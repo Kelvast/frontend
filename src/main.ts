@@ -24,11 +24,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const pickInfo = scene.pick(scene.pointerX, scene.pointerY);
     if (pickInfo?.hit && pickInfo.pickedMesh?.name === "ground") {
       const { x, z } = pickInfo.pickedPoint!;
-      connectWebSocket().send(JSON.stringify({ 
-        type: "click", 
-        targetX: Math.round(x), 
-        targetY: Math.round(z) 
-      }));
+      connectWebSocket().send(
+        JSON.stringify({
+          type: "click",
+          targetX: Math.round(x),
+          targetY: Math.round(z),
+        }),
+      );
     }
   });
 });
