@@ -5,7 +5,14 @@ export function createScene(canvas: HTMLCanvasElement): Scene {
   const scene = new Scene(engine);
 
   // Camera
-  const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 4, 1000, BABYLON.Vector3.Zero(), scene);
+  const camera = new ArcRotateCamera(
+    "camera",
+    -Math.PI / 2,
+    Math.PI / 4,
+    1000,
+    BABYLON.Vector3.Zero(),
+    scene,
+  );
   camera.attachControl(canvas, true);
 
   // Light
