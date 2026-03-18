@@ -1,11 +1,11 @@
-import { Engine, Scene, FreeCamera, HemisphericLight, MeshBuilder } from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder } from "@babylonjs/core";
 
 export function createScene(canvas: HTMLCanvasElement): Scene {
   const engine = new Engine(canvas, true);
   const scene = new Scene(engine);
 
   // Camera
-  const camera = new FreeCamera("camera", new BABYLON.Vector3(0, 512, -1024), scene);
+  const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 4, 1000, BABYLON.Vector3.Zero(), scene);
   camera.attachControl(canvas, true);
 
   // Light
