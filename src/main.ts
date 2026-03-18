@@ -1,22 +1,26 @@
 import { Engine } from "@babylonjs/core";
 import { createScene } from "./world";
-import * as players from "./players";
+import { initPlayer, updatePlayer } from "./player";
+import { initPlayers, updatePlayers } from "./players";
 import { createTiles } from "./tiles";
 import { initInput } from "./input";
+import { connectWebSocket } from "./net";
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas, true);
 
 const scene = createScene(canvas, engine);
 
-players.init(scene);
+initPlayer(scene);
+initPlayers(scene);
 createTiles(scene);
 initInput(scene);
-
-(window as any).update = players.update;
+connectWebSocket();
 
 engine.runRenderLoop(() => {
-  if ((window as any).update) (window as any).update(engine.getDeltaTime() / 1000);
+  const delta = engine.getDeltaTime() / 1000;
+  updatePlayer(delta);
+  updatePlayers(delta);
   scene.render();
 });
 

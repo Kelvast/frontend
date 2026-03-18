@@ -3,59 +3,61 @@ import {
   MeshBuilder, 
   StandardMaterial, 
   Color3,
-  Mesh
+  Mesh,
+  Vector3
 } from "@babylonjs/core";
 
-const TILE_SIZE = 32;
+export const TILE_SIZE = 32;
 export const TILE_COUNT = 13;
 export const WORLD_ORIGIN = 16384;
 
-const tileHighlights: Mesh[] = [];
+// Map key "x,z" → no index maths, no swap bugs
+const highlights = new Map<string, Mesh>();
 
 export function createTiles(scene: Scene) {
   for (let x = 0; x < TILE_COUNT; x++) {
     for (let z = 0; z < TILE_COUNT; z++) {
-      const tile = MeshBuilder.CreateGround(`tile-${x}-${z}`, { 
-        width: TILE_SIZE, height: TILE_SIZE 
-      }, scene);
-      tile.position.x = WORLD_ORIGIN + (x - TILE_COUNT / 2) * TILE_SIZE;
-      tile.position.z = WORLD_ORIGIN + (z - TILE_COUNT / 2) * TILE_SIZE;
-      tile.position.y = 0.01;
-      tile.isPickable = true;
-      tile.metadata = { tileX: x, tileZ: z };
+      const centreX = WORLD_ORIGIN + x * TILE_SIZE;
+      const centreZ = WORLD_ORIGIN + z * TILE_SIZE;
 
+      const tile = MeshBuilder.CreateGround(`tile-${x}-${z}`, {
+        width: TILE_SIZE, height: TILE_SIZE
+      }, scene);
+      tile.position.set(centreX, 0.01, centreZ);
+      tile.isPickable = true;
+      tile.metadata = { tileX: x, tileZ: z, worldX: centreX, worldZ: centreZ };
+
+      // Checkerboard
+      const isEven = (x + z) % 2 === 0;
       const mat = new StandardMaterial(`tmat-${x}-${z}`, scene);
-      mat.diffuseColor = new Color3(0.2, 0.2, 0.2);
-      mat.alpha = 0.8;
+      mat.diffuseColor = isEven
+        ? new Color3(0.20, 0.26, 0.20)
+        : new Color3(0.13, 0.17, 0.13);
+      mat.specularColor = Color3.Black();
       tile.material = mat;
 
-      // Highlight overlay
-      const highlight = MeshBuilder.CreateGround(`h-${x}-${z}`, { 
-        width: TILE_SIZE - 0.5, height: TILE_SIZE - 0.5 
+      // Highlight — keyed by "x,z" string, no array index
+      const highlight = MeshBuilder.CreateGround(`h-${x}-${z}`, {
+        width: TILE_SIZE - 1, height: TILE_SIZE - 1
       }, scene);
-      highlight.position.copyFrom(tile.position);
-      highlight.position.y = 0.02;
+      highlight.position.set(centreX, 0.02, centreZ);
       const hMat = new StandardMaterial(`hmat-${x}-${z}`, scene);
       hMat.diffuseColor = new Color3(1, 1, 0);
-      hMat.alpha = 0.4;
+      hMat.alpha = 0.5;
+      hMat.backFaceCulling = false;
       highlight.material = hMat;
       highlight.isVisible = false;
-      tileHighlights.push(highlight);
+      highlights.set(`${x},${z}`, highlight);
     }
   }
 }
 
 export function flashTile(tileX: number, tileZ: number) {
-  const idx = tileZ * TILE_COUNT + tileX;
-  const h = tileHighlights[idx];
+  // Hide all first — only one highlight at a time
+  highlights.forEach(h => h.isVisible = false);
+
+  const h = highlights.get(`${tileX},${tileZ}`);
   if (!h) return;
   h.isVisible = true;
-  setTimeout(() => h.isVisible = false, 500);
-}
-
-export function tileToWorld(tileX: number, tileZ: number) {
-  return {
-    x: WORLD_ORIGIN + (tileX - TILE_COUNT / 2) * TILE_SIZE,
-    z: WORLD_ORIGIN + (tileZ - TILE_COUNT / 2) * TILE_SIZE,
-  };
+  setTimeout(() => (h.isVisible = false), 600);
 }

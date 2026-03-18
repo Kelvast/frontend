@@ -1,67 +1,63 @@
-import { Scene, MeshBuilder, Vector3, Color3, StandardMaterial, AbstractMesh, ArcRotateCamera } from "@babylonjs/core";
-import type { ServerPlayer } from "./types";
+import { Scene, MeshBuilder, Vector3, Color3, StandardMaterial, AbstractMesh } from "@babylonjs/core";
+import { myPlayerId } from "./player";
 
-export let playerCamera: ArcRotateCamera;
+const PLAYER_SIZE = 20;
 
-const players = new Map<number, {
+const others = new Map<number, {
   mesh: AbstractMesh;
   targetPos: Vector3;
   currentPos: Vector3;
 }>();
 
 let scene: Scene;
-let myPlayerId: number | null = null;
 
-export function init(sceneRef: Scene) {
+export function initPlayers(sceneRef: Scene) {
   scene = sceneRef;
-  console.log("Players module initialized");
-  window.addEventListener("loginSuccess", (e: any) => {
-    myPlayerId = e.detail;
-    console.log("I am player ID:", myPlayerId);
-  });
-  window.addEventListener("serverState", (e: CustomEvent<ServerPlayer[]>) => {
-    console.log("State received:", e.detail.length, "players");
-    e.detail.forEach(updatePlayerState);
+
+  window.addEventListener("serverState", (e: CustomEvent<any[]>) => {
+    e.detail
+      .filter(p => p.id !== myPlayerId) // Skip self
+      .forEach(updateOther);
+
+    // Remove players no longer in state
+    const activeIds = new Set(e.detail.map(p => p.id));
+    others.forEach((_, id) => {
+      if (!activeIds.has(id)) {
+        others.get(id)?.mesh.dispose();
+        others.delete(id);
+      }
+    });
   });
 }
 
-function updatePlayerState(player: ServerPlayer) {
-  console.log("updatePlayerState id:", player.id, "pos:", player.x, player.y);
-  let playerData = players.get(player.id);
+function updateOther(player: any) {
+  let data = others.get(player.id);
 
-  if (!playerData) {
-    const mesh = MeshBuilder.CreateBox(`player-${player.id}`, { size: 1 }, scene);
-    mesh.position = new Vector3(player.x, 0.5, player.y);
+  if (!data) {
+    const mesh = MeshBuilder.CreateBox(`player-${player.id}`, {
+      width: PLAYER_SIZE, height: PLAYER_SIZE, depth: PLAYER_SIZE
+    }, scene);
+    mesh.position = new Vector3(player.x, PLAYER_SIZE / 2, player.y);
 
     const mat = new StandardMaterial(`mat-${player.id}`, scene);
-    mat.diffuseColor = new Color3(0, 0.5, 1);
+    mat.diffuseColor = new Color3(1, 0.4, 0); // Orange for others
     mesh.material = mat;
 
-    playerData = {
+    data = {
       mesh,
-      targetPos: new Vector3(player.x, 0.5, player.y),
-      currentPos: new Vector3(player.x, 0.5, player.y),
+      targetPos: new Vector3(player.x, PLAYER_SIZE / 2, player.y),
+      currentPos: new Vector3(player.x, PLAYER_SIZE / 2, player.y),
     };
-    players.set(player.id, playerData);
-    console.log("Created blue cube for player", player.id);
+    others.set(player.id, data);
   } else {
-    playerData.targetPos.copyFromFloats(player.x, 0.5, player.y);
+    data.targetPos.copyFromFloats(player.x, PLAYER_SIZE / 2, player.y);
   }
 }
 
-export function update(deltaTime: number) {
-  let myPlayerData: any = null;
-  players.forEach((data: any, id: number) => {
+export function updatePlayers(deltaTime: number) {
+  others.forEach((data: any) => {
     const lerpFactor = Math.min(0.15 * deltaTime * 60, 1);
     data.currentPos = Vector3.Lerp(data.currentPos, data.targetPos, lerpFactor);
     data.mesh.position.copyFrom(data.currentPos);
-    
-    if (id === myPlayerId) {
-      myPlayerData = data;
-    }
   });
-
-  if (myPlayerData && playerCamera) {
-    playerCamera.setTarget(myPlayerData.currentPos);
-  }
 }
