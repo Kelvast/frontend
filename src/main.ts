@@ -7,11 +7,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
   const engine = new Engine(canvas, true);
   const scene = createScene(canvas);
-  
-  init(scene);
+
+  init(scene); // Initialize players
 
   engine.runRenderLoop(() => {
-    update(engine.getDeltaTime());
+    update(engine.getDeltaTime()); // Update player positions
     scene.render();
   });
 
