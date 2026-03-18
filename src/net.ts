@@ -15,9 +15,11 @@ export function connectWebSocket(): WebSocket {
   };
 
   socket.onmessage = (event) => {
-    const message = JSON.parse(event.data) as { type: string; players?: ServerPlayer[] };
+    const message = JSON.parse(event.data);
+    if (message.type === "loginSuccess") {
+      window.dispatchEvent(new CustomEvent("loginSuccess", { detail: message.id }));
+    }
     if (message.type === "state" && message.players) {
-      // Broadcast to subscribers (players.ts will listen)
       window.dispatchEvent(
         new CustomEvent("serverState", {
           detail: message.players as ServerPlayer[],
@@ -35,5 +37,4 @@ export function connectWebSocket(): WebSocket {
   return socket;
 }
 
-// Auto-connect when this module loads
 connectWebSocket();

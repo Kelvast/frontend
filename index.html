@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MMO Client</title>
+    <title>MMO</title>
     <style>
       html, body { 
         margin: 0; padding: 0; overflow: hidden; 
@@ -14,12 +14,17 @@
         width: 100vw; height: 100vh; 
         touch-action: none; 
         display: block;
+        cursor: crosshair;
       }
     </style>
   </head>
   <body>
-    <!-- Babylon needs this exact ID -->
     <canvas id="renderCanvas"></canvas>
+    
+    <!-- BabylonJS CDN -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/babylonjs.materials.min.js"></script>
+    
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -1,36 +1,22 @@
 import { Engine } from "@babylonjs/core";
-import { connectWebSocket } from "./net";
 import { createScene } from "./world";
-import { init, update } from "./players";
+import * as players from "./players";
+import "./tiles";
 
-document.addEventListener("DOMContentLoaded", () => {
-  const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
-  const engine = new Engine(canvas, true);
-  const scene = createScene(canvas);
+const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
+const engine = new Engine(canvas, true);
 
-  init(scene); // Initialize players
+const scene = createScene(canvas, engine);
 
-  engine.runRenderLoop(() => {
-    update(engine.getDeltaTime());
-    scene.render();
-  });
+// Init modules
+players.init(scene);
 
-  window.addEventListener("resize", () => {
-    engine.resize();
-  });
+// Global update reference
+(window as any).update = players.update;
 
-  canvas.addEventListener("contextmenu", (event) => {
-    event.preventDefault();
-    const pickInfo = scene.pick(scene.pointerX, scene.pointerY);
-    if (pickInfo?.hit && pickInfo.pickedMesh?.name === "ground") {
-      const { x, z } = pickInfo.pickedPoint!;
-      connectWebSocket().send(
-        JSON.stringify({
-          type: "click",
-          targetX: Math.round(x),
-          targetY: Math.round(z),
-        }),
-      );
-    }
-  });
+engine.runRenderLoop(() => {
+  if ((window as any).update) (window as any).update(engine.getDeltaTime() / 1000);
+  scene.render();
 });
+
+window.addEventListener("resize", () => engine.resize());

@@ -9,9 +9,9 @@ export interface ServerPlayer {
   facing: number;
 }
 
-// Tell TypeScript about our custom events
 declare global {
   interface WindowEventMap {
-    serverState: CustomEvent<ServerPlayer[]>;
+    "serverState": CustomEvent<ServerPlayer[]>;
+    "loginSuccess": CustomEvent<number>;
   }
 }
