@@ -1,26 +1,40 @@
-import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder } from "@babylonjs/core";
+import {
+  Scene,
+  ArcRotateCamera,
+  HemisphericLight,
+  MeshBuilder,
+  Vector3,
+  StandardMaterial,
+  Engine,
+  Color3,
+  Color4,
+} from "@babylonjs/core";
 
 export function createScene(canvas: HTMLCanvasElement): Scene {
   const engine = new Engine(canvas, true);
   const scene = new Scene(engine);
+  scene.clearColor = new Color4(0.1, 0.1, 0.2, 1.0);
 
-  // Camera
   const camera = new ArcRotateCamera(
     "camera",
     -Math.PI / 2,
     Math.PI / 4,
-    1000,
-    BABYLON.Vector3.Zero(),
+    60,
+    new Vector3(0, 10, 0),
     scene,
   );
   camera.attachControl(canvas, true);
+  camera.lowerBetaLimit = 0.1;
+  camera.upperBetaLimit = (Math.PI / 2) * 0.9;
 
-  // Light
-  const light = new HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+  new HemisphericLight("light", new Vector3(0, 1, 0), scene);
 
-  // Ground plane
-  const ground = MeshBuilder.CreateGround("ground", { width: 2048, height: 2048 }, scene);
-  ground.position.y = -1;
+  const ground = MeshBuilder.CreateGround("ground", { width: 100, height: 100 }, scene);
+  ground.position.y = 0;
+
+  const groundMat = new StandardMaterial("groundMat", scene);
+  groundMat.diffuseColor = new Color3(0.2, 0.8, 0.2);
+  ground.material = groundMat;
 
   return scene;
 }

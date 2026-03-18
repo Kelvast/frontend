@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   init(scene); // Initialize players
 
   engine.runRenderLoop(() => {
-    update(engine.getDeltaTime()); // Update player positions
+    update(engine.getDeltaTime());
     scene.render();
   });
 

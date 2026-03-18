@@ -1,50 +1,39 @@
-import { Scene } from "@babylonjs/core";
-import { createScene } from "./world";
-
-const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
-const scene = createScene(canvas);
+import type { ServerPlayer } from "./types";
 
 let socket: WebSocket | null = null;
 
-function connectWebSocket() {
+export function connectWebSocket(): WebSocket {
+  if (socket?.readyState === WebSocket.OPEN) {
+    return socket;
+  }
+
   socket = new WebSocket("ws://localhost:8080");
 
   socket.onopen = () => {
-    console.log("Connected to server");
+    console.log("✅ Connected to MMO server");
     socket?.send(JSON.stringify({ type: "login", name: "Sam", pass: "demo" }));
   };
 
   socket.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    if (message.type === "state") {
-      handleStateMessage(message.players);
+    const message = JSON.parse(event.data) as { type: string; players?: ServerPlayer[] };
+    if (message.type === "state" && message.players) {
+      // Broadcast to subscribers (players.ts will listen)
+      window.dispatchEvent(
+        new CustomEvent("serverState", {
+          detail: message.players as ServerPlayer[],
+        }),
+      );
     }
   };
 
-  socket.onerror = (error) => {
-    console.error("WebSocket error:", error);
-  };
-
+  socket.onerror = (error) => console.error("WebSocket error:", error);
   socket.onclose = () => {
-    console.log("Disconnected from server");
-    setTimeout(connectWebSocket, 1000); // Reconnect after 1 second
+    console.log("Disconnected, reconnecting...");
+    setTimeout(connectWebSocket, 1000);
   };
+
+  return socket;
 }
 
-function handleStateMessage(
-  players: {
-    id: number;
-    x: number;
-    y: number;
-    targetX: number;
-    targetY: number;
-    pathLen: number;
-    hp: number;
-    facing: number;
-  }[],
-) {
-  console.log("Received state update:", players);
-  // Update player positions here
-}
-
+// Auto-connect when this module loads
 connectWebSocket();
