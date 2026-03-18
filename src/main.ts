@@ -1,17 +1,18 @@
 import { Engine } from "@babylonjs/core";
 import { createScene } from "./world";
 import * as players from "./players";
-import "./tiles";
+import { createTiles } from "./tiles";
+import { initInput } from "./input";
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas, true);
 
 const scene = createScene(canvas, engine);
 
-// Init modules
 players.init(scene);
+createTiles(scene);
+initInput(scene);
 
-// Global update reference
 (window as any).update = players.update;
 
 engine.runRenderLoop(() => {

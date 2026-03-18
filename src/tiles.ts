@@ -2,32 +2,36 @@ import {
   Scene, 
   MeshBuilder, 
   StandardMaterial, 
-  Color3, 
-  PointerEventTypes
+  Color3,
+  Mesh
 } from "@babylonjs/core";
-import { Mesh } from "@babylonjs/core";
 
 const TILE_SIZE = 32;
-const tileMeshes: Mesh[] = [];
+export const TILE_COUNT = 13;
+export const WORLD_ORIGIN = 16384;
+
 const tileHighlights: Mesh[] = [];
 
 export function createTiles(scene: Scene) {
-  // 13x13 RS region
-  for (let x = 0; x < 13; x++) {
-    for (let z = 0; z < 13; z++) {
+  for (let x = 0; x < TILE_COUNT; x++) {
+    for (let z = 0; z < TILE_COUNT; z++) {
       const tile = MeshBuilder.CreateGround(`tile-${x}-${z}`, { 
         width: TILE_SIZE, height: TILE_SIZE 
       }, scene);
-      tile.position.x = 16384 + (x - 6.5) * TILE_SIZE;
-      tile.position.z = 16384 + (z - 6.5) * TILE_SIZE;
+      tile.position.x = WORLD_ORIGIN + (x - TILE_COUNT / 2) * TILE_SIZE;
+      tile.position.z = WORLD_ORIGIN + (z - TILE_COUNT / 2) * TILE_SIZE;
       tile.position.y = 0.01;
       tile.isPickable = true;
       tile.metadata = { tileX: x, tileZ: z };
-      tileMeshes.push(tile);
 
-      // Highlight
+      const mat = new StandardMaterial(`tmat-${x}-${z}`, scene);
+      mat.diffuseColor = new Color3(0.2, 0.2, 0.2);
+      mat.alpha = 0.8;
+      tile.material = mat;
+
+      // Highlight overlay
       const highlight = MeshBuilder.CreateGround(`h-${x}-${z}`, { 
-        width: TILE_SIZE - 0.1, height: TILE_SIZE - 0.1 
+        width: TILE_SIZE - 0.5, height: TILE_SIZE - 0.5 
       }, scene);
       highlight.position.copyFrom(tile.position);
       highlight.position.y = 0.02;
@@ -39,27 +43,19 @@ export function createTiles(scene: Scene) {
       tileHighlights.push(highlight);
     }
   }
+}
 
-  // Click → walk
-  scene.onPointerObservable.add((pointerInfo) => {
-    if (pointerInfo.type === PointerEventTypes.POINTERDOWN) {
-      const pickInfo = scene.pick(scene.pointerX!, scene.pointerY!);
-      if (pickInfo.hit && pickInfo.pickedMesh?.metadata?.tileX !== undefined) {
-        const { tileX, tileZ } = pickInfo.pickedMesh.metadata as any;
-        const worldX = 16384 + (tileX - 6.5) * TILE_SIZE;
-        const worldZ = 16384 + (tileZ - 6.5) * TILE_SIZE;
-        
-        console.log(`Walk to (${worldX.toFixed(0)}, ${worldZ.toFixed(0)})`);
-        window.dispatchEvent(new CustomEvent("walkTo", {
-          detail: { x: worldX, y: worldZ }
-        }));
+export function flashTile(tileX: number, tileZ: number) {
+  const idx = tileZ * TILE_COUNT + tileX;
+  const h = tileHighlights[idx];
+  if (!h) return;
+  h.isVisible = true;
+  setTimeout(() => h.isVisible = false, 500);
+}
 
-        const idx = tileZ * 13 + tileX;
-        if (tileHighlights[idx]) {
-          tileHighlights[idx].isVisible = true;
-          setTimeout(() => tileHighlights[idx].isVisible = false, 500);
-        }
-      }
-    }
-  });
+export function tileToWorld(tileX: number, tileZ: number) {
+  return {
+    x: WORLD_ORIGIN + (tileX - TILE_COUNT / 2) * TILE_SIZE,
+    z: WORLD_ORIGIN + (tileZ - TILE_COUNT / 2) * TILE_SIZE,
+  };
 }
