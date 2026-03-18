@@ -3,22 +3,24 @@ import {
   MeshBuilder, 
   StandardMaterial, 
   Color3,
-  Mesh,
-  Vector3
+  Mesh
 } from "@babylonjs/core";
 
 export const TILE_SIZE = 32;
-export const TILE_COUNT = 13;
-export const WORLD_ORIGIN = 16384;
+export const TILE_COUNT = 21; // Odd number = clean centre tile
+export const WORLD_ORIGIN = 16384; // Matches server spawn
 
-// Map key "x,z" → no index maths, no swap bugs
 const highlights = new Map<string, Mesh>();
 
 export function createTiles(scene: Scene) {
+  // Half offset so grid is centred on WORLD_ORIGIN
+  const half = Math.floor(TILE_COUNT / 2);
+
   for (let x = 0; x < TILE_COUNT; x++) {
     for (let z = 0; z < TILE_COUNT; z++) {
-      const centreX = WORLD_ORIGIN + x * TILE_SIZE;
-      const centreZ = WORLD_ORIGIN + z * TILE_SIZE;
+      // Centred: tile (half, half) sits exactly at WORLD_ORIGIN
+      const centreX = WORLD_ORIGIN + (x - half) * TILE_SIZE;
+      const centreZ = WORLD_ORIGIN + (z - half) * TILE_SIZE;
 
       const tile = MeshBuilder.CreateGround(`tile-${x}-${z}`, {
         width: TILE_SIZE, height: TILE_SIZE
@@ -27,7 +29,6 @@ export function createTiles(scene: Scene) {
       tile.isPickable = true;
       tile.metadata = { tileX: x, tileZ: z, worldX: centreX, worldZ: centreZ };
 
-      // Checkerboard
       const isEven = (x + z) % 2 === 0;
       const mat = new StandardMaterial(`tmat-${x}-${z}`, scene);
       mat.diffuseColor = isEven
@@ -36,7 +37,6 @@ export function createTiles(scene: Scene) {
       mat.specularColor = Color3.Black();
       tile.material = mat;
 
-      // Highlight — keyed by "x,z" string, no array index
       const highlight = MeshBuilder.CreateGround(`h-${x}-${z}`, {
         width: TILE_SIZE - 1, height: TILE_SIZE - 1
       }, scene);
@@ -53,9 +53,7 @@ export function createTiles(scene: Scene) {
 }
 
 export function flashTile(tileX: number, tileZ: number) {
-  // Hide all first — only one highlight at a time
   highlights.forEach(h => h.isVisible = false);
-
   const h = highlights.get(`${tileX},${tileZ}`);
   if (!h) return;
   h.isVisible = true;

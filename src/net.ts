@@ -1,9 +1,10 @@
 import type { ServerPlayer } from "./types";
+import { setMyId, syncPlayers, getLastTile } from "./store";
 
 const SERVER_URL = import.meta.env.VITE_MMO_SERVER ?? "ws://localhost:8080";
 
 let socket: WebSocket | null = null;
-let hasConnected = false; // Guard against HMR double-connect
+let hasConnected = false;
 
 export function connectWebSocket(): WebSocket {
   if (socket?.readyState === WebSocket.OPEN) return socket;
@@ -12,28 +13,39 @@ export function connectWebSocket(): WebSocket {
   socket = new WebSocket(SERVER_URL);
 
   socket.onopen = () => {
-    if (hasConnected) return; // HMR guard — never login twice
+    if (hasConnected) return;
     hasConnected = true;
     console.log(`✅ Connected (${SERVER_URL})`);
-    socket?.send(JSON.stringify({ type: "login", name: "Sam", pass: "demo" }));
+
+    const lastTile = getLastTile();
+
+    // Send last known position so server spawns player there
+    socket?.send(JSON.stringify({
+      type: "login",
+      name: "Sam",
+      pass: "demo",
+      ...(lastTile && { spawnX: lastTile.x, spawnZ: lastTile.z })
+    }));
   };
 
   socket.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    if (message.type === "loginSuccess") {
-      window.dispatchEvent(new CustomEvent("loginSuccess", { detail: message.id }));
+    const msg = JSON.parse(event.data);
+
+    if (msg.type === "loginSuccess") {
+      setMyId(msg.id);
+      window.dispatchEvent(new CustomEvent("loginSuccess", { detail: msg.id }));
     }
-    if (message.type === "state" && message.players) {
-      window.dispatchEvent(new CustomEvent("serverState", {
-        detail: message.players as ServerPlayer[],
-      }));
+
+    if (msg.type === "state" && msg.players) {
+      syncPlayers(msg.players as ServerPlayer[]);
+      window.dispatchEvent(new Event("stateUpdated"));
     }
   };
 
-  socket.onerror = (error) => console.error("WebSocket error:", error);
+  socket.onerror = (e) => console.error("WebSocket error:", e);
   socket.onclose = () => {
     console.log("Disconnected, reconnecting...");
-    hasConnected = false; // Allow re-login on genuine reconnect
+    hasConnected = false;
     setTimeout(connectWebSocket, 1000);
   };
 

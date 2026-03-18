@@ -1,13 +1,12 @@
 import { ArcRotateCamera, Vector3, Scene } from "@babylonjs/core";
+import { getCameraState, setCameraState } from "./store";
 
 export let playerCamera: ArcRotateCamera;
 
 export function createCamera(canvas: HTMLCanvasElement, scene: Scene): ArcRotateCamera {
-  playerCamera = new ArcRotateCamera(
-    "camera",
-    -Math.PI / 2,
-    Math.PI / 3,
-    500,
+  const { alpha, beta, radius } = getCameraState(); // Restore from store
+
+  playerCamera = new ArcRotateCamera("camera", alpha, beta, radius,
     new Vector3(16384, 0, 16384),
     scene
   );
@@ -19,10 +18,14 @@ export function createCamera(canvas: HTMLCanvasElement, scene: Scene): ArcRotate
   playerCamera.upperBetaLimit = Math.PI / 2.2;
   playerCamera.wheelPrecision = 0.5;
 
+  // Persist camera state whenever user moves it
+  playerCamera.onViewMatrixChangedObservable.add(() => {
+    setCameraState(playerCamera.alpha, playerCamera.beta, playerCamera.radius);
+  });
+
   return playerCamera;
 }
 
-// RS-style: pan target to follow player, preserve angle/zoom
 export function followTarget(position: Vector3) {
   if (!playerCamera) return;
 
