@@ -17,9 +17,7 @@ export function createTiles(scene: Scene) {
     for (let z = 0; z < TILE_COUNT; z++) {
       const centreX = WORLD_ORIGIN + (x - half) * TILE_SIZE;
       const centreZ = WORLD_ORIGIN + (z - half) * TILE_SIZE;
-      const labelX = x - half;
-      const labelZ = z - half;
-
+      
       // ── Tile base ──────────────────────────────────────
       const tile = MeshBuilder.CreateGround(`tile-${x}-${z}`, {
         width: TILE_SIZE, height: TILE_SIZE

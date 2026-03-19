@@ -28,7 +28,7 @@ export function initInput(scene: Scene) {
     if (!pickInfo?.hit || !pickInfo.pickedMesh) return;
     if (pickInfo.pickedMesh.metadata?.tileX === undefined) return;
 
-    const { worldX, worldZ, serverTileX, serverTileZ } = pickInfo.pickedMesh.metadata as {
+    const { serverTileX, serverTileZ } = pickInfo.pickedMesh.metadata as {
       tileX: number; tileZ: number;
       worldX: number; worldZ: number;
       serverTileX: number; serverTileZ: number;
