@@ -18,9 +18,20 @@ function getSavedSession(): { token: string; expiresAt: number } | null {
 }
 
 export function logout() {
+  if (socket?.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "logout" }));
+  } else {
+    handleLoggedOut();
+  }
+}
+
+function handleLoggedOut() {
   localStorage.removeItem("mmo_session");
   socket?.close();
-  window.location.reload();
+  socket = null;
+  showLoginScreen().then(({ email, pass }) => {
+    socket?.send(JSON.stringify({ type: "login", email, pass }));
+  });
 }
 
 export async function connectWebSocket(): Promise<WebSocket> {
@@ -50,6 +61,10 @@ export async function connectWebSocket(): Promise<WebSocket> {
       hideLoginScreen();
       window.dispatchEvent(new CustomEvent("loginSuccess", { detail: msg.id }));
       console.log(`✅ Logged in (id: ${msg.id})`);
+    }
+
+    if (msg.type === "logoutSuccess") {
+      handleLoggedOut();
     }
 
     if (msg.type === "authResponse" && !msg.success) {
@@ -87,4 +102,3 @@ export async function connectWebSocket(): Promise<WebSocket> {
 
   return socket;
 }
-

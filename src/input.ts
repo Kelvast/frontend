@@ -40,6 +40,6 @@ export function initInput(scene: Scene) {
     console.log(`Walking to tile (${serverTileX}, ${serverTileZ})`);
 
     const ws = await connectWebSocket();
-    ws.send(JSON.stringify({ type: "click", targetX: worldX, targetY: worldZ }));
+    ws.send(JSON.stringify({ type: "click", targetX: serverTileX, targetY: serverTileZ }));
   });
 }

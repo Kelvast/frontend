@@ -1,7 +1,6 @@
 import { Scene, MeshBuilder, Vector3, Color3, StandardMaterial, AbstractMesh } from "@babylonjs/core";
 import { getOtherPlayers } from "./store";
-
-const PLAYER_SIZE = 20;
+import { PLAYER_SIZE } from "./constants";
 
 const meshes = new Map<number, {
   mesh: AbstractMesh;

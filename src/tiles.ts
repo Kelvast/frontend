@@ -6,10 +6,7 @@ import {
   Mesh,
   DynamicTexture
 } from "@babylonjs/core";
-
-export const TILE_SIZE = 32;
-export const TILE_COUNT = 21;
-export const WORLD_ORIGIN = 16384;
+import { TILE_COUNT, WORLD_ORIGIN, TILE_SIZE } from "./constants";
 
 const highlights = new Map<string, Mesh>();
 
@@ -20,6 +17,8 @@ export function createTiles(scene: Scene) {
     for (let z = 0; z < TILE_COUNT; z++) {
       const centreX = WORLD_ORIGIN + (x - half) * TILE_SIZE;
       const centreZ = WORLD_ORIGIN + (z - half) * TILE_SIZE;
+      const labelX = x - half;
+      const labelZ = z - half;
 
       // ── Tile base ──────────────────────────────────────
       const tile = MeshBuilder.CreateGround(`tile-${x}-${z}`, {
@@ -33,8 +32,8 @@ export function createTiles(scene: Scene) {
         tileZ: z, 
         worldX: centreX, 
         worldZ: centreZ,
-        serverTileX: centreX,
-        serverTileZ: centreZ,
+        serverTileX: x,
+        serverTileZ: z,
       };
 
       const isEven = (x + z) % 2 === 0;
@@ -62,8 +61,8 @@ export function createTiles(scene: Scene) {
       ctx.textBaseline = "middle";
       ctx.fillStyle = "rgba(255,255,255,0.7)";
       const lineHeight = 22;
-      ctx.fillText(`x:${centreX}`, 64, 64 - lineHeight / 2);
-      ctx.fillText(`y:${centreZ}`, 64, 64 + lineHeight / 2);
+      ctx.fillText(`x:${x}`, 64, 64 - lineHeight / 2);
+      ctx.fillText(`z:${z}`, 64, 64 + lineHeight / 2);
       tex.update();
 
       const labelMat = new StandardMaterial(`lmat-${x}-${z}`, scene);
