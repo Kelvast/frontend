@@ -1,57 +1,48 @@
 'use client';
 
-import { Engine } from "@babylonjs/core";
-import { createScene } from "./world";
-import { initPlayer, updatePlayer } from "./player";
-import { initPlayers, updatePlayers } from "./players";
-import { createTiles } from "./tiles";
-import { initInput } from "./input";
-import { connectWebSocket } from "./net";
-import { mountHUD, showHUD, hideHUD } from "./hud";
+import { useEffect, useRef } from 'react';
+import { Engine, Scene, FreeCamera, HemisphericLight, MeshBuilder, Vector3 } from '@babylonjs/core';
+import { useGameStore } from '../../utils/game-store';
+import { connectWS } from '../../utils/ws-client';
 
-const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
-const engine = new Engine(canvas, true);
-
-let gameStarted = false;
-
-mountHUD(); // Mount once at startup, hidden by default
-
-async function start() {
-  console.log("🌐 Connecting...");
-  await connectWebSocket();
-  console.log("⏳ Waiting for login...");
-
-  await new Promise<void>((resolve) => {
-    window.addEventListener("loginSuccess", () => resolve(), { once: true });
-  });
-
-  console.log("🎮 Initialising game...");
-
-  if (!gameStarted) {
-    const scene = createScene(canvas, engine);
-    initPlayer(scene);
-    initPlayers(scene);
-    createTiles(scene);
-    initInput(scene);
-
-    engine.runRenderLoop(() => {
-      const delta = engine.getDeltaTime() / 1000;
-      updatePlayer(delta);
-      updatePlayers(delta);
-      scene.render();
-    });
-
-    window.addEventListener("resize", () => engine.resize());
-    gameStarted = true;
-    console.log("✅ Game started");
-  }
-
-  showHUD();
+interface GameCanvasProps {
+  token: string;
 }
 
-window.addEventListener("logoutSuccess", () => {
-  hideHUD();
-  start(); // re-enter login flow
-});
+export default function GameCanvas({ token }: GameCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<Engine | null>(null);
+  const { myId, player, nearbyPlayers, setNearbyPlayers } = useGameStore();
 
-start();
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const engine = new Engine(canvasRef.current, true);
+    engineRef.current = engine;
+    const scene = new Scene(engine);
+
+    // Basic setup from typical Babylon MMO main.ts
+    const camera = new FreeCamera('camera', new Vector3(0, 5, -10), scene);
+    camera.setTarget(Vector3.Zero());
+    camera.attachControl(canvasRef.current, true);
+
+    const light = new HemisphericLight('light', new Vector3(0, 1, 0), scene);
+
+    // Ground
+    MeshBuilder.CreateGround('ground', { width: 100, height: 100 }, scene);
+
+    // Render loop for MMO updates
+    engine.runRenderLoop(() => {
+      scene.render();
+      // Sync nearbyPlayers from store/WS here
+    });
+
+    connectWS(token); // Connect to MMO server
+
+    return () => {
+      engine.dispose();
+    };
+  }, [token]);
+
+  return <canvas ref={canvasRef} style={{ width: '100vw', height: '100vh' }} />;
+}

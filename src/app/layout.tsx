@@ -1,32 +1,28 @@
-import { Viewport } from "next";
-import "../styles/globals.css";
-import { ReactNode } from "react";
-import { Inter, Space_Grotesk } from "next/font/google";
+import type { Metadata } from 'next';
+import { FC } from 'react';
+import { Inter } from 'next/font/google';
+import '../styles/globals.css';
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'MMO Client',
+  description: 'Next.js + Babylon.js + Zustand + Atomic Design',
 };
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-body",
-  display: "swap",
-});
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  variable: "--font-heading",
-  display: "swap",
-});
+interface Props {
+  children: React.ReactNode;
+}
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+const RootLayout: FC<Props> = ({ children }) => {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
+        {children}
+      </body>
     </html>
   );
-}
+};
+
+export default RootLayout;

@@ -1,35 +1,30 @@
-import { NextPage } from "next";
-import Url from "../1-atoms/Url";
+import { FC, memo, PropsWithChildren, ReactNode } from "react";
+import Link from "next/link";
 import BaseLayout from "../4-layouts/BaseLayout";
 
-interface Props {
-  //
-}
+interface Props {}
 
-const HomePage: NextPage<Props> = () => {
+const HomePage: FC<Props> = () => {
   return (
-    <>
-      <BaseLayout className="home">
-        <div className="flex flex-col justify-center items-center h-screen">
-          <div className="flex flex-col w-100 max-w-md space-y-3">
-            <h1 className="font-serif text-6xl lg:text-8xl">
-              NextJs Typescript Tailwind Boilerplate
-            </h1>
-            <h2 className="font-sans text-xl lg:text-2xl">by Sam Newhouse</h2>
-            <div className="flex flex-row space-x-2">
-              <Url href="https://github.com/SamNewhouse/create-nttb" className="text-md lg:text-lg">
-                <span>github</span>
-              </Url>
-              <Url href="https://www.npmjs.com/package/create-nttb" className="text-md lg:text-lg">
-                <span>nmpjs</span>
-              </Url>
-            </div>
-          </div>
-          <div></div>
-        </div>
-      </BaseLayout>
-    </>
+    <BaseLayout className="bg-gradient-to-r from-gray-50 to-blue-50">
+      <div className="py-20 px-4 text-center">
+        <h1 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-8">
+          Babylon.js MMO
+        </h1>
+        <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+          Next.js + Zustand + Atomic Design port complete. 
+          Login to enter the multiplayer world.
+        </p>
+        <Link
+          href="/login"
+          className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 rounded-2xl text-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300"
+          prefetch={false}
+        >
+          Play Now →
+        </Link>
+      </div>
+    </BaseLayout>
   );
 };
 
-export default HomePage;
+export default memo<PropsWithChildren<Props>>(HomePage);
