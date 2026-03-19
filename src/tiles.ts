@@ -20,8 +20,6 @@ export function createTiles(scene: Scene) {
     for (let z = 0; z < TILE_COUNT; z++) {
       const centreX = WORLD_ORIGIN + (x - half) * TILE_SIZE;
       const centreZ = WORLD_ORIGIN + (z - half) * TILE_SIZE;
-      const relX = x - half;
-      const relZ = z - half;
 
       // ── Tile base ──────────────────────────────────────
       const tile = MeshBuilder.CreateGround(`tile-${x}-${z}`, {
@@ -30,7 +28,14 @@ export function createTiles(scene: Scene) {
       tile.position.set(centreX, 0, centreZ);
       tile.isPickable = true;
       tile.renderingGroupId = 0;
-      tile.metadata = { tileX: x, tileZ: z, worldX: centreX, worldZ: centreZ };
+      tile.metadata = { 
+        tileX: x, 
+        tileZ: z, 
+        worldX: centreX, 
+        worldZ: centreZ,
+        serverTileX: centreX,
+        serverTileZ: centreZ,
+      };
 
       const isEven = (x + z) % 2 === 0;
       const mat = new StandardMaterial(`tmat-${x}-${z}`, scene);
@@ -44,9 +49,9 @@ export function createTiles(scene: Scene) {
       const label = MeshBuilder.CreateGround(`label-${x}-${z}`, {
         width: TILE_SIZE * 0.85, height: TILE_SIZE * 0.85
       }, scene);
-      label.position.set(centreX, 0.5, centreZ); // High enough Y gap, no z-fight
+      label.position.set(centreX, 0.5, centreZ);
       label.isPickable = false;
-      label.renderingGroupId = 1; // Always renders on top of group 0
+      label.renderingGroupId = 1;
 
       const tex = new DynamicTexture(`tex-${x}-${z}`, { width: 128, height: 128 }, scene);
       tex.hasAlpha = true;
@@ -56,7 +61,9 @@ export function createTiles(scene: Scene) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.fillText(`${relX},${relZ}`, 64, 64);
+      const lineHeight = 22;
+      ctx.fillText(`x:${centreX}`, 64, 64 - lineHeight / 2);
+      ctx.fillText(`y:${centreZ}`, 64, 64 + lineHeight / 2);
       tex.update();
 
       const labelMat = new StandardMaterial(`lmat-${x}-${z}`, scene);

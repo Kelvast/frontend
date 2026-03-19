@@ -28,14 +28,17 @@ export function initInput(scene: Scene) {
     if (!pickInfo?.hit || !pickInfo.pickedMesh) return;
     if (pickInfo.pickedMesh.metadata?.tileX === undefined) return;
 
-    const { tileX, tileZ, worldX, worldZ } = pickInfo.pickedMesh.metadata as {
-      tileX: number; tileZ: number; worldX: number; worldZ: number;
+    const { worldX, worldZ, serverTileX, serverTileZ } = pickInfo.pickedMesh.metadata as {
+      tileX: number; tileZ: number;
+      worldX: number; worldZ: number;
+      serverTileX: number; serverTileZ: number;
     };
 
-    flashTile(tileX, tileZ);
-    setLastTile(tileX, tileZ); // Persist to store + localStorage
+    flashTile(pickInfo.pickedMesh.metadata.tileX, pickInfo.pickedMesh.metadata.tileZ);
+    setLastTile(serverTileX, serverTileZ);
 
-    console.log(`Tile (${tileX},${tileZ}) → (${worldX}, ${worldZ})`);
+    // One coord — matches label on tile exactly
+    console.log(`Walking to tile (${serverTileX}, ${serverTileZ})`);
 
     const ws = connectWebSocket();
     ws.send(JSON.stringify({ type: "click", targetX: worldX, targetY: worldZ }));
