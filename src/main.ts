@@ -9,19 +9,32 @@ import { connectWebSocket } from "./net";
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas, true);
 
-const scene = createScene(canvas, engine);
+async function start() {
+  console.log("🌐 Connecting...");
+  await connectWebSocket();
+  console.log("⏳ Waiting for login...");
 
-initPlayer(scene);
-initPlayers(scene);
-createTiles(scene);
-initInput(scene);
-connectWebSocket();
+  await new Promise<void>((resolve) => {
+    window.addEventListener("loginSuccess", () => resolve(), { once: true });
+  });
 
-engine.runRenderLoop(() => {
-  const delta = engine.getDeltaTime() / 1000;
-  updatePlayer(delta);
-  updatePlayers(delta);
-  scene.render();
-});
+  console.log("🎮 Initialising game...");
+  const scene = createScene(canvas, engine);
 
-window.addEventListener("resize", () => engine.resize());
+  initPlayer(scene);
+  initPlayers(scene);
+  createTiles(scene);
+  initInput(scene);
+
+  engine.runRenderLoop(() => {
+    const delta = engine.getDeltaTime() / 1000;
+    updatePlayer(delta);
+    updatePlayers(delta);
+    scene.render();
+  });
+
+  window.addEventListener("resize", () => engine.resize());
+  console.log("✅ Game started");
+}
+
+start();

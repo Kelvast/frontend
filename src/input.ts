@@ -10,7 +10,7 @@ window.addEventListener("loginSuccess", (e: CustomEvent<number>) => {
 });
 
 export function initInput(scene: Scene) {
-  scene.onPointerObservable.add((pointerInfo) => {
+  scene.onPointerObservable.add(async (pointerInfo) => {
     if (pointerInfo.type !== PointerEventTypes.POINTERDOWN) return;
 
     const event = pointerInfo.event as PointerEvent;
@@ -37,10 +37,9 @@ export function initInput(scene: Scene) {
     flashTile(pickInfo.pickedMesh.metadata.tileX, pickInfo.pickedMesh.metadata.tileZ);
     setLastTile(serverTileX, serverTileZ);
 
-    // One coord — matches label on tile exactly
     console.log(`Walking to tile (${serverTileX}, ${serverTileZ})`);
 
-    const ws = connectWebSocket();
+    const ws = await connectWebSocket();
     ws.send(JSON.stringify({ type: "click", targetX: worldX, targetY: worldZ }));
   });
 }
