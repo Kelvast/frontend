@@ -37,14 +37,13 @@ export interface ChunkData {
   chunkX: number;
   chunkZ: number;
   region: string;
-  tiles: Tile[][];
+  tiles: Tile[][]; // [row][col] — 16×16
 }
 
 export interface Region {
   id: string;
   name: string;
   pvp: boolean;
-  spawnPoint: { x: number; z: number };
   chunks: Record<string, ChunkData>; // key: "chunkX,chunkZ"
 }
 

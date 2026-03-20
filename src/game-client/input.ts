@@ -1,40 +1,38 @@
 import { Scene } from "@babylonjs/core";
 import { Position } from "../types";
+import { logger } from "../utils/logger";
 
 export class GameInput {
+  private _onKeyDown: (e: KeyboardEvent) => void;
+  private _onKeyUp: (e: KeyboardEvent) => void;
   private keys = new Set<string>();
-  private mouseDown = false;
   private targetPosition: Position = { x: 0, y: 0, z: 0 };
 
   constructor(scene: Scene) {
-    // Keyboard
-    window.addEventListener("keydown", (e) => this.keys.add(e.code));
-    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    logger.game("GameInput initialised");
 
-    // Mouse click move
+    this._onKeyDown = (e) => this.keys.add(e.code);
+    this._onKeyUp = (e) => this.keys.delete(e.code);
+
+    window.addEventListener("keydown", this._onKeyDown);
+    window.addEventListener("keyup", this._onKeyUp);
+
     scene.onPointerObservable.add((pi) => {
       if (pi.type === 4 && pi.pickInfo?.hit) {
-        // LEFT_CLICK
-        const pick = pi.pickInfo as any;
-        this.targetPosition = {
-          x: pick.pickedPoint!.x,
-          y: 0,
-          z: pick.pickedPoint!.z,
-        };
+        const point = pi.pickInfo.pickedPoint!;
+        this.targetPosition = { x: point.x, y: 0, z: point.z };
+        logger.game("Click target set:", this.targetPosition);
       }
     });
   }
 
   update(delta: number) {
-    // WASD movement
-    const speed = 5 * delta;
-    let dx = 0,
-      dz = 0;
-    if (this.keys.has("KeyW")) dz -= speed;
-    if (this.keys.has("KeyS")) dz += speed;
-    if (this.keys.has("KeyA")) dx -= speed;
-    if (this.keys.has("KeyD")) dx += speed;
+    return { targetPosition: this.targetPosition };
+  }
 
-    return { dx, dz, targetPosition: this.targetPosition };
+  dispose() {
+    logger.game("Disposing GameInput");
+    window.removeEventListener("keydown", this._onKeyDown);
+    window.removeEventListener("keyup", this._onKeyUp);
   }
 }

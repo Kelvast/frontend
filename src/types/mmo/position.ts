@@ -4,16 +4,4 @@ export interface Position {
   z: number;
 }
 
-export interface Rotation {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export interface Velocity {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export type Vector3Like = Position | { x: number; y: number; z: number };
+export const ZERO_POSITION: Position = { x: 0, y: 0, z: 0 };

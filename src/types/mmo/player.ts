@@ -1,4 +1,4 @@
-import { Position, Rotation } from "./position";
+import { Position } from "./position";
 
 export interface PlayerStats {
   level: number;
@@ -13,7 +13,6 @@ export interface PlayerState {
   id: string;
   name: string;
   position: Position;
-  rotation: Rotation;
   stats: PlayerStats;
   isMoving: boolean;
   lastUpdated: number;

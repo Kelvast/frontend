@@ -10,7 +10,7 @@ export const CAMERA = {
   DEFAULT_BETA: Math.PI / 3, // default vertical angle — ~60° above ground
   DEFAULT_RADIUS: 20, // default zoom distance from player on load
   ANGULAR_SENSIBILITY: 500, // mouse drag sensitivity — higher = slower rotation
-  ROTATE_SPEED: 0.02, // A/D orbit speed in radians per frame
+  ORBIT_SPEED: 0.02, // W/S tilt speed in radians per frame
 } as const;
 
 export const PLAYER = {

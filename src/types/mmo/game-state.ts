@@ -1,16 +1,15 @@
 import { PlayerState } from "./player";
 
-export interface GameState {
+export interface GameStoreState {
+  // State
   myId: string | null;
   player: PlayerState | null;
   nearbyPlayers: PlayerState[];
   worldTime: number;
   isConnected: boolean;
   latency: number;
-}
 
-// Store Actions (for Zustand)
-export interface GameActions {
+  // Actions
   setMyId: (id: string) => void;
   updatePlayer: (player: PlayerState) => void;
   setNearbyPlayers: (players: PlayerState[]) => void;
@@ -19,5 +18,3 @@ export interface GameActions {
   setConnected: (connected: boolean) => void;
   setLatency: (latency: number) => void;
 }
-
-export type GameStoreState = GameState & GameActions;

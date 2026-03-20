@@ -8,7 +8,7 @@ import { NEXT_PUBLIC_API_URL } from "../config/variables";
  */
 export const httpClient: AxiosInstance = axios.create({
   baseURL: NEXT_PUBLIC_API_URL,
-  timeout: 5000,
+  timeout: 12000,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -37,6 +37,6 @@ export async function request<T = any>(config: AxiosRequestConfig): Promise<T> {
       message = error.message;
     }
     // Throw standardized error object for consumption by your app
-    throw { message, status };
+    throw Object.assign(new Error(message), { status });
   }
 }

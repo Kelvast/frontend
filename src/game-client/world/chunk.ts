@@ -1,7 +1,8 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, Scene, Mesh } from "@babylonjs/core";
 import { ChunkData } from "../../types/mmo/world";
-import { TILE_CONFIG } from "./tile-config";
 import { WORLD } from "../constants";
+import { TILE_CONFIG } from "./tile-config";
+import { logger } from "../../utils/logger";
 
 export class Chunk {
   private meshes: Mesh[] = [];
@@ -10,6 +11,7 @@ export class Chunk {
     private data: ChunkData,
     private scene: Scene,
   ) {
+    logger.game(`Spawning chunk (${data.chunkX}, ${data.chunkZ}) in region "${data.region}"`);
     this.spawn();
   }
 
@@ -18,7 +20,7 @@ export class Chunk {
 
     for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
       for (let col = 0; col < WORLD.CHUNK_SIZE; col++) {
-        const tileType = tiles[row][col].type;
+        const tile = tiles[row][col];
 
         const worldX = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE;
         const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
@@ -29,19 +31,22 @@ export class Chunk {
           this.scene,
         );
 
-        mesh.position = new Vector3(worldX, 0, worldZ);
+        mesh.position = new Vector3(worldX, tile.y, worldZ);
 
         const mat = new StandardMaterial(`mat-${chunkX}-${chunkZ}-${col}-${row}`, this.scene);
-        mat.diffuseColor = TILE_CONFIG[tileType].color;
+        mat.diffuseColor = TILE_CONFIG[tile.type].color;
         mat.specularColor = Color3.Black();
         mesh.material = mat;
 
         this.meshes.push(mesh);
       }
     }
+
+    logger.game(`Chunk (${chunkX}, ${chunkZ}) spawned — ${this.meshes.length} tiles`);
   }
 
   dispose() {
+    logger.game(`Disposing chunk (${this.data.chunkX}, ${this.data.chunkZ})`);
     this.meshes.forEach((m) => m.dispose());
     this.meshes = [];
   }
