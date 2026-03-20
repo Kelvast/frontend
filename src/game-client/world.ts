@@ -9,9 +9,10 @@ export class GameWorld {
     const light = new HemisphericLight('worldLight', new Vector3(0, 1, 0), this.scene);
     light.intensity = 0.8;
 
-    const ground = MeshBuilder.CreateGround('worldGround', { width: 200, height: 200 }, this.scene);
+    const ground = MeshBuilder.CreateGround('ground', { width: 100, height: 100 }, this.scene);
     const groundMat = new StandardMaterial('groundMat', this.scene);
-    groundMat.diffuseColor = new Color3(0.15, 0.45, 0.15);
+    groundMat.diffuseColor = new Color3(0.2, 0.6, 0.2);
+    groundMat.specularColor = new Color3(0, 0, 0);
     ground.material = groundMat;
   }
 }

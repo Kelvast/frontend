@@ -1,57 +1,69 @@
-import { 
-  ArcRotateCamera, Vector3, Scene, PointerInfo, PickingInfo, 
-  ActionManager, ExecuteCodeAction 
-} from '@babylonjs/core';
+import { ArcRotateCamera, Scene, Vector3 } from '@babylonjs/core';
+
+const MIN_ZOOM = 5;
+const MAX_ZOOM = 40;
+const DEFAULT_ALPHA = -Math.PI / 2;
+const DEFAULT_BETA = Math.PI / 3;
+const DEFAULT_RADIUS = 20;
+const FOLLOW_SPEED = 0.1;
+const ROTATE_SPEED = 0.02;
 
 export class GameCamera {
   public readonly camera: ArcRotateCamera;
+  private rotateLeft = false;
+  private rotateRight = false;
 
   constructor(scene: Scene) {
     this.camera = new ArcRotateCamera(
-      'gameCamera', 
-      Math.PI / 2, Math.PI / 4, 20, 
-      Vector3.Zero(), scene
+      'gameCamera',
+      DEFAULT_ALPHA,
+      DEFAULT_BETA,
+      DEFAULT_RADIUS,
+      Vector3.Zero(),
+      scene
     );
+
     this.camera.attachControl(scene.getEngine().getRenderingCanvas()!, true);
-    
-    this.camera.lowerBetaLimit = 0.1;
-    this.camera.upperBetaLimit = (Math.PI / 2) * 0.99;
-    this.camera.lowerRadiusLimit = 3;
 
-    // ✅ FIXED: Click-to-move for ArcRotateCamera
-    scene.actionManager = new ActionManager(scene);
-    scene.actionManager.registerAction(
-      new ExecuteCodeAction(
-        ActionManager.OnLeftPickTrigger,
-        (evt) => {
-          const pickInfo = evt.source?.pickInfo as PickingInfo;
-          if (pickInfo.hit && pickInfo.pickedPoint) {
-            // Move camera target to clicked world point
-            this.camera.setTarget(pickInfo.pickedPoint);
-            
-            // Broadcast to server (your WS)
-            window.dispatchEvent(new CustomEvent('playerMove', {
-              detail: {
-                x: pickInfo.pickedPoint.x,
-                y: 0,
-                z: pickInfo.pickedPoint.z
-              }
-            }));
-          }
-        }
-      )
-    );
+    // Zoom limits
+    this.camera.lowerRadiusLimit = MIN_ZOOM;
+    this.camera.upperRadiusLimit = MAX_ZOOM;
 
-    // Mouse wheel zoom
-    this.camera.inputs.addMouseWheel();
+    // Vertical angle limits (prevent going underground or flipping)
+    this.camera.lowerBetaLimit = 0.2;
+    this.camera.upperBetaLimit = (Math.PI / 2) * 0.95;
+
+    // Free rotation via middle mouse — already default on ArcRotateCamera
+    this.camera.angularSensibilityX = 500;
+    this.camera.angularSensibilityY = 500;
+
+    this._setupKeyboardRotation(scene);
+  }
+
+  private _setupKeyboardRotation(scene: Scene) {
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyA') this.rotateLeft = true;
+      if (e.code === 'KeyD') this.rotateRight = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'KeyA') this.rotateLeft = false;
+      if (e.code === 'KeyD') this.rotateRight = false;
+    });
+
+    scene.onBeforeRenderObservable.add(() => {
+      if (this.rotateLeft) this.camera.alpha -= ROTATE_SPEED;
+      if (this.rotateRight) this.camera.alpha += ROTATE_SPEED;
+    });
   }
 
   followPlayer(target: Vector3) {
-    this.camera.setTarget(target);
+    const smoothed = Vector3.Lerp(this.camera.target, target, FOLLOW_SPEED);
+    this.camera.setTarget(smoothed);
   }
 
-  followPlayerSmooth(target: Vector3, speed = 0.05) {
-    const smoothed = Vector3.Lerp(this.camera.target, target, speed);
-    this.camera.setTarget(smoothed);
+  dispose() {
+    window.removeEventListener('keydown', () => {});
+    window.removeEventListener('keyup', () => {});
   }
 }

@@ -1,4 +1,4 @@
-import { Engine, Scene } from '@babylonjs/core';
+import { Engine, Scene, Color4 } from '@babylonjs/core';
 
 export class GameEngine {
   public readonly engine: Engine;
@@ -8,16 +8,15 @@ export class GameEngine {
     this.engine = new Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
-      disableWebGL2Support: false
+      disableWebGL2Support: false,
     });
     this.scene = new Scene(this.engine);
-    
-    this.engine.runRenderLoop(() => this.scene.render());
+    this.scene.clearColor = new Color4(0.53, 0.81, 0.98, 1); // sky blue
+
     window.addEventListener('resize', () => this.engine.resize());
   }
-  
+
   dispose() {
-    window.removeEventListener('resize', () => {});
     this.engine.dispose();
   }
 }
