@@ -1,9 +1,10 @@
 // Tile & chunk dimensions
 export const TILE_SIZE = 1;
 export const CHUNK_SIZE = 16;
+export const CHUNK_LOAD_RADIUS = 1; 
 
 // Player mesh
-export const PLAYER_SIZE = 1; // same as a tile
+export const PLAYER_SIZE = 1;
 
 // Camera
 export const MIN_ZOOM = 5;

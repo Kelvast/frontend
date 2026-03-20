@@ -51,7 +51,7 @@ Combat actions and death events are sent immediately as events, not batched
 Every player occupies exactly one tile at all times. The local player is always spawned at the world origin on load. Remote players are synced via the Zustand store, which is updated by incoming WebSocket messages.
 
 ### World
-The world is made up of regions, each containing chunks of 128x128 tiles. Chunks are loaded and unloaded dynamically as the player moves. Tiles can be marked as unwalkable to represent obstacles, walls, or water.
+The world is made up of regions, each containing chunks of 16x16 tiles. Chunks are loaded and unloaded dynamically as the player moves. Tiles can be marked as unwalkable to represent obstacles, walls, or water.
 
 ### Skills
 Players have a set of skills (e.g. Combat, Woodcutting, Mining, Fishing). Each skill has an XP value and a derived level. Performing actions in the world awards XP to the relevant skill.
@@ -63,7 +63,7 @@ Combat is tile-based. A player can attack another player or NPC if they are with
 Players carry items in a fixed-size inventory grid. Items can be picked up from world tiles or dropped onto them. Item quantities are tracked per slot.
 
 ### NPCs
-NPCs are spawned at fixed points within regions. They have a mesh, a name label, and can be interacted with for dialogue or trade.
+NPCs have a fixed home position in world coordinates `(x, y, z)` — defined once, outside of chunk data. They have a mesh, a name label, and can be interacted with for dialogue or trade. NPC definitions are loaded as a separate layer after terrain, so the world is always ready before any entity needs to path against it.
 
 ### Quests
 Quests have three states: not started, in progress, and complete. Completion is tracked via a state machine. Completing a quest awards XP or items.
@@ -80,15 +80,20 @@ World
 ```
 
 ### Tile
-The smallest unit of the world. A tile is identified by its coordinates `x, y, z`. Tiles marked `walkable: false` contain a static impassable object such as a wall, rock, or water. Players and NPCs can occupy the same walkable tile simultaneously.
-
-```ts
-Tile {
-  walkable: boolean
-}
-```
+The smallest unit of the world. A tile is identified by its coordinates `x, y, z`. Tiles marked `walkable: false` are impassable — water, walls, rocks etc. Players and NPCs can occupy the same walkable tile simultaneously.
 
 Tiles are stored in a map keyed by `"x,y,z"` — coordinates are the key, not stored inside the tile.
+
+Each tile has a type and a height (`y`):
+
+\```ts
+Tile {
+  type: TileType  // GRASS | WATER | STONE | SAND | PATH
+  y: TileHeight   // 0 | 0.25 | 0.5 | 0.75 | 1 | 2 | 3
+}
+\```
+
+`TileHeight` values: `GROUND (0)`, `SLOPE_LOW (0.25)`, `SLOPE_MID (0.5)`, `SLOPE_HIGH (0.75)`, `FIRST_FLOOR (1)`, `SECOND_FLOOR (2)`, `THIRD_FLOOR (3)`
 
 ### Chunk
 
@@ -97,13 +102,13 @@ A 16x16 block of tiles (256 tiles total). Chunks are the unit of streaming — o
 ```ts
 Chunk {
   chunkX: number
-  chunkY: number
   chunkZ: number
-  tiles: Record<string, Tile>  // key: "x,y,z" local to chunk
+  region: string
+  tiles: Tile[][]
 }
 ```
 
-Each chunk has a position in the world expressed as chunkX, chunkY, chunkZ. The chunk a player occupies is derived directly from their tile coordinates:
+Chunks are static terrain data served directly to the client, not through the game server. The client calculates which chunks are in range on movement and fetches any not already cached. Chunks are cached for the entire session — fetched once, never re-fetched. When the player moves into a new chunk, the newly visible edge chunks are loaded and the opposite edge is evicted.
 
 ```ts
 const chunkX = Math.floor(x / CHUNK_SIZE)  // CHUNK_SIZE = 16
@@ -150,16 +155,54 @@ All game systems — the server, client, and store — speak in world tile coord
 
 ---
 
-## Coordinate System
+## Map System
 
-All positions use tile coordinates x, y, z.
+The world is divided into a grid of **chunks**, each `CHUNK_SIZE × CHUNK_SIZE` tiles. Only chunks near the player are loaded at any time.
 
-- `x` and `z` define position on the horizontal plane
-- `y` defines the vertical layer (0 = ground level, 1 = first floor, -1 = underground etc.)
-- A tile is 1 unit. `TILE_SIZE` (the visual size in the 3D world) lives only in `tiles.ts`
-- A chunk is 16x16 tiles on the x/z plane — y layers are defined per tile
-- `snapToTile(x, y, z)` is the single source of truth for converting a world position to a tile coordinate
-- The server, store, and all types speak in tile coordinates — only the renderer cares about `TILE_SIZE`
+World (infinite grid of chunks)
+└── Chunk (16×16 tiles)
+└── Tile (1×1 unit — has a type: grass, water, stone, sand, path)
+
+text
+
+### Coordinate System
+
+Each tile has a world tile coordinate `(tx, tz)`. To find which chunk it belongs to:
+
+- `chunkX = Math.floor(tx / CHUNK_SIZE)`
+- `chunkZ = Math.floor(tz / CHUNK_SIZE)`
+
+Local position within that chunk:
+
+- `localX = tx % CHUNK_SIZE`
+- `localZ = tz % CHUNK_SIZE`
+
+### Loading Strategy
+
+World data loads in tiers to minimise initial load time:
+
+1. **World map** — region metadata and chunk boundaries, no tile data yet
+2. **Terrain** — tile data for chunks near the player, streamed as they move
+3. **Objects / Interactables** — loaded for visible chunks only
+4. **Entities (NPCs, players)** — last, terrain must exist before entities path against it
+
+Each layer is cached independently. The world map is nearly static and cached aggressively. Terrain chunks are cached for the session. Entities are always live.
+
+### Tile Types
+
+- `GRASS` — default terrain
+- `WATER` — impassable
+- `STONE` — walkable hard surface
+- `SAND` — walkable soft surface
+- `PATH` — walkable road/trail
+
+### Files
+
+- `src/game-client/constants.ts` — `TILE_SIZE`, `CHUNK_SIZE`
+- `src/game-client/chunks.ts` — `Chunk` class, spawns and disposes tile meshes
+- `src/game-client/chunk-manager.ts` — tracks loaded chunks, triggers load/unload on player movement
+- `src/types/mmo/tile.ts` — `TileType` enum
+- `src/types/mmo/chunk.ts` — `ChunkData` type (16×16 tile array + chunk coords)
 
 ---
 
@@ -178,36 +221,38 @@ All positions use tile coordinates x, y, z.
 ```
 src/
 ├── app/
-│ ├── api/              # login, register API routes
-│ ├── login/            # login page
-│ └── game/             # game page
-├── game-client/    
-│ ├── index.ts          # singleton init/destroy
-│ ├── engine.ts         # Engine + Scene
-│ ├── camera.ts         # camera
-│ ├── world.ts          # ground, lighting
-│ ├── grid.ts           # tile grid overlay
-│ ├── players.ts        # player meshes
-│ └── tiles.ts          # snapToTile, TILE_SIZE, CHUNK_SIZE
-├── presentation/   
-│ ├── 1-atoms/          # buttons, inputs
-│ ├── 2-molecules/      # form fields, UI groups
-│ ├── 3-organisms/      # GameCanvas, LoginForm
-│ ├── 4-layouts/        # BaseLayout
-│ └── 5-pages/          # GamePage, LoginPage 
-├── types/    
-│ └── mmo/    
-│   ├── tile.ts   
-│   ├── chunk.ts    
-│   ├── region.ts   
-│   ├── player.ts   
-│   ├── network.ts    
-│   └── game-state.ts   
-└── utils/    
-├── game-store.ts       # Zustand store
-├── ws-client.ts        # WebSocket connection
-├── http.ts             # Axios wrapper
-└── response.ts         # API response helpers
+│ ├── api/                # login, register API routes
+│ ├── login/              # login page
+│ └── game/               # game page
+├── game-client/      
+│ ├── index.ts            # singleton init/destroy
+│ ├── engine.ts           # Engine + Scene
+│ ├── camera.ts           # camera
+│ ├── constants.ts        # TILE_SIZE, CHUNK_SIZE, camera constants
+│ ├── world.ts            # ground, lighting
+│ ├── grid.ts             # tile grid overlay
+│ ├── players.ts          # player meshes
+│ ├── chunks.ts           # Chunk class, tile mesh spawning
+│ └── chunk-manager.ts    # load/unload chunks around player
+├── presentation/     
+│ ├── 1-atoms/            # buttons, inputs
+│ ├── 2-molecules/        # form fields, UI groups
+│ ├── 3-organisms/        # GameCanvas, LoginForm
+│ ├── 4-layouts/          # BaseLayout
+│ └── 5-pages/            # GamePage, LoginPage 
+├── types/      
+│ └── mmo/      
+│   ├── tile.ts     
+│   ├── chunk.ts      
+│   ├── region.ts     
+│   ├── player.ts     
+│   ├── network.ts      
+│   └── game-state.ts     
+└── utils/      
+├── game-store.ts         # Zustand store
+├── ws-client.ts          # WebSocket connection
+├── http.ts               # Axios wrapper
+└── response.ts           # API response helpers
 ```
 
 ## Naming Conventions
