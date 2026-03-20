@@ -25,7 +25,8 @@ const GameCanvas = ({ token }: GameCanvasProps) => {
     <canvas
       ref={canvasRef}
       id="game"
-      className="w-screen h-screen fixed top-0 left-0 z-50"
+      style={{ width: '100vw', height: '100vh' }}
+      className="fixed top-0 left-0 z-50 block"
     />
   );
 };

@@ -10,6 +10,7 @@ export class GameEngine {
       stencil: true,
       disableWebGL2Support: false,
     });
+    this.engine.resize();
     this.scene = new Scene(this.engine);
     this.scene.clearColor = new Color4(0.53, 0.81, 0.98, 1); // sky blue
 

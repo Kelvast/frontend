@@ -20,6 +20,6 @@ export interface Region {
   spawnPoint: { x: number, y: number, z: number }
 }
 
-interface World {
+export interface World {
   regions: Record<string, Region>  // key: region id
 }

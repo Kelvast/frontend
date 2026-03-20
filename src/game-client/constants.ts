@@ -1,12 +1,11 @@
+// Tile & chunk dimensions
+export const TILE_SIZE = 1;
 export const CHUNK_SIZE = 16;
 
-export const TILE_SIZE = 32;
-export const TILE_COUNT = 21;
-export const WORLD_ORIGIN = 512 * 32;
-export const HALF_TILES = Math.floor(TILE_COUNT / 2);
+// Player mesh
+export const PLAYER_SIZE = 1; // same as a tile
 
-export const PLAYER_SIZE = 20;
-
+// Camera
 export const MIN_ZOOM = 5;
 export const MAX_ZOOM = 40;
 export const DEFAULT_ALPHA = -Math.PI / 2;

@@ -20,7 +20,13 @@ let _players: PlayerManager | null = null;
 export function initGame(canvas: HTMLCanvasElement): void {
   if (_engine) return; // already running
 
+  console.log('canvas dims:', canvas.width, canvas.height);
+  console.log('canvas client dims:', canvas.clientWidth, canvas.clientHeight);
+  
   _engine = new GameEngine(canvas);
+  
+  console.log('engine size:', _engine.engine.getRenderWidth(), _engine.engine.getRenderHeight());
+  console.log('scene meshes:', _engine.scene.meshes.length);
   const scene = _engine.scene;
 
   new GameWorld(scene);
@@ -41,12 +47,32 @@ export function initGame(canvas: HTMLCanvasElement): void {
     }
   });
 
-  // Single render loop — reads store directly
+  let logged = false;
   _engine.engine.runRenderLoop(() => {
-    const { nearbyPlayers, myId } = useGameStore.getState();
-    _players!.syncPlayers(nearbyPlayers, myId ?? '');
+    if (!logged) {
+      console.log('render loop running');
+      console.log('camera target:', _camera!.camera.target);
+      console.log('camera position:', _camera!.camera.position);
+      console.log('meshes in scene:', _engine!.scene.meshes.length);
+      logged = true;
+    }
     scene.render();
   });
+
+  // Single render loop — reads store directly
+  _engine.engine.runRenderLoop(() => {
+    console.log('cam target:', _camera!.camera.target);  // should show (0,1,0)
+    console.log('local mesh:', _players!.getLocalPlayer()?.position); // should show 
+    const { nearbyPlayers, myId } = useGameStore.getState();
+    _players!.syncPlayers(nearbyPlayers, myId ?? '');
+
+    // Add these two lines
+    const localPos = _players!.getLocalPlayer()?.position;
+    if (localPos) _camera!.followPlayer(localPos);
+
+    scene.render();
+  });
+
 }
 
 export function connectGame(token: string): void {
