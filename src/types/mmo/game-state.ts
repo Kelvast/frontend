@@ -1,10 +1,9 @@
 import { PlayerInitMsg, TickMsg } from "../ws-protocol";
 import { PlayerState } from "./player";
+import { UserSettings } from "./settings";
 
 export interface GameStoreState {
-  // State
   myId: string | null;
-  player: PlayerState | null;
   nearbyPlayers: PlayerState[];
   worldTime: number;
   isConnected: boolean;
@@ -12,13 +11,13 @@ export interface GameStoreState {
   sessionToken: string | null;
   sessionExpiresAt: number | null;
   indexRegistry: Map<number, string>;
+  settings: UserSettings;
 
-  // Actions
   setMyId: (id: string) => void;
-  updatePlayer: (player: PlayerState) => void;
   setConnected: (connected: boolean) => void;
   setLatency: (latency: number) => void;
   setSession: (session: { sessionToken: string; sessionExpiresAt: number }) => void;
+  updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;
   registerPlayer: (msg: PlayerInitMsg) => void;
   unregisterPlayer: (index: number) => void;
   applyTick: (msg: TickMsg) => void;

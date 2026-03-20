@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { GameStoreState, PlayerState } from "../types";
+import { UserSettings } from "../types/mmo/settings";
+import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
+import { defaultSkills } from "../types/mmo/skills";
 
-export const useGameStore = create<GameStoreState>((set, get) => ({
+export const useGameStore = create<GameStoreState>((set) => ({
   myId: null,
-  player: null,
   nearbyPlayers: [],
   worldTime: 0,
   isConnected: false,
@@ -12,6 +14,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   sessionToken: null,
   sessionExpiresAt: null,
   indexRegistry: new Map(),
+  settings: loadSettings(),
 
   setMyId: (id: string) => {
     logger.game("My ID set:", id);
@@ -30,29 +33,23 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     set({ sessionToken, sessionExpiresAt });
   },
 
-  // Used only for the local player hydration from the `state` tick
-  updatePlayer: (player) =>
-    set((state) => {
-      const exists = state.nearbyPlayers.some((p) => p.id === player.id);
-      logger.game("Local player updated:", player.id);
-      return {
-        nearbyPlayers: exists
-          ? state.nearbyPlayers.map((p) => (p.id === player.id ? { ...p, ...player } : p))
-          : [...state.nearbyPlayers, player],
-      };
-    }),
+  updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
+    const updated = patchSettings(key, value);
+    logger.game(`Settings updated — ${key}:`, value);
+    set({ settings: updated });
+  },
 
   registerPlayer: (msg) =>
     set((state) => {
       const registry = new Map(state.indexRegistry);
       registry.set(msg.index, msg.id);
-      const exists = state.nearbyPlayers.some((p) => p.id === msg.id);
       const player: PlayerState = {
         id: msg.id,
         name: msg.name,
-        position: { x: msg.x, y: 0, z: msg.y },
+        position: { x: msg.x, y: msg.y, z: msg.z },
         facing: 0,
         isMoving: false,
+        pace: "walk",
         lastUpdated: Date.now(),
         animationState: "idle",
         stats: {
@@ -62,9 +59,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
           experience: 0,
           mana: 0,
           maxMana: 0,
+          skills: defaultSkills(),
         },
       };
       logger.game("Player registered — index:", msg.index, "id:", msg.id);
+      const exists = state.nearbyPlayers.some((p) => p.id === msg.id);
       return {
         indexRegistry: registry,
         nearbyPlayers: exists
@@ -85,12 +84,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       };
     }),
 
-  applyTick: ({ t, p }) =>
+  applyTick: ({ p }) =>
     set((state) => {
       const updates = new Map(
-        p.map(([idx, x, y, facing, hp]) => {
+        p.map(([idx, x, y, z, facing, hp]) => {
           const id = state.indexRegistry.get(idx);
-          return [id, { position: { x, y: 0, z: y }, facing, isMoving: x !== 0 || y !== 0, hp }];
+          return [id, { position: { x, y, z }, facing, isMoving: true, hp }];
         }),
       );
       return {

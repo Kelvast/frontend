@@ -9,15 +9,11 @@ interface GameCanvasProps {
 
 const GameCanvas = ({ token }: GameCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const initialized = useRef(false);
 
   useEffect(() => {
-    if (!canvasRef.current || initialized.current) return;
-    initialized.current = true;
-
+    if (!canvasRef.current) return;
     initGame(canvasRef.current);
     connectGame(token);
-
     return () => destroyGame();
   }, []);
 

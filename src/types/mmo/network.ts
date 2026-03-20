@@ -1,16 +1,12 @@
-import { PlayerState } from "./player";
-import { Position } from "./position";
+export type { LoginSuccessMsg, PlayerInitMsg, PlayerLeaveMsg, AuthFailMsg, TickMsg, PlayerDelta } from "../ws-protocol";
 
-export type WSMessage =
-  | { type: "init"; myId: string; players: PlayerState[] }
-  | { type: "player_update"; playerId: string; position: Position }
-  | { type: "player_join"; player: PlayerState }
-  | { type: "player_leave"; playerId: string }
-  | { type: "ping"; latency: number };
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+}
 
-export type WSMessageType = WSMessage["type"];
-
-export interface AuthResponse {
-  token: string;
-  userId: string;
+export interface LoginPayload {
+  email: string;
+  password: string;
 }

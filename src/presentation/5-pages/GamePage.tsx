@@ -1,16 +1,23 @@
 "use client";
-import { FC, memo, PropsWithChildren, ReactNode, useEffect, useState } from "react";
+import { FC, memo, PropsWithChildren, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import GameCanvas from "../3-organisms/GameCanvas";
 import BaseLayout from "../4-layouts/BaseLayout";
+import { DEV_MODE } from "../../utils/dev";
 
 interface Props {}
 
 const GamePage: FC<Props> = () => {
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string>("");
+  const [ready, setReady] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    if (DEV_MODE) {
+      setReady(true);
+      return;
+    }
+
     const storedToken =
       localStorage.getItem("mmo-token") ||
       document.cookie
@@ -24,9 +31,10 @@ const GamePage: FC<Props> = () => {
     }
 
     setToken(storedToken);
+    setReady(true);
   }, [router]);
 
-  if (!token) {
+  if (!ready) {
     return (
       <BaseLayout className="bg-black">
         <div className="flex items-center justify-center min-h-screen text-white text-xl">

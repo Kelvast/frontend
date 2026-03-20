@@ -1,19 +1,25 @@
-import { Scene, HemisphericLight, Vector3, DirectionalLight, Color3 } from "@babylonjs/core";
-import { Chunk } from "./chunk";
-import { spawnChunk1 } from "./regions/spawn/chunk-1";
+import { Scene, HemisphericLight, Vector3, DirectionalLight, Color3, HighlightLayer } from "@babylonjs/core";
+import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
+import { Region } from "../../types";
+import { DEV_MODE } from "../../utils/dev";
 
 export class GameWorld {
-  private chunks: Map<string, Chunk> = new Map();
+  private regions: Map<string, GameRegion> = new Map();
+  private highlightLayer: HighlightLayer | undefined;
 
   constructor(private scene: Scene) {
     logger.game("Initialising world");
+    if (DEV_MODE) {
+      this.highlightLayer = new HighlightLayer("tileHighlight", scene);
+      this.highlightLayer.innerGlow = false;
+      this.highlightLayer.outerGlow = false;
+    }
     this._setupLighting();
-    this._loadInitialChunks();
     logger.game("World ready");
   }
 
-  private _setupLighting() {
+  private _setupLighting(): void {
     const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), this.scene);
     ambient.intensity = 0.6;
     ambient.diffuse = new Color3(1, 1, 1);
@@ -25,34 +31,27 @@ export class GameWorld {
     logger.game("Lighting set up");
   }
 
-  private _loadInitialChunks() {
-    logger.game("Loading initial chunks");
-    this._loadChunk(spawnChunk1);
-  }
-
-  private _loadChunk(data: ConstructorParameters<typeof Chunk>[0]) {
-    const key = `${data.chunkX},${data.chunkZ}`;
-    if (this.chunks.has(key)) {
-      logger.warn(`Chunk ${key} already loaded — skipping`);
+  loadRegion(data: Region): void {
+    if (this.regions.has(data.id)) {
+      logger.game(`Region "${data.id}" already loaded — skipping`);
       return;
     }
-    this.chunks.set(key, new Chunk(data, this.scene));
-    logger.game(`Chunk ${key} loaded — total loaded: ${this.chunks.size}`);
+    this.regions.set(data.id, new GameRegion(data, this.scene, this.highlightLayer));
   }
 
-  private _unloadChunk(chunkX: number, chunkZ: number) {
-    const key = `${chunkX},${chunkZ}`;
-    const chunk = this.chunks.get(key);
-    if (chunk) {
-      chunk.dispose();
-      this.chunks.delete(key);
-      logger.game(`Chunk ${key} unloaded — total loaded: ${this.chunks.size}`);
+  reloadRegion(fresh: Region): void {
+    const region = this.regions.get(fresh.id);
+    if (region) {
+      region.reloadAll(fresh);
+    } else {
+      this.loadRegion(fresh);
     }
   }
 
-  dispose() {
+  dispose(): void {
     logger.game("Disposing world");
-    this.chunks.forEach((chunk) => chunk.dispose());
-    this.chunks.clear();
+    this.regions.forEach((r) => r.dispose());
+    this.regions.clear();
+    this.highlightLayer?.dispose();
   }
 }

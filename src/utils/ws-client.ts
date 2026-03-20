@@ -2,7 +2,8 @@
 
 import { useGameStore } from "./game-store";
 import { logger } from "./logger";
-import { getDevCredentials } from "./dev";
+import { DEV_MODE, getDevCredentials } from "./dev";
+import { UserSettings } from "../types/mmo/settings";
 
 let ws: WebSocket | null = null;
 
@@ -28,22 +29,17 @@ export const connectWS = (token?: string) => {
   };
 
   ws.onmessage = (event) => {
-    const bytes = new Blob([event.data]).size;
-    logger.ws("← payload size:", bytes, "bytes", `(${(bytes / 1024).toFixed(2)}kb)`);
     const data = JSON.parse(event.data);
-    logger.ws("←", data.type, data);
+
+    if (data.type !== "tick") {
+      const bytes = new Blob([event.data]).size;
+      logger.ws("← payload size:", bytes, "bytes", `(${(bytes / 1024).toFixed(2)}kb)`);
+      logger.ws("←", data.type, data);
+    }
 
     switch (data.type) {
-      case "authResponse":
-        if (data.success) {
-          logger.ws("Auth successful");
-        } else {
-          logger.error("Auth failed:", data.message);
-        }
-        break;
-
-      case "loginSuccess":
-        logger.ws("Login success — id:", data.id);
+      case "login_success":
+        logger.ws("Login success — index:", data.index, "id:", data.id);
         useGameStore.getState().setMyId(String(data.id));
         useGameStore.getState().setSession({
           sessionToken: data.sessionToken,
@@ -51,31 +47,28 @@ export const connectWS = (token?: string) => {
         });
         break;
 
-      // TODO: Remove once server sends player_init/tick/player_leave protocol
-      case "state": {
-        const { indexRegistry } = useGameStore.getState();
-        data.players.forEach((p: any) => {
-          if (indexRegistry.has(p.id)) return; // already registered, tick will handle updates
-          useGameStore.getState().registerPlayer({
-            index: p.id,
-            id: String(p.id),
-            name: p.name ?? String(p.id),
-            hp: p.hp ?? 100,
-            maxHp: p.maxHp ?? 100,
-            x: p.x,
-            y: p.y,
-          });
-        });
-
-        // Unregister players no longer in the state broadcast
-        const incomingIds = new Set(data.players.map((p: any) => p.id));
-        indexRegistry.forEach((_, index) => {
-          if (!incomingIds.has(index)) useGameStore.getState().unregisterPlayer(index);
-        });
-
-        logger.ws("State (legacy) — players:", data.players.length);
+      case "auth_fail":
+        if (DEV_MODE) {
+          const dev = getDevCredentials()!;
+          logger.ws("Dev mode — account not found, auto-registering");
+          ws!.send(JSON.stringify({
+            type: "register",
+            name: "DevPlayer",
+            email: dev.email,
+            password: dev.password,
+          }));
+        } else {
+          logger.error("Auth failed:", data.message);
+        }
         break;
-      }
+
+      case "register_success":
+        if (DEV_MODE) {
+          const dev = getDevCredentials()!;
+          logger.ws("Dev mode — registered, logging in");
+          ws!.send(JSON.stringify({ type: "login", email: dev.email, password: dev.password }));
+        }
+        break;
 
       case "player_init":
         logger.ws("Player init — index:", data.index, "id:", data.id);
@@ -107,11 +100,18 @@ export const connectWS = (token?: string) => {
   };
 };
 
-export const sendPlayerUpdate = (position: { x: number; y: number; z: number }) => {
+export const sendPlayerMove = (x: number, y: number, z: number, facing: number) => {
   if (ws?.readyState === WebSocket.OPEN) {
-    logger.ws("→ player_move", position);
-    ws.send(JSON.stringify({ type: "player_move", position }));
+    logger.ws("→ player_move", { x, y, z, facing });
+    ws.send(JSON.stringify({ type: "player_move", x, y, z, facing }));
   } else {
-    logger.warn("sendPlayerUpdate called but WS not open");
+    logger.warn("sendPlayerMove called but WS not open");
+  }
+};
+
+export const sendSettings = (settings: UserSettings): void => {
+  if (ws?.readyState === WebSocket.OPEN) {
+    logger.ws("→ save_settings", settings);
+    ws.send(JSON.stringify({ type: "save_settings", settings }));
   }
 };

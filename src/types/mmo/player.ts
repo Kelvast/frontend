@@ -1,4 +1,8 @@
 import { Position } from "./position";
+import { MovementType } from "../../game-client/movement";
+import { Skills } from "./skills";
+
+export type AnimationState = MovementType | "idle" | "attacking";
 
 export interface PlayerStats {
   level: number;
@@ -7,6 +11,7 @@ export interface PlayerStats {
   maxHealth: number;
   mana: number;
   maxMana: number;
+  skills: Skills;
 }
 
 export interface PlayerState {
@@ -16,6 +21,7 @@ export interface PlayerState {
   facing: number;
   stats: PlayerStats;
   isMoving: boolean;
+  pace: MovementType;
   lastUpdated: number;
-  animationState?: "idle" | "walking" | "running" | "attacking";
+  animationState: AnimationState;
 }
