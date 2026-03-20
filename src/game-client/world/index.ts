@@ -1,4 +1,11 @@
-import { Scene, HemisphericLight, Vector3, DirectionalLight, Color3, HighlightLayer } from "@babylonjs/core";
+import {
+  Scene,
+  HemisphericLight,
+  Vector3,
+  DirectionalLight,
+  Color3,
+  HighlightLayer,
+} from "@babylonjs/core";
 import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
 import { Region } from "../../types";

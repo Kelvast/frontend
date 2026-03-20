@@ -1,3 +1,5 @@
+import { xpToLevel } from "../../utils/xp";
+
 export const SKILL_NAMES = [
   "attack",
   "strength",
@@ -33,8 +35,10 @@ export interface Skill {
 
 export type Skills = Record<SkillName, Skill>;
 
+export function skillFromXp(xp: number): Skill {
+  return { level: xpToLevel(xp), xp };
+}
+
 export function defaultSkills(): Skills {
-  return Object.fromEntries(
-    SKILL_NAMES.map((name) => [name, { level: 1, xp: 0 }]),
-  ) as Skills;
+  return Object.fromEntries(SKILL_NAMES.map((name) => [name, skillFromXp(0)])) as Skills;
 }

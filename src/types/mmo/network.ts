@@ -1,4 +1,11 @@
-export type { LoginSuccessMsg, PlayerInitMsg, PlayerLeaveMsg, AuthFailMsg, TickMsg, PlayerDelta } from "../ws-protocol";
+export type {
+  LoginSuccessMsg,
+  PlayerInitMsg,
+  PlayerLeaveMsg,
+  AuthFailMsg,
+  TickMsg,
+  PlayerDelta,
+} from "../ws-protocol";
 
 export interface RegisterPayload {
   name: string;

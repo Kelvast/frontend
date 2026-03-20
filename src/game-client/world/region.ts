@@ -25,8 +25,9 @@ export class GameRegion {
   private hasChanged(key: string, fresh: ChunkData): boolean {
     const current = this.rawData.get(key);
     if (!current) return true;
-    return JSON.stringify(current.tiles) !== JSON.stringify(fresh.tiles) ||
-      current.pvp !== fresh.pvp;
+    return (
+      JSON.stringify(current.tiles) !== JSON.stringify(fresh.tiles) || current.pvp !== fresh.pvp
+    );
   }
 
   reloadChunk(key: string, chunkData: ChunkData): void {

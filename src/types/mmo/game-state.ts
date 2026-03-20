@@ -1,4 +1,4 @@
-import { PlayerInitMsg, TickMsg } from "../ws-protocol";
+import { PlayerInitMsg, TickMsg, LoginSuccessMsg } from "../ws-protocol";
 import { PlayerState } from "./player";
 import { UserSettings } from "./settings";
 
@@ -18,6 +18,7 @@ export interface GameStoreState {
   setLatency: (latency: number) => void;
   setSession: (session: { sessionToken: string; sessionExpiresAt: number }) => void;
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;
+  hydrateLocalPlayer: (msg: LoginSuccessMsg) => void;
   registerPlayer: (msg: PlayerInitMsg) => void;
   unregisterPlayer: (index: number) => void;
   applyTick: (msg: TickMsg) => void;
