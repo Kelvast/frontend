@@ -8,7 +8,7 @@ import { DEV_MODE } from "../../utils/dev";
 interface Props {}
 
 const GamePage: FC<Props> = () => {
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string>("");
   const [ready, setReady] = useState(false);
   const router = useRouter();
 
@@ -46,7 +46,7 @@ const GamePage: FC<Props> = () => {
 
   return (
     <BaseLayout className="bg-black">
-      <GameCanvas token={token ?? undefined} />
+      <GameCanvas token={token} />
     </BaseLayout>
   );
 };

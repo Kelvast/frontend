@@ -5,3 +5,20 @@ interface ImportMeta {
     dispose(cb: () => void): void;
   };
 }
+
+interface RequireContext {
+  keys(): string[];
+  (id: string): any;
+  resolve(id: string): string;
+  id: string;
+}
+
+interface Require {
+  context(
+    directory: string,
+    useSubdirectories: boolean,
+    regExp: RegExp,
+  ): RequireContext;
+}
+
+declare const require: Require;

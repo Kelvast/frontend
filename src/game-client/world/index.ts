@@ -1,10 +1,10 @@
 import { Scene, HemisphericLight, Vector3, DirectionalLight, Color3 } from "@babylonjs/core";
-import { Chunk } from "./chunk";
+import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
-import type { ChunkData } from "../../types";
+import type { Region } from "../../types";
 
 export class GameWorld {
-  private chunks: Map<string, Chunk> = new Map();
+  private regions: Map<string, GameRegion> = new Map();
 
   constructor(private scene: Scene) {
     logger.game("Initialising world");
@@ -12,7 +12,7 @@ export class GameWorld {
     logger.game("World ready");
   }
 
-  private _setupLighting() {
+  private _setupLighting(): void {
     const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), this.scene);
     ambient.intensity = 0.6;
     ambient.diffuse = new Color3(1, 1, 1);
@@ -24,30 +24,26 @@ export class GameWorld {
     logger.game("Lighting set up");
   }
 
-  loadChunk(data: ChunkData) {
-    const key = `${data.chunkX},${data.chunkZ}`;
-    if (this.chunks.has(key)) {
-      logger.warn(`Chunk ${key} already loaded — skipping`);
+  loadRegion(data: Region): void {
+    if (this.regions.has(data.id)) {
+      logger.game(`Region "${data.id}" already loaded — skipping`);
       return;
     }
-    this.chunks.set(key, new Chunk(data, this.scene));
-    logger.game(`Chunk ${key} loaded — total loaded: ${this.chunks.size}`);
+    this.regions.set(data.id, new GameRegion(data, this.scene));
   }
 
-  reloadChunk(data: ChunkData) {
-    const key = `${data.chunkX},${data.chunkZ}`;
-    const existing = this.chunks.get(key);
-    if (existing) {
-      existing.dispose();
-      this.chunks.delete(key);
+  reloadRegion(fresh: Region): void {
+    const region = this.regions.get(fresh.id);
+    if (region) {
+      region.reloadAll(fresh);
+    } else {
+      this.loadRegion(fresh);
     }
-    this.chunks.set(key, new Chunk(data, this.scene));
-    logger.game(`Chunk ${key} reloaded`);
   }
 
-  dispose() {
+  dispose(): void {
     logger.game("Disposing world");
-    this.chunks.forEach((chunk) => chunk.dispose());
-    this.chunks.clear();
+    this.regions.forEach((r) => r.dispose());
+    this.regions.clear();
   }
 }

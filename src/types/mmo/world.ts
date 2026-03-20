@@ -37,16 +37,16 @@ export interface ChunkData {
   chunkX: number;
   chunkZ: number;
   region: string;
-  tiles: Tile[][]; // [row][col] — 16×16
+  pvp: boolean;
+  tiles: Tile[][];
 }
 
 export interface Region {
   id: string;
   name: string;
-  pvp: boolean;
-  chunks: Record<string, ChunkData>; // key: "chunkX,chunkZ"
+  chunks: Record<string, ChunkData>;
 }
 
 export interface World {
-  regions: Record<string, Region>; // key: region id
+  regions: Record<string, Region>;
 }
