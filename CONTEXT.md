@@ -7,7 +7,7 @@
 ## Project
 
 Browser-based 3D MMO client. Next.js (App Router) + Babylon.js + Zustand.
-Server is a separate repo (`mmo-server`), written in Node.js/TypeScript.
+Server is a separate repo (`mmo-server`), written in Node.js/TypeScript, deployed to AWS EC2 via SST v3 IaC.
 
 ***
 
@@ -25,56 +25,56 @@ Server is a separate repo (`mmo-server`), written in Node.js/TypeScript.
 
 ## Folder Structure (actual)
 
-```
+```bash
 src/
 ├── app/
-│   ├── api/              # Next.js API routes (login, register)
-│   ├── game/             # Game page
-│   ├── login/            # Login page
-│   ├── layout.tsx        # Root layout
-│   ├── page.ts           # Root redirect
-│   ├── error.ts
-│   └── not-found.ts
-├── game-client/
-│   ├── index.ts          # initGame / connectGame / destroyGame singleton
-│   ├── engine.ts         # GameEngine class (Babylon Engine + Scene)
-│   ├── camera.ts         # GameCamera class (arc rotate, WASD camera only)
-│   ├── input.ts          # Click → snapToTile → sendPlayerUpdate
-│   ├── constants.ts      # TILE_SIZE, CHUNK_SIZE, camera constants
-│   ├── entities/
-│   │   ├── players.ts    # PlayerManager class — local + remote player meshes
-│   │   └── npcs.ts       # Empty placeholder — not yet implemented
-│   └── world/
-│       ├── index.ts      # GameWorld class
-│       ├── chunk.ts      # Chunk class — spawns/disposes tile meshes from ChunkData
-│       ├── tile-config.ts # TILE_CONFIG — color + walkable per TileType
+│   ├── api/                        # Next.js API routes (login, register)
+│   ├── game/                       # Game page
+│   ├── login/                      # Login page
+│   ├── layout.tsx                  # Root layout
+│   ├── page.ts                     # Root redirect
+│   ├── error.ts          
+│   └── not-found.ts          
+├── game-client/          
+│   ├── index.ts                    # initGame / connectGame / destroyGame singleton
+│   ├── engine.ts                   # GameEngine class (Babylon Engine + Scene)
+│   ├── camera.ts                   # GameCamera class (arc rotate, WASD camera only)
+│   ├── input.ts                    # Click → snapToTile → sendPlayerUpdate
+│   ├── constants.ts                # TILE_SIZE, CHUNK_SIZE, camera constants
+│   ├── entities/         
+│   │   ├── players.ts              # PlayerManager class — local + remote player meshes
+│   │   └── npcs.ts                 # Empty placeholder — not yet implemented
+│   └── world/          
+│       ├── index.ts                # GameWorld class
+│       ├── chunk.ts                # Chunk class — spawns/disposes tile meshes from ChunkData
+│       ├── tile-config.ts          # TILE_CONFIG — color + walkable per TileType
 │       └── regions/
 │           └── spawn/
-│               └── chunk-1.ts  # First hand-authored ChunkData (16×16 tile grid)
+│               └── chunk-1.ts      # First hand-authored ChunkData (16×16 tile grid)
 ├── presentation/
 │   ├── 1-atoms/
 │   ├── 2-molecules/
-│   ├── 3-organisms/      # GameCanvas, LoginForm
-│   ├── 4-layouts/
-│   └── 5-pages/
-├── types/
-│   ├── index.ts          # Re-exports all mmo types
-│   └── mmo/
-│       ├── world.ts      # TileType, TileHeight, TILE_WALKABLE, Tile, tile(), ChunkData, Region, World
-│       ├── player.ts     # PlayerStats, PlayerState
-│       ├── position.ts   # Position, Rotation
-│       ├── network.ts    # WSMessage union, PlayerInitMsg, TickMsg, PlayerDelta
-│       ├── game-state.ts # GameStoreState
-│       └── entities.ts   # (stub)
-├── utils/
-│   ├── game-store.ts     # Zustand store
-│   ├── ws-client.ts      # WebSocket connection + message handling
-│   ├── http.ts           # Axios wrapper
-│   ├── response.ts       # API response helpers
-│   └── site.ts           # Site metadata / config helpers
-└── config/               # App-level config
-```
+│   ├── 3-organisms/                # GameCanvas, LoginForm
+│   ├── 4-layouts/          
+│   └── 5-pages/          
+├── types/          
+│   ├── index.ts                    # Re-exports all mmo types
+│   └── mmo/          
+│       ├── world.ts                # TileType, TileHeight, TILE_WALKABLE, Tile, tile(), ChunkData, Region, World
+│       ├── player.ts               # PlayerStats, PlayerState
+│       ├── position.ts             # Position, Rotation
+│       ├── network.ts              # WSMessage union, PlayerInitMsg, TickMsg, PlayerDelta — canonical protocol contract
+│       ├── game-state.ts           # GameStoreState
+│       └── entities.ts             # (stub)
+├── utils/          
+│   ├── game-store.ts               # Zustand store
+│   ├── ws-client.ts                # WebSocket connection + message handling
+│   ├── http.ts                     # Axios wrapper
+│   ├── response.ts                 # API response helpers
+│   └── site.ts                     # Site metadata / config helpers
+└── config/                         # App-level config
 
+```
 
 ***
 
@@ -99,7 +99,6 @@ src/
 | Chunk manager (load/unload on movement) | ⬜ Not yet built |
 | Server: player_init / tick / player_leave protocol | ⬜ Not yet built (client ready, server pending) |
 | Skills, combat, inventory, quests | ⬜ Not yet built |
-
 
 ***
 
@@ -132,32 +131,123 @@ src/
 
 ***
 
-## Network Protocol (current, from `src/types/mmo/network.ts`)
+## Network Protocol (canonical contract)
+
+`src/types/mmo/network.ts` is the **source of truth** for all WS message shapes. The server's
+`src/types/network.ts` must be kept manually in sync with this file. Do not diverge them.
 
 ```ts
-// Target protocol (client ready, server not yet sending):
-export interface PlayerInitMsg {
-  type?: "player_init"
-  index: number
-  id: string
+// Server → Client
+
+interface PlayerInitMsg {
+  type: "player_init"
+  index: number       // session-scoped integer, used for delta updates
+  id: string          // persistent UUID
   name: string
   hp: number
   maxHp: number
+  x: number           // world tile x
+  y: number           // world tile y
+}
+
+type PlayerDelta = [index: number, x: number, y: number, facing: number, hp: number]
+
+interface TickMsg {
+  type: "tick"
+  t: number           // server timestamp ms
+  p: PlayerDelta[]    // only players whose state changed since last tick
+}
+
+interface PlayerLeaveMsg {
+  type: "player_leave"
+  index: number
+}
+
+interface LoginSuccessMsg {
+  type: "login_success"
+  index: number
+  id: string
   x: number
   y: number
+  hp: number
+  sessionToken: string
+  sessionExpiresAt: number
 }
 
-export type PlayerDelta = [index: number, x: number, y: number, facing: number, hp: number]
-
-export interface TickMsg {
-  t: number           // server timestamp
-  p: PlayerDelta[]    // only changed players
+interface AuthFailMsg {
+  type: "auth_fail"
+  message: string
 }
 
-// Legacy (server currently sends, bridged in ws-client.ts):
-// { type: 'state', players: [...] }  — TODO: remove once server updated
+// Client → Server
+
+interface LoginPacket {
+  type: "login"
+  email: string
+  pass: string
+}
+
+interface RegisterPacket {
+  type: "register"
+  name: string
+  email: string
+  pass: string
+}
+
+interface ResumePacket {
+  type: "resume"
+  token: string
+}
+
+interface ClickPacket {
+  type: "click"
+  targetX: number
+  targetY: number
+}
 ```
 
+
+### Legacy Bridge (temporary, remove once server updated)
+
+The server currently sends `{ type: "state", players: [...] }` and `{ type: "loginSuccess", ... }`.
+These are bridged in `ws-client.ts` until the server is updated to emit the canonical protocol above.
+
+***
+
+## Client / Server Validation Boundary
+
+**This is a firm architectural contract.**
+
+### Client is responsible for:
+
+- All UI-level input validation before any packet is sent:
+    - Email format checks
+    - Password length / complexity requirements
+    - Name length and allowed character checks
+    - Click target is a valid walkable tile (via `TILE_WALKABLE`)
+    - No packets sent while `!isConnected`
+- Preventing duplicate actions (e.g. double-clicking while already moving)
+- Session expiry detection — refresh or re-auth before sending packets
+
+
+### Server is responsible for:
+
+- Auth validation only: bcrypt compare, session token validity, expiry timestamp
+- Game-logic boundary checks: target tile reachability, movement rate limiting (future)
+- Rejecting any structurally invalid packet (missing `type` field, unknown type)
+- Never trusting `ws.playerId` — always cross-reference against the `players` Map
+- Being the **sole authority on game state** — client is display-only
+
+
+### What the server deliberately does NOT do:
+
+- Email format validation
+- Password length / complexity checks
+- Name format validation
+- Any client-side UX concern
+
+This split exists for performance and architectural clarity. It is **not** a security shortcut —
+the server always remains authoritative on all game state and auth decisions.
 
 ***
 
@@ -165,9 +255,9 @@ export interface TickMsg {
 
 | Message | Handler |
 | :-- | :-- |
-| `authResponse` | logs success/failure |
-| `loginSuccess` | `setMyId`, `setSession` |
-| `state` | legacy bridge → `registerPlayer` per player, `unregisterPlayer` for departed (TODO: remove) |
+| `auth_fail` | logs failure, shows UI error |
+| `login_success` | `setMyId`, `setSession` |
+| `state` | **legacy bridge** → `registerPlayer` per player, `unregisterPlayer` for departed (remove once server updated) |
 | `player_init` | `registerPlayer` |
 | `player_leave` | `unregisterPlayer(data.index)` |
 | `tick` | `applyTick` |
@@ -219,6 +309,7 @@ interface World { regions: Record<string, Region> }
 - **Server ticks every 100ms** — delta updates batched, combat/death events immediate
 - **Session index** — client fully implemented; server still sends legacy `state` broadcasts (bridged client-side, TODO)
 - **`player` field in store is unused** — `nearbyPlayers` is the single source of truth; local player identified via `myId`
+- **`src/types/mmo/network.ts` is the canonical protocol contract** — server must match it, not the other way around
 
 ***
 
@@ -256,4 +347,3 @@ interface World { regions: Record<string, Region> }
 - Constants: `UPPER_SNAKE_CASE` (`TILE_SIZE`, `CHUNK_SIZE`, `TILE_CONFIG`)
 - WS message types: `snake_case` strings (`player_move`, `player_join`)
 - Zustand actions: `camelCase` prefixed with verb (`setMyId`, `registerPlayer`)
-
