@@ -1,4 +1,4 @@
-import { HemisphericLight, Vector3, Scene } from '@babylonjs/core';
+import { HemisphericLight, Vector3, Scene } from "@babylonjs/core";
 
 export class GameWorld {
   constructor(private scene: Scene) {
@@ -6,7 +6,7 @@ export class GameWorld {
   }
 
   private init() {
-    const light = new HemisphericLight('worldLight', new Vector3(0, 1, 0), this.scene);
+    const light = new HemisphericLight("worldLight", new Vector3(0, 1, 0), this.scene);
     light.intensity = 0.8;
   }
 }

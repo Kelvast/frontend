@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import { FC, memo, PropsWithChildren, ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import GameCanvas from "../3-organisms/GameCanvas";
@@ -11,14 +11,18 @@ const GamePage: FC<Props> = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('mmo-token') || 
-                       document.cookie.split('; ').find(row => row.startsWith('mmo-token='))?.split('=')[1];
-    
+    const storedToken =
+      localStorage.getItem("mmo-token") ||
+      document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("mmo-token="))
+        ?.split("=")[1];
+
     if (!storedToken) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
-    
+
     setToken(storedToken);
   }, [router]);
 

@@ -1,15 +1,15 @@
-export { GameCamera } from './camera';
-export { GameEngine } from './engine';
-export { GameInput } from './input';
-export { GameWorld } from './world';
-export { PlayerManager } from './entities/players';
+export { GameCamera } from "./camera";
+export { GameEngine } from "./engine";
+export { GameInput } from "./input";
+export { GameWorld } from "./world";
+export { PlayerManager } from "./entities/players";
 
-import { GameEngine } from './engine';
-import { GameCamera } from './camera';
-import { GameWorld } from './world';
-import { PlayerManager } from './entities/players';
-import { connectWS, sendPlayerUpdate } from '../utils/ws-client';
-import { useGameStore } from '../utils/game-store';
+import { GameEngine } from "./engine";
+import { GameCamera } from "./camera";
+import { GameWorld } from "./world";
+import { PlayerManager } from "./entities/players";
+import { connectWS, sendPlayerUpdate } from "../utils/ws-client";
+import { useGameStore } from "../utils/game-store";
 
 let _engine: GameEngine | null = null;
 let _camera: GameCamera | null = null;
@@ -27,7 +27,7 @@ export function initGame(canvas: HTMLCanvasElement): void {
   _players.spawnLocalPlayer();
 
   scene.onPointerObservable.add((pi) => {
-    if (pi.type === 1 && pi.pickInfo?.hit && pi.pickInfo.pickedMesh?.name === 'ground') {
+    if (pi.type === 1 && pi.pickInfo?.hit && pi.pickInfo.pickedMesh?.name === "ground") {
       const pt = pi.pickInfo.pickedPoint!;
       const x = Math.round(pt.x / 5) * 5;
       const z = Math.round(pt.z / 5) * 5;
@@ -38,7 +38,7 @@ export function initGame(canvas: HTMLCanvasElement): void {
 
   _engine.engine.runRenderLoop(() => {
     const { nearbyPlayers, myId } = useGameStore.getState();
-    _players!.syncPlayers(nearbyPlayers, myId ?? '');
+    _players!.syncPlayers(nearbyPlayers, myId ?? "");
     const localPos = _players!.getLocalPlayer()?.position;
     if (localPos) _camera!.followPlayer(localPos);
     scene.render();

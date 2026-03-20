@@ -12,8 +12,7 @@ const HomePage: FC<Props> = () => {
           Babylon.js MMO
         </h1>
         <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-          Next.js + Zustand + Atomic Design port complete. 
-          Login to enter the multiplayer world.
+          Next.js + Zustand + Atomic Design port complete. Login to enter the multiplayer world.
         </p>
         <Link
           href="/login"

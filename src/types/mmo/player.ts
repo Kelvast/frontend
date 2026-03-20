@@ -1,4 +1,4 @@
-import { Position, Rotation } from './position';
+import { Position, Rotation } from "./position";
 
 export interface PlayerStats {
   level: number;
@@ -17,5 +17,5 @@ export interface PlayerState {
   stats: PlayerStats;
   isMoving: boolean;
   lastUpdated: number;
-  animationState?: 'idle' | 'walking' | 'running' | 'attacking';
+  animationState?: "idle" | "walking" | "running" | "attacking";
 }

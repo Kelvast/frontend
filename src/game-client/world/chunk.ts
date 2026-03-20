@@ -1,29 +1,32 @@
-import { MeshBuilder, StandardMaterial, Color3, Vector3, Scene, Mesh } from '@babylonjs/core';
-import { ChunkData } from '../../types/mmo/world';
-import { TILE_SIZE, CHUNK_SIZE } from '../constants';
-import { TILE_CONFIG } from './tile-config';
+import { MeshBuilder, StandardMaterial, Color3, Vector3, Scene, Mesh } from "@babylonjs/core";
+import { ChunkData } from "../../types/mmo/world";
+import { TILE_CONFIG } from "./tile-config";
+import { WORLD } from "../constants";
 
 export class Chunk {
   private meshes: Mesh[] = [];
 
-  constructor(private data: ChunkData, private scene: Scene) {
+  constructor(
+    private data: ChunkData,
+    private scene: Scene,
+  ) {
     this.spawn();
   }
 
   private spawn() {
     const { chunkX, chunkZ, tiles } = this.data;
 
-    for (let row = 0; row < CHUNK_SIZE; row++) {
-      for (let col = 0; col < CHUNK_SIZE; col++) {
-        const tileType = tiles[row][col];
+    for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
+      for (let col = 0; col < WORLD.CHUNK_SIZE; col++) {
+        const tileType = tiles[row][col].type;
 
-        const worldX = (chunkX * CHUNK_SIZE + col) * TILE_SIZE;
-        const worldZ = (chunkZ * CHUNK_SIZE + row) * TILE_SIZE;
+        const worldX = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE;
+        const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
 
         const mesh = MeshBuilder.CreateGround(
           `tile-${chunkX}-${chunkZ}-${col}-${row}`,
-          { width: TILE_SIZE, height: TILE_SIZE },
-          this.scene
+          { width: WORLD.TILE_SIZE, height: WORLD.TILE_SIZE },
+          this.scene,
         );
 
         mesh.position = new Vector3(worldX, 0, worldZ);
@@ -39,7 +42,7 @@ export class Chunk {
   }
 
   dispose() {
-    this.meshes.forEach(m => m.dispose());
+    this.meshes.forEach((m) => m.dispose());
     this.meshes = [];
   }
 }

@@ -1,29 +1,29 @@
 export enum TileType {
-  GRASS = 'GRASS',
-  WATER = 'WATER',
-  STONE = 'STONE',
-  SAND  = 'SAND',
-  PATH  = 'PATH',
+  GRASS = "GRASS",
+  WATER = "WATER",
+  STONE = "STONE",
+  SAND = "SAND",
+  PATH = "PATH",
 }
 
 export const TileHeight = {
-  GROUND:       0,
-  SLOPE_LOW:    0.25,
-  SLOPE_MID:    0.5,
-  SLOPE_HIGH:   0.75,
-  FIRST_FLOOR:  1,
+  GROUND: 0,
+  SLOPE_LOW: 0.25,
+  SLOPE_MID: 0.5,
+  SLOPE_HIGH: 0.75,
+  FIRST_FLOOR: 1,
   SECOND_FLOOR: 2,
-  THIRD_FLOOR:  3,
+  THIRD_FLOOR: 3,
 } as const;
 
-export type TileHeight = typeof TileHeight[keyof typeof TileHeight];
+export type TileHeight = (typeof TileHeight)[keyof typeof TileHeight];
 
 export const TILE_WALKABLE: Record<TileType, boolean> = {
   [TileType.GRASS]: true,
   [TileType.WATER]: false,
   [TileType.STONE]: true,
-  [TileType.SAND]:  true,
-  [TileType.PATH]:  true,
+  [TileType.SAND]: true,
+  [TileType.PATH]: true,
 };
 
 export interface Tile {
@@ -45,9 +45,9 @@ export interface Region {
   name: string;
   pvp: boolean;
   spawnPoint: { x: number; z: number };
-  chunks: Record<string, ChunkData>;  // key: "chunkX,chunkZ"
+  chunks: Record<string, ChunkData>; // key: "chunkX,chunkZ"
 }
 
 export interface World {
-  regions: Record<string, Region>;  // key: region id
+  regions: Record<string, Region>; // key: region id
 }

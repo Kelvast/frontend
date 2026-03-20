@@ -1,7 +1,12 @@
 import {
-  MeshBuilder, Vector3, Color3, StandardMaterial, AbstractMesh, Scene,
-} from '@babylonjs/core';
-import { PlayerState } from '../types';
+  MeshBuilder,
+  Vector3,
+  Color3,
+  StandardMaterial,
+  AbstractMesh,
+  Scene,
+} from "@babylonjs/core";
+import { PlayerState } from "../../types";
 
 export class PlayerManager {
   private meshes: Record<string, AbstractMesh> = {};
@@ -11,10 +16,10 @@ export class PlayerManager {
 
   // Call this immediately on game init — no WS needed
   spawnLocalPlayer(): AbstractMesh {
-    const mesh = MeshBuilder.CreateBox('localPlayer', { size: 2 }, this.scene);
+    const mesh = MeshBuilder.CreateBox("localPlayer", { size: 2 }, this.scene);
     mesh.position = new Vector3(0, 1, 0);
 
-    const mat = new StandardMaterial('localPlayerMat', this.scene);
+    const mat = new StandardMaterial("localPlayerMat", this.scene);
     mat.diffuseColor = new Color3(0, 0.7, 1);
     mesh.material = mat;
 
@@ -50,7 +55,7 @@ export class PlayerManager {
       mesh.position = Vector3.Lerp(
         mesh.position,
         new Vector3(player.position.x, 1, player.position.z),
-        0.12
+        0.12,
       );
     }
   }
@@ -63,7 +68,7 @@ export class PlayerManager {
   }
 
   syncPlayers(players: PlayerState[], myId: string) {
-    players.forEach(player => {
+    players.forEach((player) => {
       if (player.id === myId) return; // local player handled separately
       if (!this.meshes[player.id]) {
         this.spawnPlayer(player);
@@ -72,8 +77,8 @@ export class PlayerManager {
       }
     });
 
-    Object.keys(this.meshes).forEach(id => {
-      if (!players.find(p => p.id === id)) this.removePlayer(id);
+    Object.keys(this.meshes).forEach((id) => {
+      if (!players.find((p) => p.id === id)) this.removePlayer(id);
     });
   }
 }
