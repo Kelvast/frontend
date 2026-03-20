@@ -1,63 +1,64 @@
+'use client';
+
 import { useGameStore } from './game-store';
 
-const SERVER_URL = process.env.NEXT_PUBLIC_MMO_SERVER_URL ?? 'ws://localhost:8080';
+let ws: WebSocket | null = null;
 
-let socket: WebSocket | null = null;
+export const connectWS = (token: string) => {
+  const url = process.env.NEXT_PUBLIC_MMO_SERVER_URL || 'ws://localhost:8080';
+  
+  ws = new WebSocket(url);
 
-export function connectWS(token?: string): WebSocket {
-  socket?.close();
-  
-  socket = new WebSocket(SERVER_URL);
-  
-  socket.onopen = () => {
-    const store = useGameStore.getState();
-    store.setConnected(true);
-    
-    if (token) {
-      socket!.send(JSON.stringify({ type: 'resume', token }));
-    } else {
-      // Trigger login UI or use stored session
-      const session = localStorage.getItem('mmo_session');
-      if (session) {
-        socket!.send(JSON.stringify({ type: 'resume', token: JSON.parse(session).token }));
-      }
-    }
+  ws.onopen = () => {
+    console.log('MMO WS Connected');
+    useGameStore.getState().setConnected(true);
   };
 
-  socket.onmessage = (event) => {
+  ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     
-    const store = useGameStore.getState();
-    
-    if (data.type === 'loginSuccess' || data.type === 'resumeSuccess') {
-      store.setMyId(data.id);
-      localStorage.setItem('mmo_session', JSON.stringify({
-        token: data.sessionToken,
-        expiresAt: data.sessionExpiresAt
-      }));
-    } else if (data.type === 'state') {
-      store.syncPlayers(data.players);
+    switch (data.type) {
+      case 'init':
+        useGameStore.getState().setMyId(data.id);
+        useGameStore.getState().setNearbyPlayers(data.players);
+        break;
+        
+      case 'player_update':
+        // Update specific player position
+        const currentPlayers = useGameStore.getState().nearbyPlayers;
+        const updatedPlayers = currentPlayers.map(p => 
+          p.id === data.playerId 
+            ? { ...p, position: data.position }
+            : p
+        );
+        useGameStore.getState().setNearbyPlayers(updatedPlayers);
+        break;
+        
+      case 'player_join':
+        useGameStore.getState().addNearbyPlayer(data.player);
+        break;
+        
+      case 'player_leave':
+        useGameStore.getState().removeNearbyPlayer(data.playerId);
+        break;
     }
   };
 
-  socket.onclose = () => {
+  ws.onclose = () => {
+    console.log('MMO WS Disconnected');
     useGameStore.getState().setConnected(false);
   };
 
-  socket.onerror = (error) => {
+  ws.onerror = (error) => {
     console.error('WS Error:', error);
   };
+};
 
-  return socket;
-}
-
-export function sendPosition(x: number, y: number) {
-  if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ type: 'position', x, y }));
+export const sendPlayerUpdate = (position: { x: number; y: number; z: number }) => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'player_move',
+      position
+    }));
   }
-}
-
-export function disconnectWS() {
-  socket?.close();
-  socket = null;
-}
+};
