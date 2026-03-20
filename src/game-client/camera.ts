@@ -22,6 +22,15 @@ export class GameCamera {
         }
       }
     });
+
+    this.camera.lowerBetaLimit = 0.1;
+    this.camera.upperBetaLimit = (Math.PI / 2) * 0.99;
+    this.camera.lowerRadiusLimit = 3;
+  }
+
+  followPlayerSmooth(target: Vector3, speed = 0.05) {
+    const targetPos = new Vector3(target.x, target.y + 5, target.z + 10);
+    this.camera.setPosition(Vector3.Lerp(this.camera.position, targetPos, speed));
   }
 
   followPlayer(target: Vector3) {
