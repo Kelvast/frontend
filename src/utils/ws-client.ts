@@ -28,6 +28,8 @@ export const connectWS = (token?: string) => {
   };
 
   ws.onmessage = (event) => {
+    const bytes = new Blob([event.data]).size;
+    logger.ws("← payload size:", bytes, "bytes", `(${(bytes / 1024).toFixed(2)}kb)`);
     const data = JSON.parse(event.data);
     logger.ws("←", data.type, data);
 
@@ -44,39 +46,49 @@ export const connectWS = (token?: string) => {
         logger.ws("Login success — id:", data.id);
         useGameStore.getState().setMyId(String(data.id));
         useGameStore.getState().setSession({
-          sessionToken:     data.sessionToken,
+          sessionToken: data.sessionToken,
           sessionExpiresAt: data.sessionExpiresAt,
         });
         break;
 
+      // TODO: Remove once server sends player_init/tick/player_leave protocol
       case "state": {
-        const { myId } = useGameStore.getState();
-        const me = data.players.find((p: any) => String(p.id) === myId);
-        if (me) {
-          logger.ws("Local player state:", me);
-          useGameStore.getState().updatePlayer(me);
-        }
-        useGameStore.getState().setNearbyPlayers(data.players);
-        logger.ws("State update — players:", data.players.length);
+        const { indexRegistry } = useGameStore.getState();
+        data.players.forEach((p: any) => {
+          if (indexRegistry.has(p.id)) return; // already registered, tick will handle updates
+          useGameStore.getState().registerPlayer({
+            index: p.id,
+            id: String(p.id),
+            name: p.name ?? String(p.id),
+            hp: p.hp ?? 100,
+            maxHp: p.maxHp ?? 100,
+            x: p.x,
+            y: p.y,
+          });
+        });
+
+        // Unregister players no longer in the state broadcast
+        const incomingIds = new Set(data.players.map((p: any) => p.id));
+        indexRegistry.forEach((_, index) => {
+          if (!incomingIds.has(index)) useGameStore.getState().unregisterPlayer(index);
+        });
+
+        logger.ws("State (legacy) — players:", data.players.length);
         break;
       }
 
-      case "player_update": {
-        const current = useGameStore.getState().nearbyPlayers;
-        useGameStore.getState().setNearbyPlayers(
-          current.map(p => p.id === data.playerId ? { ...p, position: data.position } : p)
-        );
-        break;
-      }
-
-      case "player_join":
-        logger.ws("Player joined:", data.player?.id);
-        useGameStore.getState().addNearbyPlayer(data.player);
+      case "player_init":
+        logger.ws("Player init — index:", data.index, "id:", data.id);
+        useGameStore.getState().registerPlayer(data);
         break;
 
       case "player_leave":
-        logger.ws("Player left:", data.playerId);
-        useGameStore.getState().removeNearbyPlayer(data.playerId);
+        logger.ws("Player left — index:", data.index);
+        useGameStore.getState().unregisterPlayer(data.index);
+        break;
+
+      case "tick":
+        useGameStore.getState().applyTick(data);
         break;
 
       default:
