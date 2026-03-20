@@ -1,10 +1,6 @@
 import { Region, ChunkData } from "../../../types";
 
-export function buildRegionFromContext(
-  ctx: RequireContext,
-  id: string,
-  name: string,
-): Region {
+export function buildRegionFromContext(ctx: RequireContext, id: string, name: string): Region {
   const chunks = Object.fromEntries(
     ctx.keys().map((key: string) => {
       const [x, z] = key.replace("./", "").replace(".ts", "").split("-").map(Number);

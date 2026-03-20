@@ -7,8 +7,7 @@ export type AnimationState = MovementType | "idle" | "attacking";
 export interface PlayerStats {
   level: number;
   experience: number;
-  health: number;
-  maxHealth: number;
+  currentHp: number;
   mana: number;
   maxMana: number;
   skills: Skills;

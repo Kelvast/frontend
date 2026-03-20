@@ -90,10 +90,7 @@ export function initGame(canvas: HTMLCanvasElement): void {
     const z = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
     const y = pi.pickInfo.pickedMesh.position.y;
 
-    const facing = Math.atan2(
-      z - _players!.getLocalTarget().z,
-      x - _players!.getLocalTarget().x,
-    );
+    const facing = Math.atan2(z - _players!.getLocalTarget().z, x - _players!.getLocalTarget().x);
 
     logger.game("Click → move to tile", { x, y, z });
     _players!.moveLocalPlayer(x, z);
@@ -126,7 +123,6 @@ export function destroyGame(): void {
   _players = null;
   _world = null;
 }
-
 
 declare const module: {
   hot?: {

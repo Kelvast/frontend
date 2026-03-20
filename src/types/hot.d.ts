@@ -14,11 +14,7 @@ interface RequireContext {
 }
 
 interface Require {
-  context(
-    directory: string,
-    useSubdirectories: boolean,
-    regExp: RegExp,
-  ): RequireContext;
+  context(directory: string, useSubdirectories: boolean, regExp: RegExp): RequireContext;
 }
 
 declare const require: Require;

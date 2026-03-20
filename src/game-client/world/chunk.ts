@@ -87,7 +87,10 @@ export class Chunk {
   }
 
   private _makeOutlineMat(): StandardMaterial {
-    const mat = new StandardMaterial(`outline-mat-${this.data.chunkX}-${this.data.chunkZ}`, this.scene);
+    const mat = new StandardMaterial(
+      `outline-mat-${this.data.chunkX}-${this.data.chunkZ}`,
+      this.scene,
+    );
     mat.diffuseColor = Color3.Black();
     mat.emissiveColor = Color3.Black();
     mat.wireframe = true;

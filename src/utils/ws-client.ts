@@ -40,7 +40,7 @@ export const connectWS = (token?: string) => {
     switch (data.type) {
       case "login_success":
         logger.ws("Login success — index:", data.index, "id:", data.id);
-        useGameStore.getState().setMyId(String(data.id));
+        useGameStore.getState().hydrateLocalPlayer(data);
         useGameStore.getState().setSession({
           sessionToken: data.sessionToken,
           sessionExpiresAt: data.sessionExpiresAt,
@@ -51,12 +51,14 @@ export const connectWS = (token?: string) => {
         if (DEV_MODE) {
           const dev = getDevCredentials()!;
           logger.ws("Dev mode — account not found, auto-registering");
-          ws!.send(JSON.stringify({
-            type: "register",
-            name: "DevPlayer",
-            email: dev.email,
-            password: dev.password,
-          }));
+          ws!.send(
+            JSON.stringify({
+              type: "register",
+              name: "DevPlayer",
+              email: dev.email,
+              password: dev.password,
+            }),
+          );
         } else {
           logger.error("Auth failed:", data.message);
         }

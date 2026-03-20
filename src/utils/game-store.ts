@@ -3,7 +3,8 @@ import { GameStoreState, PlayerState } from "../types";
 import { UserSettings } from "../types/mmo/settings";
 import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
-import { defaultSkills } from "../types/mmo/skills";
+import { defaultSkills, skillFromXp } from "../types/mmo/skills";
+import { maxHpFromSkills } from "./xp";
 
 export const useGameStore = create<GameStoreState>((set) => ({
   myId: null,
@@ -39,10 +40,45 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set({ settings: updated });
   },
 
+  hydrateLocalPlayer: (msg) =>
+    set((state) => {
+      const skills = Object.fromEntries(
+        Object.entries(msg.skills).map(([name, xp]) => [name, skillFromXp(xp as number)]),
+      ) as ReturnType<typeof defaultSkills>;
+      const player: PlayerState = {
+        id: msg.id,
+        name: "",
+        position: { x: msg.x, y: msg.y, z: msg.z },
+        facing: 0,
+        isMoving: false,
+        pace: "walk",
+        lastUpdated: Date.now(),
+        animationState: "idle",
+        stats: {
+          level: 1,
+          experience: 0,
+          currentHp: maxHpFromSkills(skills.hitpoints.level),
+          mana: 0,
+          maxMana: 0,
+          skills,
+        },
+      };
+      logger.game("Local player hydrated — id:", msg.id);
+      const exists = state.nearbyPlayers.some((p) => p.id === msg.id);
+      return {
+        myId: msg.id,
+        indexRegistry: new Map(state.indexRegistry).set(msg.index, msg.id),
+        nearbyPlayers: exists
+          ? state.nearbyPlayers.map((p) => (p.id === msg.id ? { ...p, ...player } : p))
+          : [...state.nearbyPlayers, player],
+      };
+    }),
+
   registerPlayer: (msg) =>
     set((state) => {
       const registry = new Map(state.indexRegistry);
       registry.set(msg.index, msg.id);
+      const skills = defaultSkills();
       const player: PlayerState = {
         id: msg.id,
         name: msg.name,
@@ -53,13 +89,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
         lastUpdated: Date.now(),
         animationState: "idle",
         stats: {
-          health: msg.hp,
-          maxHealth: msg.maxHp,
           level: 1,
           experience: 0,
+          currentHp: maxHpFromSkills(skills.hitpoints.level),
           mana: 0,
           maxMana: 0,
-          skills: defaultSkills(),
+          skills,
         },
       };
       logger.game("Player registered — index:", msg.index, "id:", msg.id);
@@ -87,21 +122,19 @@ export const useGameStore = create<GameStoreState>((set) => ({
   applyTick: ({ p }) =>
     set((state) => {
       const updates = new Map(
-        p.map(([idx, x, y, z, facing, hp]) => {
+        p.map(([idx, x, y, z, facing]) => {
           const id = state.indexRegistry.get(idx);
-          return [id, { position: { x, y, z }, facing, isMoving: true, hp }];
+          return [id, { position: { x, y, z }, facing, isMoving: true }];
         }),
       );
       return {
         nearbyPlayers: state.nearbyPlayers.map((player) => {
           const delta = updates.get(player.id);
-          if (!delta) return player;
-          const { hp, ...rest } = delta;
+          if (!delta) return { ...player };
           return {
             ...player,
-            ...rest,
+            ...delta,
             lastUpdated: Date.now(),
-            stats: { ...player.stats, health: hp },
           };
         }),
       };
