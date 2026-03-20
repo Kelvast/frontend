@@ -17,6 +17,7 @@ export class GameEngine {
 
     this.scene = new Scene(this.engine);
     this.scene.clearColor = new Color4(0.53, 0.81, 0.98, 1);
+    this.scene.constantlyUpdateMeshUnderPointer = true;
 
     this._resizeHandler = () => {
       this.engine.resize();
@@ -26,7 +27,7 @@ export class GameEngine {
     logger.game("Engine ready");
   }
 
-  dispose() {
+  dispose(): void {
     logger.game("Disposing engine");
     window.removeEventListener("resize", this._resizeHandler);
     this.engine.dispose();

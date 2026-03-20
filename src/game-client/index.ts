@@ -2,9 +2,11 @@ import { GameEngine } from "./engine";
 import { GameCamera } from "./camera";
 import { GameWorld } from "./world";
 import { PlayerManager } from "./entities/players";
-import { connectWS, sendPlayerMove } from "../utils/ws-client";
+import { connectWS, sendPlayerMove, sendSettings } from "../utils/ws-client";
 import { useGameStore } from "../utils/game-store";
 import { logger } from "../utils/logger";
+import { WORLD } from "./constants";
+import { Color3, Mesh, StandardMaterial } from "@babylonjs/core";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -43,30 +45,65 @@ export function initGame(canvas: HTMLCanvasElement): void {
 
   _camera = new GameCamera(scene);
   _players = new PlayerManager(scene);
-  _players.spawnLocalPlayer();
+  const localMesh = _players.spawnLocalPlayer();
+  _camera.attachToMesh(localMesh);
   logger.game("Scene ready — engine, camera, world, players initialised");
 
+  let _hoveredMesh: Mesh | null = null;
+  let _hoveredOriginalColor: Color3 | null = null;
+
   scene.onPointerObservable.add((pi) => {
-    if (pi.type === 1 && pi.pickInfo?.hit && pi.pickInfo.pickedPoint) {
-      const pt = pi.pickInfo.pickedPoint;
-      const x = Math.round(pt.x / 5) * 5;
-      const y = Math.round(pt.y * 100) / 100;
-      const z = Math.round(pt.z / 5) * 5;
-      const facing = Math.atan2(
-        z - (_players!.getLocalPlayer()?.position.z ?? 0),
-        x - (_players!.getLocalPlayer()?.position.x ?? 0),
-      );
-      logger.game("Click → move to tile", { x, y, z });
-      _players!.moveLocalPlayer(x, z);
-      sendPlayerMove(x, y, z, facing);
+    if (pi.type === 4) {
+      const mesh = pi.pickInfo?.pickedMesh as Mesh | null;
+      const name = mesh?.name ?? "";
+
+      if (mesh !== _hoveredMesh) {
+        if (_hoveredMesh?.material && _hoveredOriginalColor) {
+          (_hoveredMesh.material as StandardMaterial).diffuseColor = _hoveredOriginalColor;
+        }
+        if (mesh && name.startsWith("tile-")) {
+          const mat = mesh.material as StandardMaterial;
+          _hoveredOriginalColor = mat.diffuseColor.clone();
+          mat.diffuseColor = Color3.Lerp(mat.diffuseColor, Color3.White(), 0.35);
+          _hoveredMesh = mesh;
+        } else {
+          _hoveredMesh = null;
+          _hoveredOriginalColor = null;
+        }
+      }
     }
+
+    if (pi.type !== 1) return;
+    if ((pi.event as PointerEvent).button !== 0) return;
+    if (!pi.pickInfo?.hit || !pi.pickInfo.pickedMesh) return;
+
+    const name = pi.pickInfo.pickedMesh.name;
+    const parts = name.split("-");
+    if (parts[0] !== "tile" || parts.length !== 5) return;
+
+    const chunkX = parseInt(parts[1], 10);
+    const chunkZ = parseInt(parts[2], 10);
+    const col = parseInt(parts[3], 10);
+    const row = parseInt(parts[4], 10);
+
+    const x = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE;
+    const z = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
+    const y = pi.pickInfo.pickedMesh.position.y;
+
+    const facing = Math.atan2(
+      z - _players!.getLocalTarget().z,
+      x - _players!.getLocalTarget().x,
+    );
+
+    logger.game("Click → move to tile", { x, y, z });
+    _players!.moveLocalPlayer(x, z);
+    sendPlayerMove(x, y, z, facing);
   });
 
   _engine.engine.runRenderLoop(() => {
     const { nearbyPlayers, myId } = useGameStore.getState();
     _players!.syncPlayers(nearbyPlayers, myId ?? "");
-    const localPos = _players!.getLocalPlayer()?.position;
-    if (localPos) _camera!.followPlayer(localPos);
+    _players!.tickLocalPlayer();
     scene.render();
   });
 
@@ -82,12 +119,14 @@ export function connectGame(token?: string): void {
 export function destroyGame(): void {
   if (!_engine) return;
   logger.game("Destroying game instance");
+  sendSettings(useGameStore.getState().settings);
   _engine.dispose();
   _engine = null;
   _camera = null;
   _players = null;
   _world = null;
 }
+
 
 declare const module: {
   hot?: {

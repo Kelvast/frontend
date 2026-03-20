@@ -1,25 +1,44 @@
-import { ArcRotateCamera, Scene, Vector3 } from "@babylonjs/core";
+import {
+  ArcRotateCamera,
+  ArcRotateCameraPointersInput,
+  ArcRotateCameraMouseWheelInput,
+  Scene,
+  AbstractMesh,
+  Vector3,
+} from "@babylonjs/core";
 import { CAMERA } from "./constants";
 import { logger } from "../utils/logger";
+import { useGameStore } from "../utils/game-store";
 
 export class GameCamera {
   public readonly camera: ArcRotateCamera;
   private _keys = { left: false, right: false, up: false, down: false };
+  private _saveTimer: ReturnType<typeof setTimeout> | null = null;
   private _onKeyDown: (e: KeyboardEvent) => void;
   private _onKeyUp: (e: KeyboardEvent) => void;
 
   constructor(scene: Scene) {
     logger.game("Creating camera");
+
+    const saved = useGameStore.getState().settings.camera;
+
     this.camera = new ArcRotateCamera(
       "gameCamera",
-      CAMERA.DEFAULT_ALPHA,
-      CAMERA.DEFAULT_BETA,
-      CAMERA.DEFAULT_RADIUS,
+      saved.alpha,
+      saved.beta,
+      saved.radius,
       Vector3.Zero(),
       scene,
     );
 
     this.camera.attachControl(scene.getEngine().getRenderingCanvas()!, true);
+
+    const pointersInput = this.camera.inputs.attached["pointers"] as ArcRotateCameraPointersInput;
+    pointersInput.buttons = [1, 2];
+
+    const wheelInput = this.camera.inputs.attached["mousewheel"] as ArcRotateCameraMouseWheelInput;
+    wheelInput.wheelPrecision = CAMERA.WHEEL_PRECISION;
+
     this.camera.lowerRadiusLimit = CAMERA.MIN_ZOOM;
     this.camera.upperRadiusLimit = CAMERA.MAX_ZOOM;
     this.camera.lowerBetaLimit = 0.2;
@@ -48,17 +67,31 @@ export class GameCamera {
       if (this._keys.right) this.camera.alpha += CAMERA.ORBIT_SPEED;
       if (this._keys.up) this.camera.beta -= CAMERA.ORBIT_SPEED;
       if (this._keys.down) this.camera.beta += CAMERA.ORBIT_SPEED;
+      this._debouncedSave();
     });
 
     logger.game("Camera ready");
   }
 
-  followPlayer(target: Vector3) {
-    this.camera.setTarget(target);
+  private _debouncedSave(): void {
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      useGameStore.getState().updateSettings("camera", {
+        alpha: this.camera.alpha,
+        beta: this.camera.beta,
+        radius: this.camera.radius,
+      });
+    }, 300);
   }
 
-  dispose() {
+  attachToMesh(mesh: AbstractMesh): void {
+    this.camera.lockedTarget = mesh;
+  }
+
+  dispose(): void {
     logger.game("Disposing camera");
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+    this.camera.lockedTarget = null;
     window.removeEventListener("keydown", this._onKeyDown);
     window.removeEventListener("keyup", this._onKeyUp);
   }

@@ -1,13 +1,20 @@
-import { Scene, HemisphericLight, Vector3, DirectionalLight, Color3 } from "@babylonjs/core";
+import { Scene, HemisphericLight, Vector3, DirectionalLight, Color3, HighlightLayer } from "@babylonjs/core";
 import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
-import type { Region } from "../../types";
+import { Region } from "../../types";
+import { DEV_MODE } from "../../utils/dev";
 
 export class GameWorld {
   private regions: Map<string, GameRegion> = new Map();
+  private highlightLayer: HighlightLayer | undefined;
 
   constructor(private scene: Scene) {
     logger.game("Initialising world");
+    if (DEV_MODE) {
+      this.highlightLayer = new HighlightLayer("tileHighlight", scene);
+      this.highlightLayer.innerGlow = false;
+      this.highlightLayer.outerGlow = false;
+    }
     this._setupLighting();
     logger.game("World ready");
   }
@@ -29,7 +36,7 @@ export class GameWorld {
       logger.game(`Region "${data.id}" already loaded — skipping`);
       return;
     }
-    this.regions.set(data.id, new GameRegion(data, this.scene));
+    this.regions.set(data.id, new GameRegion(data, this.scene, this.highlightLayer));
   }
 
   reloadRegion(fresh: Region): void {
@@ -45,5 +52,6 @@ export class GameWorld {
     logger.game("Disposing world");
     this.regions.forEach((r) => r.dispose());
     this.regions.clear();
+    this.highlightLayer?.dispose();
   }
 }

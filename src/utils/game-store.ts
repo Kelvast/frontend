@@ -1,8 +1,11 @@
 import { create } from "zustand";
 import { GameStoreState, PlayerState } from "../types";
+import { UserSettings } from "../types/mmo/settings";
+import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
+import { defaultSkills } from "../types/mmo/skills";
 
-export const useGameStore = create<GameStoreState>((set, get) => ({
+export const useGameStore = create<GameStoreState>((set) => ({
   myId: null,
   nearbyPlayers: [],
   worldTime: 0,
@@ -11,6 +14,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   sessionToken: null,
   sessionExpiresAt: null,
   indexRegistry: new Map(),
+  settings: loadSettings(),
 
   setMyId: (id: string) => {
     logger.game("My ID set:", id);
@@ -29,6 +33,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     set({ sessionToken, sessionExpiresAt });
   },
 
+  updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
+    const updated = patchSettings(key, value);
+    logger.game(`Settings updated — ${key}:`, value);
+    set({ settings: updated });
+  },
+
   registerPlayer: (msg) =>
     set((state) => {
       const registry = new Map(state.indexRegistry);
@@ -39,6 +49,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         position: { x: msg.x, y: msg.y, z: msg.z },
         facing: 0,
         isMoving: false,
+        pace: "walk",
         lastUpdated: Date.now(),
         animationState: "idle",
         stats: {
@@ -48,6 +59,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
           experience: 0,
           mana: 0,
           maxMana: 0,
+          skills: defaultSkills(),
         },
       };
       logger.game("Player registered — index:", msg.index, "id:", msg.id);

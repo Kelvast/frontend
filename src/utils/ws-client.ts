@@ -3,6 +3,7 @@
 import { useGameStore } from "./game-store";
 import { logger } from "./logger";
 import { DEV_MODE, getDevCredentials } from "./dev";
+import { UserSettings } from "../types/mmo/settings";
 
 let ws: WebSocket | null = null;
 
@@ -105,5 +106,12 @@ export const sendPlayerMove = (x: number, y: number, z: number, facing: number) 
     ws.send(JSON.stringify({ type: "player_move", x, y, z, facing }));
   } else {
     logger.warn("sendPlayerMove called but WS not open");
+  }
+};
+
+export const sendSettings = (settings: UserSettings): void => {
+  if (ws?.readyState === WebSocket.OPEN) {
+    logger.ws("→ save_settings", settings);
+    ws.send(JSON.stringify({ type: "save_settings", settings }));
   }
 };
