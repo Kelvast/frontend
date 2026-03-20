@@ -103,11 +103,13 @@ if (process.env.NODE_ENV === "development" && module.hot) {
     destroyGame();
   });
 
-  module.hot.accept([], () => {
+  const regionCtx: RequireContext = require.context("./world/regions", true, /\/index\.ts$/);
+
+  module.hot.accept([regionCtx.id], () => {
     if (!_world) return;
-    const ctx: RequireContext = require.context("./world/regions", true, /\/index\.ts$/);
-    ctx.keys().forEach((key: string) => {
-      const mod = ctx(key);
+    const freshCtx: RequireContext = require.context("./world/regions", true, /\/index\.ts$/);
+    freshCtx.keys().forEach((key: string) => {
+      const mod = freshCtx(key);
       if (typeof mod.buildRegion === "function") {
         const fresh = mod.buildRegion();
         logger.game(`HMR — diffing region "${fresh.id}"`);
