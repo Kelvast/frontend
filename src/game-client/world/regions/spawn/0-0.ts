@@ -10,7 +10,7 @@ const SE = tile(TileType.STONE, TileHeight.FIRST_FLOOR);
 export default {
   pvp: false,
   tiles: [
-    [G, G, G, G, G, G, G, P, G, G, G, G, G, G, G, G],
+    [G, G, G, G, G, P, P, P, G, G, G, G, G, G, G, G],
     [G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
     [G, G, SE, SE, SE, SE, G, G, G, G, G, G, G, G, G, G],
     [G, G, SE, SE, SE, SE, G, G, G, G, G, W, W, W, G, G],

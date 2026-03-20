@@ -4,8 +4,8 @@ export const WORLD = {
 } as const;
 
 export const CAMERA = {
-  MIN_ZOOM: 5, // closest the camera can zoom in (world units)
-  MAX_ZOOM: 40, // furthest the camera can zoom out (world units)
+  MIN_ZOOM: 3, // closest the camera can zoom in (world units)
+  MAX_ZOOM: 30, // furthest the camera can zoom out (world units)
   DEFAULT_ALPHA: -Math.PI / 2, // default horizontal orbit — directly behind player
   DEFAULT_BETA: Math.PI / 3, // default vertical angle — ~60° above ground
   DEFAULT_RADIUS: 20, // default zoom distance from player on load
@@ -14,7 +14,7 @@ export const CAMERA = {
 } as const;
 
 export const PLAYER = {
-  SIZE: 2, // player mesh bounding box size (width, height, depth)
+  SIZE: 0.75, // player mesh bounding box size (width, height, depth)
   Y_OFFSET: 1, // vertical offset so player sits on ground (SIZE / 2)
   LERP_SPEED: 0.12, // lerp factor for smoothing remote player position updates
 } as const;
