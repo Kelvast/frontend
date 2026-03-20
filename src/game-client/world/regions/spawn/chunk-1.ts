@@ -14,7 +14,7 @@ export const spawnChunk1: ChunkData = {
   chunkZ: 0,
   region: "spawn",
   tiles: [
-    [G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
+    [G, G, G, G, G, G, G, P, G, G, G, G, G, G, G, G],
     [G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
     [G, G, SE, SE, SE, SE, G, G, G, G, G, G, G, G, G, G],
     [G, G, SE, SE, SE, SE, G, G, G, G, G, W, W, W, G, G],

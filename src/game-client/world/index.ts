@@ -1,7 +1,7 @@
 import { Scene, HemisphericLight, Vector3, DirectionalLight, Color3 } from "@babylonjs/core";
 import { Chunk } from "./chunk";
-import { spawnChunk1 } from "./regions/spawn/chunk-1";
 import { logger } from "../../utils/logger";
+import type { ChunkData } from "../../types";
 
 export class GameWorld {
   private chunks: Map<string, Chunk> = new Map();
@@ -9,7 +9,6 @@ export class GameWorld {
   constructor(private scene: Scene) {
     logger.game("Initialising world");
     this._setupLighting();
-    this._loadInitialChunks();
     logger.game("World ready");
   }
 
@@ -25,12 +24,7 @@ export class GameWorld {
     logger.game("Lighting set up");
   }
 
-  private _loadInitialChunks() {
-    logger.game("Loading initial chunks");
-    this._loadChunk(spawnChunk1);
-  }
-
-  private _loadChunk(data: ConstructorParameters<typeof Chunk>[0]) {
+  loadChunk(data: ChunkData) {
     const key = `${data.chunkX},${data.chunkZ}`;
     if (this.chunks.has(key)) {
       logger.warn(`Chunk ${key} already loaded — skipping`);
@@ -40,14 +34,15 @@ export class GameWorld {
     logger.game(`Chunk ${key} loaded — total loaded: ${this.chunks.size}`);
   }
 
-  private _unloadChunk(chunkX: number, chunkZ: number) {
-    const key = `${chunkX},${chunkZ}`;
-    const chunk = this.chunks.get(key);
-    if (chunk) {
-      chunk.dispose();
+  reloadChunk(data: ChunkData) {
+    const key = `${data.chunkX},${data.chunkZ}`;
+    const existing = this.chunks.get(key);
+    if (existing) {
+      existing.dispose();
       this.chunks.delete(key);
-      logger.game(`Chunk ${key} unloaded — total loaded: ${this.chunks.size}`);
     }
+    this.chunks.set(key, new Chunk(data, this.scene));
+    logger.game(`Chunk ${key} reloaded`);
   }
 
   dispose() {

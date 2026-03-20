@@ -2,9 +2,10 @@ import { GameEngine } from "./engine";
 import { GameCamera } from "./camera";
 import { GameWorld } from "./world";
 import { PlayerManager } from "./entities/players";
-import { connectWS, sendPlayerUpdate } from "../utils/ws-client";
+import { connectWS, sendPlayerMove } from "../utils/ws-client";
 import { useGameStore } from "../utils/game-store";
 import { logger } from "../utils/logger";
+import { spawnChunk1 } from "./world/regions/spawn/chunk-1";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -15,6 +16,7 @@ export { PlayerManager } from "./entities/players";
 let _engine: GameEngine | null = null;
 let _camera: GameCamera | null = null;
 let _players: PlayerManager | null = null;
+let _world: GameWorld | null = null;
 
 export function initGame(canvas: HTMLCanvasElement): void {
   if (_engine) {
@@ -26,7 +28,9 @@ export function initGame(canvas: HTMLCanvasElement): void {
   _engine = new GameEngine(canvas);
   const scene = _engine.scene;
 
-  new GameWorld(scene);
+  _world = new GameWorld(scene);
+  _world.loadChunk(spawnChunk1);
+
   _camera = new GameCamera(scene);
   _players = new PlayerManager(scene);
   _players.spawnLocalPlayer();
@@ -36,10 +40,12 @@ export function initGame(canvas: HTMLCanvasElement): void {
     if (pi.type === 1 && pi.pickInfo?.hit && pi.pickInfo.pickedMesh?.name === "ground") {
       const pt = pi.pickInfo.pickedPoint!;
       const x = Math.round(pt.x / 5) * 5;
+      const y = pt.y;
       const z = Math.round(pt.z / 5) * 5;
-      logger.game("Click → move to tile", { x, z });
+      const facing = Math.atan2(z - (_players!.getLocalPlayer()?.position.z ?? 0), x - (_players!.getLocalPlayer()?.position.x ?? 0));
+      logger.game("Click → move to tile", { x, y, z });
       _players!.moveLocalPlayer(x, z);
-      sendPlayerUpdate({ x, y: 0, z });
+      sendPlayerMove(x, y, z, facing);
     }
   });
 
@@ -65,4 +71,17 @@ export function destroyGame(): void {
   _engine = null;
   _camera = null;
   _players = null;
+  _world = null;
+}
+
+declare const module: { hot?: { accept: (cb: () => void) => void; dispose: (cb: () => void) => void } };
+
+if (process.env.NODE_ENV === "development" && module.hot) {
+  module.hot.accept(() => {
+    if (_world) {
+      logger.game("HMR — reloading chunks");
+      _world.reloadChunk(spawnChunk1);
+    }
+  });
+  module.hot.dispose(() => destroyGame());
 }
