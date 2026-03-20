@@ -1,24 +1,22 @@
 import { create } from 'zustand';
-import type { PlayerState, Position } from '../types/mmo';
+import { GameState, PlayerState } from '../types';
 
-interface GameState {
-  myId: number | null;
-  player: Position;
-  nearbyPlayers: PlayerState[];
-  wsConnected: boolean;
-  setMyId: (id: number) => void;
-  setPlayer: (pos: Position) => void;
-  syncPlayers: (players: PlayerState[]) => void;
-  setConnected: (connected: boolean) => void;
-}
-
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore = create<GameState>((set, get) => ({
   myId: null,
-  player: { x: 0, y: 0 },
+  player: null,
   nearbyPlayers: [],
-  wsConnected: false,
-  setMyId: (id) => set({ myId: id }),
-  setPlayer: (pos) => set({ player: pos }),
-  syncPlayers: (players) => set({ nearbyPlayers: players }),
-  setConnected: (connected) => set({ wsConnected: connected }),
+  worldTime: 0,
+  isConnected: false,
+  latency: 0,
+  
+  setMyId: (id: string) => set({ myId: id }),
+  updatePlayer: (player: PlayerState) => set({ player }),
+  setNearbyPlayers: (players: PlayerState[]) => set({ nearbyPlayers: players }),
+  addNearbyPlayer: (player: PlayerState) => set((state) => ({
+    nearbyPlayers: [...state.nearbyPlayers.filter(p => p.id !== player.id), player]
+  })),
+  removeNearbyPlayer: (id: string) => set((state) => ({
+    nearbyPlayers: state.nearbyPlayers.filter(p => p.id !== id)
+  })),
+  setConnected: (connected: boolean) => set({ isConnected: connected }),
 }));
