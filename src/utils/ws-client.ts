@@ -32,19 +32,40 @@ export const connectWS = (token?: string) => {
     logger.ws("←", data.type, data);
 
     switch (data.type) {
-      case "init":
-        logger.ws("Init — myId:", data.id, "players:", data.players?.length);
-        useGameStore.getState().setMyId(data.id);
-        useGameStore.getState().setNearbyPlayers(data.players);
+      case "authResponse":
+        if (data.success) {
+          logger.ws("Auth successful");
+        } else {
+          logger.error("Auth failed:", data.message);
+        }
         break;
+
+      case "loginSuccess":
+        logger.ws("Login success — id:", data.id);
+        useGameStore.getState().setMyId(String(data.id));
+        useGameStore.getState().setSession({
+          sessionToken:     data.sessionToken,
+          sessionExpiresAt: data.sessionExpiresAt,
+        });
+        break;
+
+      case "state": {
+        const { myId } = useGameStore.getState();
+        const me = data.players.find((p: any) => String(p.id) === myId);
+        if (me) {
+          logger.ws("Local player state:", me);
+          useGameStore.getState().updatePlayer(me);
+        }
+        useGameStore.getState().setNearbyPlayers(data.players);
+        logger.ws("State update — players:", data.players.length);
+        break;
+      }
 
       case "player_update": {
         const current = useGameStore.getState().nearbyPlayers;
-        useGameStore
-          .getState()
-          .setNearbyPlayers(
-            current.map((p) => (p.id === data.playerId ? { ...p, position: data.position } : p)),
-          );
+        useGameStore.getState().setNearbyPlayers(
+          current.map(p => p.id === data.playerId ? { ...p, position: data.position } : p)
+        );
         break;
       }
 

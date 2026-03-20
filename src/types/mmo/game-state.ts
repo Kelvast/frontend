@@ -8,6 +8,8 @@ export interface GameStoreState {
   worldTime: number;
   isConnected: boolean;
   latency: number;
+  sessionToken:     string | null;
+  sessionExpiresAt: number | null;
 
   // Actions
   setMyId: (id: string) => void;
@@ -17,4 +19,5 @@ export interface GameStoreState {
   removeNearbyPlayer: (id: string) => void;
   setConnected: (connected: boolean) => void;
   setLatency: (latency: number) => void;
+  setSession: (session: { sessionToken: string; sessionExpiresAt: number }) => void;
 }

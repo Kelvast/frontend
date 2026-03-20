@@ -9,15 +9,23 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   worldTime: 0,
   isConnected: false,
   latency: 0,
+  sessionToken:     null,
+  sessionExpiresAt: null,
 
   setMyId: (id: string) => {
     logger.game("My ID set:", id);
     set({ myId: id });
   },
 
-  updatePlayer: (player: PlayerState) => {
-    logger.game("Local player updated:", player.position);
-    set({ player });
+  updatePlayer: (player) => {
+    set((state) => {
+      const exists = state.nearbyPlayers.some(p => p.id === player.id);
+      const nearbyPlayers = exists
+        ? state.nearbyPlayers.map(p => p.id === player.id ? { ...p, ...player } : p)
+        : [...state.nearbyPlayers, player];
+      logger.game("Local player updated:", player.name ?? player.id);
+      return { nearbyPlayers };
+    });
   },
 
   setNearbyPlayers: (players: PlayerState[]) => {
@@ -45,4 +53,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   },
 
   setLatency: (latency: number) => set({ latency }),
+
+  setSession: ({ sessionToken, sessionExpiresAt }) => {
+    logger.game('Session stored, expires:', new Date(sessionExpiresAt).toISOString());
+    set({ sessionToken, sessionExpiresAt });
+  },
 }));

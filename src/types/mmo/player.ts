@@ -13,6 +13,7 @@ export interface PlayerState {
   id: string;
   name: string;
   position: Position;
+  facing: number;
   stats: PlayerStats;
   isMoving: boolean;
   lastUpdated: number;
