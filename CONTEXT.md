@@ -6,15 +6,13 @@
 
 ***
 
-## Project
-
+## Project Overview
 Browser-based 3D MMO client. Next.js (App Router) + Babylon.js + Zustand.  
 Server is a separate repo (`mmo-server`), written in Node.js/TypeScript, deployed to AWS EC2 via SST v3 IaC.
 
 ***
 
 ## Current Stack
-
 - **Next.js** (App Router) — routing, login/register API routes, SSR shell
 - **Babylon.js** — 3D rendering, scene, input
 - **Zustand** — client game state (`src/utils/game-store.ts`)
@@ -22,11 +20,11 @@ Server is a separate repo (`mmo-server`), written in Node.js/TypeScript, deploye
 - **Tailwind CSS** — styling
 - **WebSockets** — real-time server connection (`src/utils/ws-client.ts`)
 - **Axios** — HTTP wrapper (`src/utils/http.ts`)
+- **mmo-shared** — (Pending) Shared package for protocol, registries, and crypto.
 
 ***
 
-## Folder Structure (actual)
-
+## Folder Structure (Actual)
 ```bash
 src/
 ├── app/
@@ -62,10 +60,10 @@ src/
 ├── types/          
 │   ├── index.ts                    # Re-exports all mmo types
 │   └── mmo/          
-│       ├── world.ts                # TileType, TileHeight, TILE_WALKABLE, Tile, tile(), ChunkData, ...
+│       ├── world.ts                # TileType, TileHeight, TILE_WALKABLE, Tile, tile(), ChunkData, Region, World
 │       ├── player.ts               # PlayerStats, PlayerState
 │       ├── position.ts             # Position, Rotation
-│       ├── network.ts              # WSMessage union, PlayerInitMsg, TickMsg, PlayerDelta
+│       ├── network.ts              # WSMessage union — (Migrating to Binary Protocol)
 │       ├── game-state.ts           # GameStoreState
 │       └── entities.ts             # (stub)
 ├── utils/          
@@ -91,63 +89,103 @@ src/
 | `game-client/entities/players.ts` — `PlayerManager` | ✅ Built |
 | `game-client/world/chunk.ts` — `Chunk` class | ✅ Built |
 | `game-client/world/tile-config.ts` — `TILE_CONFIG` | ✅ Built |
-| `game-client/world/regions/spawn/chunk-1.ts` | ✅ Built |
+| `game-client/world/regions/spawn/chunk-1.ts` | ✅ Built (hand-authored data) |
 | `utils/game-store.ts` — Zustand store | ✅ Built |
 | `utils/ws-client.ts` — WebSocket client | ✅ Built |
 | `types/mmo/world.ts` — all world types | ✅ Built |
 | `types/mmo/player.ts` — PlayerState | ✅ Built |
-| `types/mmo/network.ts` — WSMessage | ✅ Built |
+| `types/mmo/network.ts` — Legacy JSON protocol | ✅ Built (Phasing out) |
 | `game-client/entities/npcs.ts` | ⬜ Empty placeholder |
 | Chunk manager (load/unload on movement) | ⬜ Not yet built |
+| Binary Wire Protocol (XOR + HMAC-2B) | ⬜ Pending Migration |
+| `mmo-shared` Package | ⬜ Pending Creation |
 
 
 ***
 
-## Locked Decisions
+## Locked Decisions \& Meta-Policies
 
-- **Chunks are terrain only** — no NPCs, no spawn points, no interactables in `ChunkData`.
-- **NPCs will have their own type** with a fixed home position `(x, y, z)` in world coords.
-- **Spawn points are external** — coordinates passed at runtime, not baked into map.
-- **All systems speak world coords `(x, y, z)`** — chunk/region always derived.
-- **Chunks are static and cacheable** — fetched once per session.
-- **Chunk loading is client-driven** — client fetches tile data directly.
-- **WASD moves camera only**, never the player.
-- **Documentation Workflow** — Managed in repeatable atomic units. All documentation updates are performed on dedicated branches followed by a PR. AI assistants are strictly prohibited from merging their own PRs; manual review is required for all changes.
-- **AI-Managed PR Policy** — The AI must never merge a PR it has created. All merges are the responsibility of the human user.
-- **Security Architecture** — XOR + HMAC-2B (truncated SHA-256) chosen for the fastest performance (3,343ns) and minimal overhead.
+- **Documentation Workflow**: Documentation is managed in repeatable atomic units. All documentation updates are performed on dedicated branches followed by a PR.
+- **AI-Managed PR Policy**: AI assistants are strictly prohibited from merging their own PRs. All merges are the responsibility of the human repo owner after manual review.
+- **Chunks are terrain only**: No NPCs, spawn points, or interactables in `ChunkData`.
+- **NPCs**: Fixed home positions `(x, y, z)` defined externally, loaded as a layer after terrain.
+- **Security**: XOR + HMAC-2B (truncated SHA-256) is the standard for game packets.
+- **Wire Format**: Fixed 12-byte packets (`Uint16Array(4)` payload + 4-byte signature).
+- **Coordinate System**: All systems speak world coords `(x, y, z)`. Chunk/Region always derived.
+- **WASD**: Moves camera only, never the player.
+- **Server Authority**: Server is the sole authority on game state; client is display-only.
 
 ***
 
-## Network Protocol Findings (2026-03-22)
+## Network Protocol Findings (2026-03-24)
 
 **Status**: Finalized for `mmo-shared` package implementation.
-**Wire Format**: `Uint16Array(4)` (8 bytes) + 4-byte HMAC signature = **12 bytes total**.
+
+### Binary Wire Format (v1.0)
+
+`[encrypted_8b] + [hmac_2b_sig] = 12 bytes total`
+
+**Payload Structure `[r, s, t, id]`**:
 
 
-| r | Message | Direction | Description |
-| :-- | :-- | :-- | :-- |
-| **0** | `action_start` | Inbound | Begin gather/action (anim sync) |
-| **1** | `action_finish` | Inbound | Complete action (server-side roll) |
-| **10** | `tick` | Outbound | Nearby player delta positions |
-| **12** | `move` | Inbound | Click-to-move target tile |
+| Component | Range | Description |
+| :-- | :-- | :-- |
+| `r` (Request) | 0-15 | Type (e.g., `0`=action_start, `12`=move, `10`=tick) |
+| `s` (Skill) | 0-31 | Skill ID per `SKILL_REGISTRY` |
+| `t` (Target) | 0-255 | Resource type / amount / context |
+| `id` (Entity) | 0-65535 | Encoded Tile or Entity ID |
+
+### Security Architecture
+
+1. **Key Exchange**: Client connects → Server generates unique 32-byte `sessionKey` (sent via TLS).
+2. **XOR Encryption**: Blinds the 8-byte payload using the session key.
+3. **HMAC-2B Integrity**: Truncated SHA-256 signature to prevent tampering.
+4. **Nonce Replay Protection**: Nonce increments per message; server rejects stale nonces.
+
+***
+
+## [LEGACY] JSON Protocol (Phasing Out)
+
+*These interfaces remain in `src/types/mmo/network.ts` until the binary migration is complete.*
+
+```ts
+// Server → Client
+interface PlayerInitMsg { type: "player_init"; index: number; id: string; name: string; hp: number; maxHp: number; x: number; y: number }
+type PlayerDelta = [index: number, x: number, y: number, facing: number, hp: number]
+interface TickMsg { type: "tick"; t: number; p: PlayerDelta[] }
+
+// Client → Server
+interface LoginPacket { type: "login"; email: string; pass: string }
+interface ClickPacket { type: "click"; targetX: number; targetY: number }
+```
 
 
 ***
 
-## Pending / Not Yet Built
+## World \& Coordinate Systems
 
-- [ ] **Implement `mmo-shared` package** — Create a unified protocol layer and shared registries.
-- [ ] **Integrate Binary Wire Protocol** — Replace JSON-based messages with the 12-byte XOR + HMAC-2B encrypted packets.
-- [ ] **Update `network.ts` and `ws-client.ts`** — Transition to the new shared protocol types.
-- [ ] **Wire `nearbyPlayers` from store** into Babylon `PlayerManager` so meshes spawn/move.
-- [ ] **Chunk manager** — Implement load/unload/cache logic around player movement.
-- [ ] **NPC Implementation** — registry and `npcs.ts` functionality.
-- [ ] **Core Systems** — Skills, Combat, Inventory, and Quest systems.
+- **Chunk Size**: 16x16 tiles.
+- **Tile Size**: 32 units.
+- **Chunk Derivation**: `chunkX = Math.floor(x / 16)`.
+- **Pixel Calculation**: `worldX = (chunkX * 16 + localX) * 32`.
+- **Loading Order**: 1. World Map → 2. Terrain → 3. Objects → 4. Entities.
 
 ***
 
-## Migration Path
+## Pending Tasks / TODOs
 
-1. **Phase 1 (Immediate)**: Create `mmo-shared`, move constants/registries, and implement identical encrypt/decrypt functions in both repos.
-2. **Phase 2 (Stability)**: Add server-side location tracking for cheat detection and rotation of nonces.
+- [ ] **Create `mmo-shared` package**: Centralize protocol, registries, and crypto.
+- [ ] **Implement Binary Migration**: Update `ws-client.ts` to handle 12-byte `ArrayBuffer` payloads.
+- [ ] **Wire `nearbyPlayers` mesh sync**: Connect store to Babylon `PlayerManager`.
+- [ ] **Chunk Manager**: Implement dynamic load/unload/cache logic.
+- [ ] **`TileHeight` Rendering**: Support sloped and multi-floor terrain.
+- [ ] **Core Game Systems**: Skills, Combat, Inventory, Quests, and Interactables.
 
+***
+
+## Scaling \& Cost Analysis (500 DAU Target)
+
+- **Mean processing**: 3,343ns (XOR + HMAC-2B is the fastest valid option).
+- **Network Traffic**: ~72 msgs/min per player.
+- **Monthly Bandwidth**: ~0.061 GB.
+- **Monthly Infrastructure Cost**: ~\$0.61 (Data transfer post-free tier).
