@@ -1,269 +1,44 @@
-# MMO Client
+# mmo-client
 
-## Overview
-
-A browser-based 3D MMO. Players move around a tile-based world, interact with other players in real time, and progress through skills, combat, and quests.
-
----
-
-## Game Systems
-
-### Movement
-Players move by clicking a tile on the ground. The client snaps the click to the nearest tile centre using `snapToTile` and sends the new position to the server. The server validates the move and broadcasts it to nearby players. Remote players interpolate smoothly to their new position. WASD moves the camera only, not the player.
-
-### Player Sync
-
-The server maintains an interest area of 3 chunks around each player. Only players within that radius are ever sent to a client — players outside it do not exist to that client.
-
-#### Two Message Types
-
-**Init** — sent once when a player enters your interest area. Contains full state.
-
-**Delta** — sent every tick while they remain in range. Contains only what changed.
-
-**Leave** — sent once when a player exits your interest area.
-
-#### Session Index
-
-On init, each player in range is assigned a small integer index for that session. All delta updates reference this index instead of the full ID — keeping tick payloads as small as possible.
-
-```ts
-// INIT — sent once
-{ type: 'player_init', id: '74m48m4...', index: 4, name: 'User', hp: 100 }
-
-// DELTA — sent every tick (index = 1 byte vs 36 byte UUID)
-{ t: 1234, p: [[4, 10, 15, 1, 98], [7, 22, 8, 0, 100]] }
-
-// LEAVE — sent once
-{ type: 'player_leave', index: 4 }
-```
-#### Tick Behaviour
-
-Server ticks every 100ms
-
-Nothing is sent if nothing has changed
-
-A player standing still generates zero outbound traffic
-
-Combat actions and death events are sent immediately as events, not batched
-
-### Players
-Every player occupies exactly one tile at all times. The local player is always spawned at the world origin on load. Remote players are synced via the Zustand store, which is updated by incoming WebSocket messages.
-
-### World
-The world is made up of regions, each containing chunks of 16x16 tiles. Chunks are loaded and unloaded dynamically as the player moves. Tiles can be marked as unwalkable to represent obstacles, walls, or water.
-
-### Skills
-Players have a set of skills (e.g. Combat, Woodcutting, Mining, Fishing). Each skill has an XP value and a derived level. Performing actions in the world awards XP to the relevant skill.
-
-### Combat
-Combat is tile-based. A player can attack another player or NPC if they are within melee range (adjacent tile). Each attack/defend cycle runs on a fixed tick. Players have health which depletes on hits. Death triggers a respawn at a defined region spawn point.
-
-### Inventory
-Players carry items in a fixed-size inventory grid. Items can be picked up from world tiles or dropped onto them. Item quantities are tracked per slot.
-
-### NPCs
-NPCs have a fixed home position in world coordinates `(x, y, z)` — defined once, outside of chunk data. They have a mesh, a name label, and can be interacted with for dialogue or trade. NPC definitions are loaded as a separate layer after terrain, so the world is always ready before any entity needs to path against it.
-
-### Quests
-Quests have three states: not started, in progress, and complete. Completion is tracked via a state machine. Completing a quest awards XP or items.
-
----
-
-## World Architecture
-
-```ts
-World
-└── Region      (named area e.g. "Starting Zone", "Wilderness")
-  └── Chunk     (16x16 tiles, loaded/unloaded as player moves)
-    └── Tile    (single cell - walkable: boolean)
-```
-
-### Tile
-The smallest unit of the world. A tile is identified by its coordinates `x, y, z`. Tiles marked `walkable: false` are impassable — water, walls, rocks etc. Players and NPCs can occupy the same walkable tile simultaneously.
-
-Tiles are stored in a map keyed by `"x,y,z"` — coordinates are the key, not stored inside the tile.
-
-Each tile has a type and a height (`y`):
-
-\```ts
-Tile {
-  type: TileType  // GRASS | WATER | STONE | SAND | PATH
-  y: TileHeight   // 0 | 0.25 | 0.5 | 0.75 | 1 | 2 | 3
-}
-\```
-
-`TileHeight` values: `GROUND (0)`, `SLOPE_LOW (0.25)`, `SLOPE_MID (0.5)`, `SLOPE_HIGH (0.75)`, `FIRST_FLOOR (1)`, `SECOND_FLOOR (2)`, `THIRD_FLOOR (3)`
-
-### Chunk
-
-A 16x16 block of tiles (256 tiles total). Chunks are the unit of streaming — only chunks near the player are held in memory at any time. The server loads a 3x3 grid of chunks around the player and streams new ones in as they move, unloading chunks that fall out of range.
-
-```ts
-Chunk {
-  chunkX: number
-  chunkZ: number
-  region: string
-  tiles: Tile[][]
-}
-```
-
-Chunks are static terrain data served directly to the client, not through the game server. The client calculates which chunks are in range on movement and fetches any not already cached. Chunks are cached for the entire session — fetched once, never re-fetched. When the player moves into a new chunk, the newly visible edge chunks are loaded and the opposite edge is evicted.
-
-```ts
-const chunkX = Math.floor(x / CHUNK_SIZE)  // CHUNK_SIZE = 16
-const chunkZ = Math.floor(z / CHUNK_SIZE)
-```
-The local tile position within that chunk is:
-
-```ts
-const localX = x % CHUNK_SIZE
-const localZ = z % CHUNK_SIZE
-```
-
-Chunks stitch together implicitly through their coordinates — there are no explicit borders. The world is a continuous infinite grid of chunks.
-
-#### Chunk Loading
-
-Chunks are static world data served directly to the client — not streamed through the game server. When a player moves, the client calculates which chunks should be in range and fetches any it doesn't already have cached. The game server only tracks which chunk each player is currently in, not the tile data itself.
-
-The client loads a 3x3 grid of chunks around the player (9 chunks, 2,304 tiles). Chunks are cached in memory for the session and only fetched once. When the player moves into a new chunk, the three new chunks on that edge are fetched and the three on the opposite edge are dropped from memory.
-
-### Region
-
-A named area of the world defined by a collection of chunks. Regions are an overlay on top of the chunk grid — they define metadata such as name, PvP rules, spawn points, and ambient settings. A chunk always belongs to exactly one region.
-
-```ts
-Region {
-  id: string
-  name: string
-  chunks: Record<string, Chunk>  // key: "chunkX,chunkY,chunkZ"
-  pvp: boolean
-}
-```
-
-### World
-The world is the master registry of all regions. It holds no tile data directly — it simply maps region ids to their Region definitions.
-
-```ts
-World {
-  regions: Record<string, Region>  // key: region id
-}
-```
-
-All game systems — the server, client, and store — speak in world tile coordinates x, y, z. The chunk and region are always derived from those coordinates, never stored on the player or entity directly.
-
----
-
-## Map System
-
-The world is divided into a grid of **chunks**, each `CHUNK_SIZE × CHUNK_SIZE` tiles. Only chunks near the player are loaded at any time.
-
-World (infinite grid of chunks)
-└── Chunk (16×16 tiles)
-└── Tile (1×1 unit — has a type: grass, water, stone, sand, path)
-
-text
-
-### Coordinate System
-
-Each tile has a world tile coordinate `(tx, tz)`. To find which chunk it belongs to:
-
-- `chunkX = Math.floor(tx / CHUNK_SIZE)`
-- `chunkZ = Math.floor(tz / CHUNK_SIZE)`
-
-Local position within that chunk:
-
-- `localX = tx % CHUNK_SIZE`
-- `localZ = tz % CHUNK_SIZE`
-
-### Loading Strategy
-
-World data loads in tiers to minimise initial load time:
-
-1. **World map** — region metadata and chunk boundaries, no tile data yet
-2. **Terrain** — tile data for chunks near the player, streamed as they move
-3. **Objects / Interactables** — loaded for visible chunks only
-4. **Entities (NPCs, players)** — last, terrain must exist before entities path against it
-
-Each layer is cached independently. The world map is nearly static and cached aggressively. Terrain chunks are cached for the session. Entities are always live.
-
-### Tile Types
-
-- `GRASS` — default terrain
-- `WATER` — impassable
-- `STONE` — walkable hard surface
-- `SAND` — walkable soft surface
-- `PATH` — walkable road/trail
-
-### Files
-
-- `src/game-client/constants.ts` — `TILE_SIZE`, `CHUNK_SIZE`
-- `src/game-client/chunks.ts` — `Chunk` class, spawns and disposes tile meshes
-- `src/game-client/chunk-manager.ts` — tracks loaded chunks, triggers load/unload on player movement
-- `src/types/mmo/tile.ts` — `TileType` enum
-- `src/types/mmo/chunk.ts` — `ChunkData` type (16×16 tile array + chunk coords)
+Browser-based 3D MMO client. Players move around a tile-based world, interact with other players in real time, and progress through skills, combat, and quests. Built with Next.js, Babylon.js, and Zustand.
 
 ---
 
 ## Tech Stack
 
-- **Next.js** — UI, routing, login/register API routes
-- **Babylon.js** — 3D game engine, rendering, input
-- **Zustand** — lightweight client game state
-- **WebSockets** — real time multiplayer sync
-- **TypeScript** — strict typing throughout
+| Layer | Technology |
+|---|---|
+| Framework | Next.js (App Router) |
+| 3D Engine | Babylon.js |
+| State | Zustand |
+| Real-time | WebSocket (`ws-client.ts`) |
+| HTTP | Axios wrapper (`http.ts`) |
+| Language | TypeScript — strict throughout |
+| Shared types | `mmo-shared` (local package) |
 
 ---
 
-## Folder Structure
+## Branch
 
-```
-src/
-├── app/
-│ ├── api/                # login, register API routes
-│ ├── login/              # login page
-│ └── game/               # game page
-├── game-client/      
-│ ├── index.ts            # singleton init/destroy
-│ ├── engine.ts           # Engine + Scene
-│ ├── camera.ts           # camera
-│ ├── constants.ts        # TILE_SIZE, CHUNK_SIZE, camera constants
-│ ├── world.ts            # ground, lighting
-│ ├── grid.ts             # tile grid overlay
-│ ├── players.ts          # player meshes
-│ ├── chunks.ts           # Chunk class, tile mesh spawning
-│ └── chunk-manager.ts    # load/unload chunks around player
-├── presentation/     
-│ ├── 1-atoms/            # buttons, inputs
-│ ├── 2-molecules/        # form fields, UI groups
-│ ├── 3-organisms/        # GameCanvas, LoginForm
-│ ├── 4-layouts/          # BaseLayout
-│ └── 5-pages/            # GamePage, LoginPage 
-├── types/      
-│ └── mmo/      
-│   ├── tile.ts     
-│   ├── chunk.ts      
-│   ├── region.ts     
-│   ├── player.ts     
-│   ├── network.ts      
-│   └── game-state.ts     
-└── utils/      
-├── game-store.ts         # Zustand store
-├── ws-client.ts          # WebSocket connection
-├── http.ts               # Axios wrapper
-└── response.ts           # API response helpers
+Active development is on **`nextjs-zustand`**. All PRs target this branch.
+
+---
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
 ```
 
-## Naming Conventions
+Copy `.env.example` to `.env.local` and fill in values:
 
-- Files: `kebab-case.ts` / `PascalCase.tsx` for components
-- Classes: `PascalCase` (e.g. `GameEngine`, `PlayerManager`)
-- Functions: `camelCase` (e.g. `initGame`, `snapToTile`, `connectWS`)
-- Types/Interfaces: `PascalCase` (e.g. `Tile`, `PlayerState`, `WSMessage`)
-- Constants: `UPPER_SNAKE_CASE` (e.g. `TILE_SIZE`, `CHUNK_SIZE`)
-- WS message types: `snake_case` strings (e.g. `player_move`, `player_join`)
-- Zustand actions: `camelCase` prefixed with verb (e.g. `setMyId`, `addNearbyPlayer`)
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_MMO_SERVER_URL` | WebSocket server — e.g. `ws://localhost:8080` |
+| `NEXT_PUBLIC_DEV_MODE` | Set `true` to enable verbose logger output |
+| `NEXT_PUBLIC_DEV_EMAIL` | Dev auto-login email (dev mode only) |
+| `NEXT_PUBLIC_DEV_PASSWORD` | Dev auto-login password (dev mode only) |
 
 ---
 
@@ -275,3 +50,218 @@ npm run build    # production build
 npm run start    # production server
 npm run format   # prettier format
 ```
+
+---
+
+## Folder Structure
+
+```
+src/
+├── app/
+│   ├── api/                # Next.js API routes — login, register
+│   ├── login/              # Login page
+│   ├── game/               # Game page
+│   └── layout.tsx          # Root layout
+│
+├── game-client/            # All Babylon.js game logic — no React inside here
+│   ├── index.ts            # initGame / connectGame / destroyGame singleton
+│   ├── engine.ts           # GameEngine — Babylon Engine + Scene bootstrap
+│   ├── camera.ts           # GameCamera — arc-rotate, WASD orbit, player follow
+│   ├── input.ts            # GameInput — keyboard tracking, click target
+│   ├── constants.ts        # WORLD, CAMERA, PLAYER, CHUNK_MANAGER, MOVEMENT constants
+│   ├── entities/
+│   │   ├── players.ts      # PlayerManager — spawn, update, remove, syncPlayers
+│   │   └── npcs.ts         # NPC rendering (stub)
+│   └── world/
+│       ├── index.ts        # GameWorld — lighting, chunk lifecycle
+│       ├── chunk.ts        # Chunk class — spawns/disposes 16×16 tile meshes
+│       ├── tile-config.ts  # Tile type → colour mapping
+│       └── regions/        # Static chunk data per region
+│           └── spawn/      # Spawn region chunk files
+│
+├── presentation/
+│   ├── 1-atoms/            # Buttons, inputs
+│   ├── 2-molecules/        # Form fields, UI groups
+│   ├── 3-organisms/        # GameCanvas, LoginForm
+│   ├── 4-layouts/          # BaseLayout
+│   └── 5-pages/            # GamePage, LoginPage
+│
+├── types/
+│   ├── index.ts            # Re-exports all types
+│   ├── ws-protocol.ts      # WS message types
+│   └── mmo/
+│       ├── world.ts        # World, Region, Chunk, ChunkData, Tile types
+│       ├── player.ts       # Player types
+│       ├── entities.ts     # NPC and entity types
+│       ├── game-state.ts   # GameStoreState, PlayerState, Stats
+│       ├── network.ts      # Network message types
+│       └── position.ts     # Position type
+│
+└── utils/
+    ├── game-store.ts       # Zustand store
+    ├── ws-client.ts        # WebSocket connection + message dispatch
+    ├── http.ts             # Axios wrapper
+    ├── logger.ts           # Centralised logger — never use raw console.log
+    ├── response.ts         # API response helpers
+    ├── site.ts             # Site metadata helpers
+    └── dev.ts              # Dev credential helpers
+```
+
+---
+
+## Game Systems
+
+### Movement
+
+Players move by clicking a tile on the ground. The click is snapped to the nearest tile centre and a `player_move` message is sent to the server. Remote players are smoothed to their new position each render frame using `Vector3.Lerp` at `PLAYER.LERP_SPEED`. WASD moves the camera only, not the player.
+
+Movement constants (`constants.ts`):
+
+| Constant | Value | Description |
+|---|---|---|
+| `MOVEMENT.TILE_DURATION_MS` | 600 | ms to traverse one tile |
+| `MOVEMENT.EASE_IN_TILES` | 2 | tiles to accelerate over at path start |
+| `MOVEMENT.EASE_OUT_TILES` | 1 | tiles to decelerate over at path end |
+| `MOVEMENT.MAX_PATH_LENGTH` | 25 | max queued tiles per click |
+
+### Player Sync
+
+The server maintains a 3-chunk interest area around each player. Three message types drive sync:
+
+| Message | When | Contains |
+|---|---|---|
+| `player_init` | Player enters interest area | Full state: id, index, name, hp, maxHp, x, y |
+| `tick` | Every 100 ms while in range | `{ t, p: [index, x, z, facing, hp][] }` |
+| `player_leave` | Player exits interest area | `{ index }` |
+
+Each player is assigned a small integer **session index** on init. Tick payloads use this index instead of the full UUID, keeping payloads minimal. The `indexRegistry` in the Zustand store maps `index → uuid`.
+
+Tick behaviour:
+- Server ticks every 100 ms
+- Nothing is sent if nothing has changed (delta suppression via `ws.lastState`)
+- A stationary player generates zero outbound tick traffic
+- Combat and death events are sent immediately as discrete events, not batched
+
+### World Architecture
+
+```
+World
+└── Region      (named area — "Starting Zone", "Wilderness")
+  └── Chunk     (16×16 tiles, loaded/unloaded as player moves)
+    └── Tile    (single cell — type + height)
+```
+
+#### Tile
+
+The smallest world unit. Identified by `(x, y, z)`. Tiles with `walkable: false` are impassable.
+
+```ts
+Tile {
+  type: TileType   // GRASS | WATER | STONE | SAND | PATH
+  y:    TileHeight // 0 | 0.25 | 0.5 | 0.75 | 1 | 2 | 3
+}
+```
+
+`TileHeight` values: `GROUND (0)`, `SLOPE_LOW (0.25)`, `SLOPE_MID (0.5)`, `SLOPE_HIGH (0.75)`, `FIRST_FLOOR (1)`, `SECOND_FLOOR (2)`, `THIRD_FLOOR (3)`.
+
+Tiles are stored in a map keyed by `"x,y,z"` — coordinates are the key, not stored inside the tile.
+
+#### Chunk
+
+A 16×16 block of tiles (256 tiles). Chunks are the unit of streaming. The client holds a 3×3 grid (9 chunks) around the player:
+
+```ts
+const chunkX = Math.floor(x / CHUNK_SIZE)   // CHUNK_SIZE = 16
+const chunkZ = Math.floor(z / CHUNK_SIZE)
+const localX = x % CHUNK_SIZE
+const localZ = z % CHUNK_SIZE
+```
+
+When the player enters a new chunk, the 3 newly visible edge chunks are loaded and the 3 on the opposite edge are evicted. Chunks are cached in memory for the session — fetched once, never re-fetched.
+
+Chunk data is **static world data served directly to the client**, not streamed through the game server. Currently, chunk data lives as static TypeScript files under `src/game-client/world/regions/`.
+
+#### Region
+
+A named area defined by a collection of chunks. Holds metadata: name, PvP rules, spawn points, ambient settings. A chunk always belongs to exactly one region.
+
+```ts
+Region {
+  id:     string
+  name:   string
+  chunks: Record<string, Chunk>  // key: "chunkX,chunkZ"
+  pvp:    boolean
+}
+```
+
+#### World
+
+The master registry of all regions. Holds no tile data directly — maps region IDs to Region definitions.
+
+```ts
+World {
+  regions: Record<string, Region>  // key: region id
+}
+```
+
+All game systems speak in world tile coordinates `(x, y, z)`. Chunk and region are always derived from coordinates, never stored on the player.
+
+### Map Loading Strategy
+
+World data loads in tiers to minimise initial load time:
+
+1. **World map** — region metadata and chunk boundaries; no tile data yet
+2. **Terrain** — tile data for nearby chunks, streamed as the player moves
+3. **Objects / Interactables** — loaded for visible chunks only
+4. **Entities (NPCs, players)** — last; terrain must exist before entities can path against it
+
+### Skills
+
+Players have skills (Combat, Woodcutting, Mining, Fishing). Each skill has an XP value and a derived level computed via the XP curve in `mmo-shared`. Performing world actions awards XP to the relevant skill.
+
+### Combat
+
+Tile-based. A player can attack another player or NPC if they are on an adjacent tile. Each attack/defend cycle runs on a fixed tick. HP depletes on hits. Death triggers a respawn at the region's spawn point.
+
+### Inventory
+
+Fixed-size item grid. Items can be picked up from world tiles or dropped onto them. Item quantities are tracked per slot.
+
+### NPCs
+
+NPCs have a fixed home position in world coordinates `(x, y, z)` defined outside chunk data. They have a mesh, a name label, and can be interacted with for dialogue or trade. NPC definitions are loaded as a separate layer after terrain.
+
+### Quests
+
+Quests have three states: not started, in progress, complete. Completion is tracked via a state machine. Completing a quest awards XP or items.
+
+---
+
+## Naming Conventions
+
+| Thing | Convention | Example |
+|---|---|---|
+| Files | `kebab-case.ts` | `game-store.ts`, `chunk-manager.ts` |
+| Components | `PascalCase.tsx` | `GameCanvas.tsx`, `LoginForm.tsx` |
+| Classes | `PascalCase` | `GameEngine`, `PlayerManager` |
+| Functions | `camelCase` | `initGame`, `snapToTile`, `connectWS` |
+| Types / Interfaces | `PascalCase` | `Tile`, `PlayerState`, `ChunkData` |
+| Constants | `UPPER_SNAKE_CASE` | `TILE_SIZE`, `CHUNK_SIZE` |
+| WS message types | `snake_case` strings | `player_init`, `player_leave`, `tick` |
+| Zustand actions | verb-prefixed `camelCase` | `setMyId`, `registerPlayer`, `applyTick` |
+
+---
+
+## Logging
+
+All logging goes through `src/utils/logger.ts`. Raw `console.log` is **banned** everywhere in the codebase.
+
+```ts
+logger.log(...)    // general — dev only
+logger.warn(...)   // warnings — dev only
+logger.error(...)  // errors — always on
+logger.ws(...)     // WebSocket events — dev only
+logger.game(...)   // Babylon/game events — dev only
+```
+
+Logger output is gated by `NEXT_PUBLIC_DEV_MODE === "true"` (errors are always emitted).

@@ -1,112 +1,47 @@
-> For AI context only. Reflects current implementation reality, not aspirations.
-> Last updated: 2026-03-20
-> Active branch: nextjs-zustand
+# CONTEXT — mmo-client
 
-***
+## Branch
 
-## Project
+All work happens on `nextjs-zustand`. Never commit directly to `main`.
 
-Browser-based 3D MMO client. Next.js (App Router) + Babylon.js + Zustand.
-Server is a separate repo (`mmo-server`), written in Node.js/TypeScript.
+---
 
-***
+## Architecture: React vs Babylon
 
-## Current Stack
+Babylon.js owns the canvas and runs independently of React's render cycle. The integration contract is:
 
-- **Next.js** (App Router) — routing, login/register API routes, SSR shell
-- **Babylon.js** — 3D rendering, scene, input
-- **Zustand** — client game state (`src/utils/game-store.ts`)
-- **TypeScript** — strict throughout
-- **Tailwind CSS** — styling
-- **WebSockets** — real-time server connection (`src/utils/ws-client.ts`)
-- **Axios** — HTTP wrapper (`src/utils/http.ts`)
+- A React `useEffect` in the game page mounts the Babylon `Engine` onto a `<canvas>` ref via `initGame(canvas)`
+- Babylon's `runRenderLoop` runs at ~60 fps
+- Each frame, the render loop reads `nearbyPlayers` and `myId` from the Zustand store using `useGameStore.getState()` (not the hook — this is outside React)
+- React re-renders only for UI state changes (HUD, inventory, login form)
 
-***
+**Never** manipulate Babylon meshes from a React component. **Never** dispatch Zustand actions from inside the Babylon render loop (except for debug tooling).
 
-## Folder Structure (actual)
+---
 
-```
-src/
-├── app/
-│   ├── api/              # Next.js API routes (login, register)
-│   ├── game/             # Game page
-│   ├── login/            # Login page
-│   ├── layout.tsx        # Root layout
-│   ├── page.ts           # Root redirect
-│   ├── error.ts
-│   └── not-found.ts
-├── game-client/
-│   ├── index.ts          # initGame / connectGame / destroyGame singleton
-│   ├── engine.ts         # GameEngine class (Babylon Engine + Scene)
-│   ├── camera.ts         # GameCamera class (arc rotate, WASD camera only)
-│   ├── input.ts          # Click → snapToTile → sendPlayerUpdate
-│   ├── constants.ts      # TILE_SIZE, CHUNK_SIZE, camera constants
-│   ├── entities/
-│   │   ├── players.ts    # PlayerManager class — local + remote player meshes
-│   │   └── npcs.ts       # Empty placeholder — not yet implemented
-│   └── world/
-│       ├── index.ts      # GameWorld class
-│       ├── chunk.ts      # Chunk class — spawns/disposes tile meshes from ChunkData
-│       ├── tile-config.ts # TILE_CONFIG — color + walkable per TileType
-│       └── regions/
-│           └── spawn/
-│               └── chunk-1.ts  # First hand-authored ChunkData (16×16 tile grid)
-├── presentation/
-│   ├── 1-atoms/
-│   ├── 2-molecules/
-│   ├── 3-organisms/      # GameCanvas, LoginForm
-│   ├── 4-layouts/
-│   └── 5-pages/
-├── types/
-│   ├── index.ts          # Re-exports all mmo types
-│   └── mmo/
-│       ├── world.ts      # TileType, TileHeight, TILE_WALKABLE, Tile, tile(), ChunkData, Region, World
-│       ├── player.ts     # PlayerStats, PlayerState
-│       ├── position.ts   # Position, Rotation
-│       ├── network.ts    # WSMessage union, PlayerInitMsg, TickMsg, PlayerDelta
-│       ├── game-state.ts # GameStoreState
-│       └── entities.ts   # (stub)
-├── utils/
-│   ├── game-store.ts     # Zustand store
-│   ├── ws-client.ts      # WebSocket connection + message handling
-│   ├── http.ts           # Axios wrapper
-│   ├── response.ts       # API response helpers
-│   └── site.ts           # Site metadata / config helpers
-└── config/               # App-level config
-```
+## Game Client Singleton (`game-client/index.ts`)
 
+`initGame(canvas)` is the entry point. It is guarded — calling it twice is a no-op. It:
 
-***
+1. Creates `GameEngine` (Babylon Engine + Scene)
+2. Creates `GameWorld` (lighting + initial chunk load)
+3. Creates `GameCamera` (arc-rotate, follows local player)
+4. Creates `PlayerManager` (spawns local player box mesh)
+5. Attaches pointer observable for click-to-move
+6. Starts the render loop — reads store, syncs player meshes, renders scene
 
-## What Is Actually Built
+`destroyGame()` disposes the engine and nulls all refs. Call it in the `useEffect` cleanup.
 
-| File | Status |
-| :-- | :-- |
-| Next.js app shell, routing, login page | ✅ Built |
-| `game-client/engine.ts` — `GameEngine` | ✅ Built |
-| `game-client/camera.ts` — `GameCamera` | ✅ Built |
-| `game-client/input.ts` — click → move | ✅ Built |
-| `game-client/entities/players.ts` — `PlayerManager` | ✅ Built |
-| `game-client/world/chunk.ts` — `Chunk` class | ✅ Built |
-| `game-client/world/tile-config.ts` — `TILE_CONFIG` | ✅ Built |
-| `game-client/world/regions/spawn/chunk-1.ts` | ✅ Built (hand-authored tile data) |
-| `utils/game-store.ts` — Zustand store | ✅ Built |
-| `utils/ws-client.ts` — WebSocket client | ✅ Built |
-| `types/mmo/world.ts` — all world types | ✅ Built |
-| `types/mmo/player.ts` — PlayerState | ✅ Built |
-| `types/mmo/network.ts` — WSMessage, PlayerInitMsg, TickMsg | ✅ Built |
-| `game-client/entities/npcs.ts` | ⬜ Empty placeholder |
-| Chunk manager (load/unload on movement) | ⬜ Not yet built |
-| Server: player_init / tick / player_leave protocol | ⬜ Not yet built (client ready, server pending) |
-| Skills, combat, inventory, quests | ⬜ Not yet built |
+`connectGame(token?)` calls `connectWS`, which opens the WebSocket and handles auto-login in dev mode or session resume via token.
 
+---
 
-***
+## Zustand Store (`utils/game-store.ts`)
 
-## Zustand Store (current, from `src/utils/game-store.ts`)
+Single store, no slices. Full shape:
 
 ```ts
-{
+interface GameStoreState {
   myId:             string | null
   player:           PlayerState | null
   nearbyPlayers:    PlayerState[]
@@ -115,145 +50,153 @@ src/
   latency:          number
   sessionToken:     string | null
   sessionExpiresAt: number | null
-  indexRegistry:    Map<number, string>   // session index → player id
+  indexRegistry:    Map<number, string>  // session index → uuid
 
-  // actions
-  setMyId(id: string): void
-  setConnected(connected: boolean): void
-  setLatency(latency: number): void
-  setSession({ sessionToken, sessionExpiresAt }): void
-  updatePlayer(player: PlayerState): void          // local player hydration from legacy state tick
-  registerPlayer(msg: PlayerInitMsg): void         // upserts player + sets index registry entry
-  unregisterPlayer(index: number): void            // removes player + cleans index registry
-  applyTick(msg: TickMsg): void                    // applies delta updates in single pass
+  setMyId:           (id: string) => void
+  setConnected:      (connected: boolean) => void
+  setLatency:        (latency: number) => void
+  setSession:        ({ sessionToken, sessionExpiresAt }) => void
+  updatePlayer:      (player: Partial<PlayerState> & { id: string }) => void
+  registerPlayer:    (msg: PlayerInitMsg) => void
+  unregisterPlayer:  (index: number) => void
+  applyTick:         ({ t, p }) => void
 }
 ```
 
+### Index Registry
 
-***
+The `indexRegistry` is a `Map<number, string>` that translates a server-assigned session index into the player's persistent UUID. It is built as `player_init` messages arrive and entries are removed on `player_leave`. The `applyTick` action uses it to resolve delta tuples `[index, x, z, facing, hp]` back to `PlayerState` entries.
 
-## Network Protocol (current, from `src/types/mmo/network.ts`)
+---
 
-```ts
-// Target protocol (client ready, server not yet sending):
-export interface PlayerInitMsg {
-  type?: "player_init"
-  index: number
-  id: string
-  name: string
-  hp: number
-  maxHp: number
-  x: number
-  y: number
-}
+## WebSocket Client (`utils/ws-client.ts`)
 
-export type PlayerDelta = [index: number, x: number, y: number, facing: number, hp: number]
+Singleton — one `WebSocket` instance per tab. `connectWS(token?)` is the only entry point. On open:
 
-export interface TickMsg {
-  t: number           // server timestamp
-  p: PlayerDelta[]    // only changed players
-}
+- Dev mode (`NEXT_PUBLIC_DEV_MODE === "true"`) — reads credentials from `dev.ts` and auto-sends a `login` packet
+- Otherwise — sends a `resume` packet with the stored token if provided
 
-// Legacy (server currently sends, bridged in ws-client.ts):
-// { type: 'state', players: [...] }  — TODO: remove once server updated
-```
+### Inbound message routing
 
-
-***
-
-## WebSocket Message Handling (current, from `src/utils/ws-client.ts`)
-
-| Message | Handler |
-| :-- | :-- |
-| `authResponse` | logs success/failure |
+| `data.type` | Action |
+|---|---|
 | `loginSuccess` | `setMyId`, `setSession` |
-| `state` | legacy bridge → `registerPlayer` per player, `unregisterPlayer` for departed (TODO: remove) |
 | `player_init` | `registerPlayer` |
-| `player_leave` | `unregisterPlayer(data.index)` |
+| `player_leave` | `unregisterPlayer` |
 | `tick` | `applyTick` |
+| `state` | Legacy fallback — maps old broadcast to `registerPlayer` / `unregisterPlayer` |
+| unknown | `logger.warn` — never throw |
 
+The `state` handler is a **temporary compatibility shim** while the server is migrated to the `player_init` / `tick` / `player_leave` protocol. Remove it once the server emits those message types.
 
-***
+### Outbound
 
-## World Types (current, from `src/types/mmo/world.ts`)
+`sendPlayerUpdate(position)` sends `{ type: "player_move", position }`. This will be replaced with the binary XOR+HMAC-2B frame once the encrypted channel is wired in.
 
-```ts
-enum TileType { GRASS | WATER | STONE | SAND | PATH }
+---
 
-const TileHeight = { GROUND: 0, SLOPE_LOW: 0.25, SLOPE_MID: 0.5, SLOPE_HIGH: 0.75,
-                     FIRST_FLOOR: 1, SECOND_FLOOR: 2, THIRD_FLOOR: 3 } as const
-type TileHeight = typeof TileHeight[keyof typeof TileHeight]
+## Auth Flow
 
-interface Tile { type: TileType; y: TileHeight }
-const tile = (type: TileType, y: TileHeight = TileHeight.GROUND): Tile => ({ type, y })
+```
+Mount → check localStorage for sessionToken
+  ├─ found  → connectGame(token) → sends ResumePacket
+  └─ absent → render LoginForm  → POST /api/login or /api/register
+                                   → on success: store token, connectGame(token)
 
-interface ChunkData {
-  chunkX: number; chunkZ: number; region: string; tiles: Tile[][]  // 16×16
-}
-
-interface Region {
-  id: string; name: string; pvp: boolean
-  spawnPoint: { x: number; z: number }
-  chunks: Record<string, ChunkData>  // key: "chunkX,chunkZ"
-}
-
-interface World { regions: Record<string, Region> }
+loginSuccess received:
+  setMyId(data.id)
+  setSession({ sessionToken, sessionExpiresAt })
+  → transition to game view
 ```
 
+The raw session key (`Buffer`, 32 bytes) is **never** written to `localStorage`. It lives only in memory for the duration of the tab session. The `sessionToken` (opaque string) is stored in `localStorage` for resume.
 
-***
+---
 
-## Locked Decisions
+## Player Rendering (`entities/players.ts`)
 
-- **Chunks are terrain only** — no NPCs, no spawn points, no interactables in `ChunkData`
-- **NPCs will have their own type** with a fixed home position `(x, y, z)` in world coords, defined externally
-- **Spawn points are external** — coordinates passed to entities at runtime, not baked into map data
-- **All systems speak world coords `(x, y, z)`** — chunk/region always derived, never stored on entities
-- **Chunks are static and cacheable** — fetched once per session, keyed `"chunkX,chunkZ"`, LRU eviction when out of range
-- **Chunk loading is client-driven** — client fetches tile data directly, game server only tracks which chunk a player is in
-- **Tiered world loading order**: world map → terrain → objects/interactables → entities
-- **`TileHeight` is a const object + type** (not an enum)
-- **`TILE_CONFIG`** is the rendering source of truth — maps `TileType` to Babylon `Color3` + walkable flag
-- **`TILE_WALKABLE`** in types is the logic source of truth — `TILE_CONFIG.walkable` mirrors it in the client
-- **WASD moves camera only**, never the player
-- **Server ticks every 100ms** — delta updates batched, combat/death events immediate
-- **Session index** — client fully implemented; server still sends legacy `state` broadcasts (bridged client-side, TODO)
-- **`player` field in store is unused** — `nearbyPlayers` is the single source of truth; local player identified via `myId`
+`PlayerManager` holds a `meshes: Record<string, AbstractMesh>` map keyed by player UUID. Each render frame, `syncPlayers(nearbyPlayers, myId)` is called:
 
-***
+1. For each player in store — if no mesh exists, `spawnPlayer` creates a box mesh; otherwise `updatePlayer` lerps its position
+2. For each mesh key not in the store — `removePlayer` disposes the mesh
+
+Local player has its own `localMesh` reference (blue box). Remote players are orange boxes. Both use `PLAYER.SIZE = 2` and `PLAYER.Y_OFFSET = 1`.
+
+---
+
+## World & Chunks (`game-client/world/`)
+
+`GameWorld` owns the `Map<string, Chunk>` registry keyed by `"chunkX,chunkZ"`. On construction it calls `_setupLighting` (hemispheric ambient + directional sun) then `_loadInitialChunks`.
+
+`Chunk` constructs 256 `CreateGround` tile meshes in a grid. Each mesh is positioned at `(worldX, tile.y, worldZ)` and coloured from `TILE_CONFIG[tile.type].color`. `dispose()` destroys all 256 meshes.
+
+Chunk data currently lives as static TypeScript exports under `world/regions/`. The `chunk-manager` pattern (dynamic load/unload on player movement) is the target architecture — `GameWorld._loadChunk` and `_unloadChunk` are the hooks it will call.
+
+---
+
+## Constants Reference (`game-client/constants.ts`)
+
+```ts
+WORLD.TILE_SIZE      = 1     // visual size of a tile in Babylon units
+WORLD.CHUNK_SIZE     = 16    // tiles per chunk edge
+
+CAMERA.MIN_ZOOM      = 5
+CAMERA.MAX_ZOOM      = 40
+CAMERA.DEFAULT_RADIUS = 20
+CAMERA.LERP_SPEED    — follows player smoothly
+
+PLAYER.SIZE          = 2
+PLAYER.Y_OFFSET      = 1
+PLAYER.LERP_SPEED    = 0.12  // per-frame lerp factor for remote player position
+
+CHUNK_MANAGER.LOAD_RADIUS = 1  // 1 = 3×3 grid around player
+
+MOVEMENT.TILE_DURATION_MS = 600
+MOVEMENT.MAX_PATH_LENGTH  = 25
+```
+
+---
 
 ## Coordinate System
 
-- World tile coords: `x, z` (integer), `y` = `TileHeight`
-- Chunk from tile: `chunkX = Math.floor(x / CHUNK_SIZE)` — `CHUNK_SIZE = 16`
-- Local tile in chunk: `localX = x % CHUNK_SIZE`
-- World pixel pos: `worldX = (chunkX * CHUNK_SIZE + localX) * TILE_SIZE` — `TILE_SIZE = 32`
+All game code uses world tile coordinates `(x, y, z)`:
+- `x` — east/west
+- `y` — height (driven by `TileHeight`)
+- `z` — north/south
 
-***
+Chunk coordinates are always derived: `chunkX = Math.floor(x / 16)`, `chunkZ = Math.floor(z / 16)`. They are never stored on the player or entity.
 
-## Pending / Not Yet Built
+Babylon world units match tile units 1:1 (`TILE_SIZE = 1`).
 
-- [ ] Server: emit `player_init` / `tick` / `player_leave` — client already handles these
-- [ ] Wire `nearbyPlayers` from store into Babylon `PlayerManager` so meshes spawn/despawn/move
-- [ ] Chunk manager — load/unload/cache chunks around player on movement
-- [ ] `TileHeight` — sloped and multi-floor terrain rendering
-- [ ] Region system wired up client-side
-- [ ] NPC type, registry, and `npcs.ts` implementation
-- [ ] Skills system
-- [ ] Combat system
-- [ ] Inventory system
-- [ ] Quest system
-- [ ] Interactables registry
+---
 
-***
+## Binary Channel (Planned)
 
-## Naming Conventions
+Once the encrypted channel is activated, outbound action packets use `mmo-shared` crypto:
 
-- Files: `kebab-case.ts` / `PascalCase.tsx` for components
-- Classes: `PascalCase` (`GameEngine`, `PlayerManager`)
-- Functions: `camelCase` (`initGame`, `snapToTile`, `connectWS`)
-- Types/Interfaces: `PascalCase` (`Tile`, `PlayerState`, `WSMessage`)
-- Constants: `UPPER_SNAKE_CASE` (`TILE_SIZE`, `CHUNK_SIZE`, `TILE_CONFIG`)
-- WS message types: `snake_case` strings (`player_move`, `player_join`)
-- Zustand actions: `camelCase` prefixed with verb (`setMyId`, `registerPlayer`)
+```ts
+const payload = encodeMessage([REQUEST_TYPES.MOVE, myId, tick, targetId]);
+const frame   = encrypt(payload, sessionKey, nonce);
+ws.send(frame);  // 10-byte ArrayBuffer
+```
 
+Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `null` return (HMAC mismatch) drops the frame silently with a `logger.warn`.
+
+The session key (`Buffer`, 32 bytes) comes from `LoginSuccessMsg` and is stored in the Zustand store under `sessionKey` — never persisted.
+
+---
+
+## Open Tasks
+
+- [ ] Wire binary XOR+HMAC-2B channel for outbound action packets (replace `sendPlayerUpdate` JSON)
+- [ ] Wire `decrypt` into inbound message handler for binary game-loop frames
+- [ ] Implement `ResumePacket` auto-send on mount from stored `sessionToken`
+- [ ] `ChunkManager` — dynamic load/unload on player movement (hooks exist in `GameWorld`)
+- [ ] Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
+- [ ] `snapToTile` utility — snap click point to tile centre before sending
+- [ ] HUD components: HP bar, XP per skill, inventory panel
+- [ ] NPC rendering — `entities/npcs.ts` is a stub
+- [ ] Remove legacy `state` message handler once server emits `player_init` / `tick` / `player_leave`
+- [ ] `ClickPacket` — wire canvas right-click / ground click to server with tile coordinates
+- [ ] Quest state machine and UI
+- [ ] Combat — melee range check, attack packet, death/respawn flow
