@@ -1,8 +1,20 @@
 # CONTEXT — mmo-client
 
-## Branch
+## Branch & PR Workflow
 
-All work happens on `nextjs-zustand`. Never commit directly to `main`.
+All changes go through a feature branch and a pull request. Nothing is committed directly to `main`.
+
+```
+1. Create a feature branch from main (or the current active branch)
+2. Do all work on that branch
+3. Open a PR targeting main (or the relevant base branch)
+4. Do NOT merge — leave it open for review and approval
+5. The branch stays active until the PR is approved and merged
+```
+
+**The active branch is whichever feature branch is currently open.** There is no single long-lived development branch — each piece of work gets its own branch. When a PR is merged, that branch is done and the next task gets a new branch from the updated base.
+
+Current active branch: `docs/readme-context` (PR #11 → `main`).
 
 ---
 
