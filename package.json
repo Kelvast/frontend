@@ -19,6 +19,7 @@
     "@babylonjs/gui": "^8.55.3",
     "@babylonjs/materials": "^8.55.4",
     "axios": "1.13.2",
+    "mmo-shared": "file:../mmo-shared",
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
