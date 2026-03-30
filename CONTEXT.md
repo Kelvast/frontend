@@ -14,7 +14,7 @@ All changes go through a feature branch and a pull request. Nothing is committed
 
 **The active branch is whichever feature branch is currently open.** There is no single long-lived development branch — each piece of work gets its own branch. When a PR is merged, that branch is done and the next task gets a new branch from the updated base.
 
-Current active branch: `docs/readme-context` (PR #11 → `main`).
+Current active branch: `map-builder-chunk-api-later` (PR pending → `main`).
 
 ---
 
@@ -33,18 +33,86 @@ Babylon.js owns the canvas and runs independently of React's render cycle. The i
 
 ## Game Client Singleton (`game-client/index.ts`)
 
-`initGame(canvas)` is the entry point. It is guarded — calling it twice is a no-op. It:
+`initGame(canvas)` is the entry point. It is guarded — calling it twice is a no-op. It is `async`:
 
 1. Creates `GameEngine` (Babylon Engine + Scene)
-2. Creates `GameWorld` (lighting + initial chunk load)
+2. Creates `GameWorld` (lighting)
 3. Creates `GameCamera` (arc-rotate, follows local player)
 4. Creates `PlayerManager` (spawns local player box mesh)
-5. Attaches pointer observable for click-to-move
-6. Starts the render loop — reads store, syncs player meshes, renders scene
+5. Attaches input handlers
+6. Starts the render loop
+7. Fetches all chunk data via the builder API and loads into the world
+8. In dev: opens SSE watcher for live chunk hot-reload
 
-`destroyGame()` disposes the engine and nulls all refs. Call it in the `useEffect` cleanup.
+`destroyGame()` disposes the engine, closes the SSE watcher, and nulls all refs. Call it in the `useEffect` cleanup.
 
 `connectGame(token?)` calls `connectWS`, which opens the WebSocket and handles auto-login in dev mode or session resume via token.
+
+---
+
+## Chunk File Format
+
+Chunk files live under `src/game-client/world/regions/<regionId>/<chunkX>_<chunkZ>.ts`.
+
+- Separator is `_` (underscore) — not `-` — to avoid ambiguity with negative coordinates.
+- Example: `0_0.ts`, `-1_2.ts`, `0_-1.ts`
+- There are **no `index.ts` files** per region. The API scans folders directly.
+- `buildRegion` and `require.context` are gone — all chunk loading goes through the API.
+
+---
+
+## Builder API Routes (`app/api/builder/`)
+
+All routes are dev-only (return 403 in production).
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/builder/regions` | GET | Lists all region folders and their chunk coords |
+| `/api/builder/chunks` | GET | Reads and parses every chunk file — returns all tile data in one response |
+| `/api/builder/chunk` | GET | Reads a single chunk file by `regionId`, `chunkX`, `chunkZ` |
+| `/api/builder/chunk` | POST | Writes a chunk file, creates region folder if needed, notifies SSE watchers |
+| `/api/builder/region` | POST | Creates a new region folder |
+| `/api/builder/watch` | GET | SSE stream — pushes `chunk_changed` events when a chunk is saved |
+
+The batch endpoint (`/api/builder/chunks`) is the primary load path — used by both the map builder and the game client on init. The individual chunk GET is only used by the SSE hot-reload path.
+
+---
+
+## Chunk Hot-Reload (Dev)
+
+In development the game client opens a persistent SSE connection to `/api/builder/watch` after init.
+
+- When the map builder saves a chunk (`POST /api/builder/chunk`), the route calls `notifyChunkChanged(regionId, chunkX, chunkZ)`
+- This pushes a `chunk_changed` SSE event to all open connections
+- The game client receives it, fetches the updated chunk via `GET /api/builder/chunk`, and calls `GameWorld.reloadChunk(chunk)`
+- No page reload required — the tile meshes for that chunk are disposed and rebuilt in-place
+- SSE auto-reconnects after 3s on disconnect
+
+---
+
+## Map Builder (`presentation/3-organisms/MapBuilder.tsx`)
+
+A dev-only tool at `/map-builder` for painting and editing the world grid.
+
+### Grid
+- Renders all chunks seamlessly (no gaps) using `<canvas>` elements — one canvas per chunk, drawn with `TILE_COLORS`
+- Empty padding slots around existing chunks show as `+` placeholders for creating new chunks
+- Hover shows a brightness overlay; selected chunk shows a blue tint + outline ring
+
+### Zoom & Pan
+- Scroll wheel to zoom (native listener, `{ passive: false }` — not React `onWheel`)
+- Middle-click drag to pan
+- Click a chunk to focus — smooth CSS `transform: scale + translate` animates to center the chunk with context around it
+- Focus zoom level is remembered via `useRef` — subsequent chunk clicks reuse the last zoom level
+- Manual zoom (buttons or scroll) updates the remembered level
+- CSS transition is disabled during pan for immediate response
+
+### `useFocusZoom` (`utils/use-focus-zoom.ts`)
+Manages zoom + translate state for the map builder viewport. Key behaviours:
+- `attachWheel(el)` — registers native wheel + mouse listeners on the viewport element
+- `focusChunk(px, pz)` — centers the given grid-relative pixel coords at the current focus zoom
+- `lastFocusZoomRef` — persists last zoom across chunk selections without triggering re-renders
+- `isPanning` — exposed as state so the CSS transition can be disabled during drag
 
 ---
 
@@ -132,42 +200,53 @@ The raw session key (`Buffer`, 32 bytes) is **never** written to `localStorage`.
 1. For each player in store — if no mesh exists, `spawnPlayer` creates a box mesh; otherwise `updatePlayer` lerps its position
 2. For each mesh key not in the store — `removePlayer` disposes the mesh
 
-Local player has its own `localMesh` reference (blue box). Remote players are orange boxes. Both use `PLAYER.SIZE = 2` and `PLAYER.Y_OFFSET = 1`.
+Local player has its own `localMesh` reference (blue box). Remote players are orange boxes.
 
 ---
 
 ## World & Chunks (`game-client/world/`)
 
-`GameWorld` owns the `Map<string, Chunk>` registry keyed by `"chunkX,chunkZ"`. On construction it calls `_setupLighting` (hemispheric ambient + directional sun) then `_loadInitialChunks`.
+`GameWorld` owns a `Map<string, GameRegion>` registry. Key methods:
 
-`Chunk` constructs 256 `CreateGround` tile meshes in a grid. Each mesh is positioned at `(worldX, tile.y, worldZ)` and coloured from `TILE_CONFIG[tile.type].color`. `dispose()` destroys all 256 meshes.
+- `loadRegion(data)` — loads a full region (used on bulk init)
+- `loadChunk(chunk)` — adds a single chunk to an existing or new region (used for streaming)
+- `hasChunk(x, z)` — checks if a chunk is already loaded
+- `reloadChunk(chunk)` — disposes and rebuilds a single chunk's meshes (used by SSE hot-reload)
+- `reloadRegion(fresh)` — diffs and reloads changed chunks across a full region
 
-Chunk data currently lives as static TypeScript exports under `world/regions/`. The `chunk-manager` pattern (dynamic load/unload on player movement) is the target architecture — `GameWorld._loadChunk` and `_unloadChunk` are the hooks it will call.
+`GameRegion` owns the `Map<string, Chunk>` and `Map<string, ChunkData>`. Key methods:
+
+- `loadChunk(key, data)` — no-op if already loaded; otherwise spawns meshes
+- `reloadChunk(key, data)` — dispose + rebuild unconditionally
+- `hasChunk(x, z)` — key existence check
+- `reloadAll(fresh)` — diff-based reload for HMR
+
+`Chunk` constructs 256 `CreateGround` tile meshes in a 16×16 grid, coloured from `TILE_COLORS`. `dispose()` destroys all meshes.
 
 ---
 
 ## Constants Reference (`game-client/constants.ts`)
 
 ```ts
-WORLD.TILE_SIZE           = 1     // visual size of a tile in Babylon units
-WORLD.CHUNK_SIZE          = 16    // tiles per chunk edge
+WORLD.TILE_SIZE  = 1   // visual size of a tile in Babylon units
+WORLD.CHUNK_SIZE = 16  // tiles per chunk edge
 
-CAMERA.MIN_ZOOM           = 5
-CAMERA.MAX_ZOOM           = 40
-CAMERA.DEFAULT_RADIUS     = 20
+CHUNK_LOADING.SEED_X = 0  // player spawn chunk X
+CHUNK_LOADING.SEED_Z = 0  // player spawn chunk Z
+
+CAMERA.MIN_ZOOM            = 3
+CAMERA.MAX_ZOOM            = 30
+CAMERA.DEFAULT_RADIUS      = 20
 CAMERA.ANGULAR_SENSIBILITY = 500
-CAMERA.ORBIT_SPEED        = 0.02
+CAMERA.ORBIT_SPEED         = 0.02
+CAMERA.WHEEL_PRECISION     = 30
 
-PLAYER.SIZE               = 2
-PLAYER.Y_OFFSET           = 1
-PLAYER.LERP_SPEED         = 0.12  // per-frame lerp factor for remote player position
+PLAYER.SIZE       = 0.75
+PLAYER.Y_OFFSET   = 0.375
+PLAYER.LERP_SPEED = 0.12
 
-CHUNK_MANAGER.LOAD_RADIUS = 1     // 1 = 3×3 grid around player
-
-MOVEMENT.TILE_DURATION_MS = 600
-MOVEMENT.EASE_IN_TILES    = 2
-MOVEMENT.EASE_OUT_TILES   = 1
-MOVEMENT.MAX_PATH_LENGTH  = 25
+MOVEMENT.BASE_SPEED      = 4
+MOVEMENT.AGILITY_FACTOR  = 0.05
 ```
 
 ---
@@ -197,16 +276,15 @@ ws.send(frame);  // 10-byte ArrayBuffer
 
 Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `null` return (HMAC mismatch) drops the frame silently with a `logger.warn`.
 
-The session key (`Buffer`, 32 bytes) comes from `LoginSuccessMsg` and is stored in the Zustand store under `sessionKey` — never persisted.
-
 ---
 
 ## Open Tasks
 
+- [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern, `CHUNK_LOADING.SEED_X/Z` seeds the origin)
+- [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
 - [ ] Wire binary XOR+HMAC-2B channel for outbound action packets (replace `sendPlayerUpdate` JSON)
 - [ ] Wire `decrypt` into inbound message handler for binary game-loop frames
 - [ ] Implement `ResumePacket` auto-send on mount from stored `sessionToken`
-- [ ] `ChunkManager` — dynamic load/unload on player movement (hooks exist in `GameWorld`)
 - [ ] Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
 - [ ] `snapToTile` utility — snap click point to tile centre before sending
 - [ ] HUD components: HP bar, XP per skill, inventory panel
