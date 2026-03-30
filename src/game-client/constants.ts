@@ -14,13 +14,24 @@ export const CAMERA = {
   WHEEL_PRECISION: 30,
 } as const;
 
+const PLAYER_HEIGHT = 1.8;
+const FLOOR_HEIGHT = PLAYER_HEIGHT + 0.5;
+
 export const PLAYER = {
   SIZE: 0.75,
-  Y_OFFSET: 0.375,
+  HEIGHT: PLAYER_HEIGHT,
+  Y_OFFSET: PLAYER_HEIGHT / 2,
   LERP_SPEED: 0.12,
+} as const;
+
+export const FLOOR = {
+  HEIGHT: FLOOR_HEIGHT,
+  FIRST_FLOOR: FLOOR_HEIGHT,
+  SECOND_FLOOR: FLOOR_HEIGHT * 2,
+  THIRD_FLOOR: FLOOR_HEIGHT * 3,
 } as const;
 
 export const MOVEMENT = {
   BASE_SPEED: 4,
-  AGILITY_FACTOR: 0.05,
+  TILE_DURATION_MS: 250,
 } as const;
