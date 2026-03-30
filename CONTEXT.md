@@ -2,7 +2,7 @@
 
 ## Branch & PR Workflow
 
-All changes go through a feature branch and a pull request. Nothing is committed directly to `main`.
+All changes — including documentation — go through a feature branch and a pull request. **Nothing is ever committed directly to `main`, without exception.**
 
 ```
 1. Create a feature branch from main (or the current active branch)
@@ -11,6 +11,10 @@ All changes go through a feature branch and a pull request. Nothing is committed
 4. Do NOT merge — leave it open for review and approval
 5. The branch stays active until the PR is approved and merged
 ```
+
+**This applies to every change including CONTEXT.md and README.md.** Docs updates get their own branch (e.g. `docs/context-readme-update`) and a PR, same as code.
+
+**Never commit to `main` directly.** If a branch cannot be found, stop and ask — do not fall back to `main`.
 
 **The active branch is whichever feature branch is currently open.** There is no single long-lived development branch — each piece of work gets its own branch. When a PR is merged, that branch is done and the next task gets a new branch from the updated base.
 
