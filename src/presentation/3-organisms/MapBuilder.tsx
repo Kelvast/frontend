@@ -33,7 +33,11 @@ function builderRegionsToRegions(builderRegions: BuilderRegion[], cache: TileCac
   }));
 }
 
-function getGridOffset(chunkX: number, chunkZ: number, grid: GridCell[][]): { px: number; pz: number } {
+function getGridOffset(
+  chunkX: number,
+  chunkZ: number,
+  grid: GridCell[][],
+): { px: number; pz: number } {
   const allChunks = grid.flat().filter((c) => c.chunk);
   const minX = allChunks.length ? Math.min(...allChunks.map((c) => c.chunkX)) - 1 : 0;
   const minZ = allChunks.length ? Math.min(...allChunks.map((c) => c.chunkZ)) - 1 : 0;
@@ -58,14 +62,28 @@ const MapBuilder: FC = () => {
   const [tileCache, setTileCache] = useState<TileCache>(new Map());
   const [selectedCell, setSelectedCell] = useState<GridCell | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const { zoom, translate, isPanning, focusChunk, manualZoomIn, manualZoomOut, resetView, attachWheel } = useFocusZoom();
+  const {
+    zoom,
+    translate,
+    isPanning,
+    focusChunk,
+    manualZoomIn,
+    manualZoomOut,
+    resetView,
+    attachWheel,
+  } = useFocusZoom();
 
-  const fetchChunkTiles = useCallback(async (regionId: string, chunkX: number, chunkZ: number): Promise<Tile[][] | null> => {
-    const res = await fetch(`/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`);
-    if (!res.ok) return null;
-    const { tiles } = await res.json();
-    return tiles as Tile[][];
-  }, []);
+  const fetchChunkTiles = useCallback(
+    async (regionId: string, chunkX: number, chunkZ: number): Promise<Tile[][] | null> => {
+      const res = await fetch(
+        `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
+      );
+      if (!res.ok) return null;
+      const { tiles } = await res.json();
+      return tiles as Tile[][];
+    },
+    [],
+  );
 
   const fetchRegions = useCallback(async () => {
     const res = await fetch("/api/builder/regions");
@@ -84,12 +102,17 @@ const MapBuilder: FC = () => {
     setTileCache(new Map(entries.filter((e): e is [string, Tile[][]] => e[1] !== null)));
   }, [fetchChunkTiles]);
 
-  useEffect(() => { fetchRegions(); }, [fetchRegions]);
+  useEffect(() => {
+    fetchRegions();
+  }, [fetchRegions]);
 
-  const handleViewportRef = useCallback((el: HTMLDivElement | null) => {
-    (viewportRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-    attachWheel(el);
-  }, [attachWheel]);
+  const handleViewportRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      (viewportRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      attachWheel(el);
+    },
+    [attachWheel],
+  );
 
   const grid = buildWorldGrid(builderRegionsToRegions(regions, tileCache));
 
@@ -157,13 +180,17 @@ const MapBuilder: FC = () => {
         <div className="w-124 bg-gray-800 border-l border-gray-700 flex flex-col">
           <div className="p-4 border-b border-gray-700 flex items-center justify-between">
             <div>
-              <p className="font-medium">Chunk {selectedCell.chunkX}, {selectedCell.chunkZ}</p>
+              <p className="font-medium">
+                Chunk {selectedCell.chunkX}, {selectedCell.chunkZ}
+              </p>
               <p className="text-xs text-gray-400">{selectedCell.chunk?.region ?? "New chunk"}</p>
             </div>
             <button
               onClick={() => handleSelectChunk(selectedCell)}
               className="text-gray-500 hover:text-white text-lg leading-none"
-            >✕</button>
+            >
+              ✕
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto">
             <ChunkEditorPanel

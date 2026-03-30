@@ -48,7 +48,10 @@ export class PlayerManager {
     const waypoints = buildWaypoints(this.localMesh.position, worldX, worldZ);
     if (waypoints.length === 0) return;
 
-    const { keys, totalFrames, fps } = buildMoveAnimation(this.localMesh.position.clone(), waypoints);
+    const { keys, totalFrames, fps } = buildMoveAnimation(
+      this.localMesh.position.clone(),
+      waypoints,
+    );
 
     const anim = new Animation(
       "playerMove",

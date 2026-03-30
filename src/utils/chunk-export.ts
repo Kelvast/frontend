@@ -10,9 +10,7 @@ const TYPE_ALIAS: Record<TileType, string> = {
 
 export function generateChunkTs(data: ChunkData): string {
   const usedTypes = [...new Set(data.tiles.flat().map((t) => t.type))];
-  const aliases = usedTypes
-    .map((t) => `const ${TYPE_ALIAS[t]} = tile(TileType.${t});`)
-    .join("\n");
+  const aliases = usedTypes.map((t) => `const ${TYPE_ALIAS[t]} = tile(TileType.${t});`).join("\n");
 
   const rows = data.tiles
     .map((row) => {

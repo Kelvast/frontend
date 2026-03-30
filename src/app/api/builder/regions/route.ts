@@ -20,7 +20,8 @@ export async function GET() {
       .map((e) => {
         const regionId = e.name;
         const regionPath = path.resolve(REGIONS_ROOT, regionId);
-        const chunks = fs.readdirSync(regionPath)
+        const chunks = fs
+          .readdirSync(regionPath)
           .map((f) => f.match(/^(-?\d+)_(-?\d+)\.ts$/))
           .filter((m): m is RegExpMatchArray => m !== null)
           .map((m) => ({ chunkX: Number(m[1]), chunkZ: Number(m[2]) }));

@@ -11,10 +11,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { regionId } = await request.json() as { regionId: string };
+    const { regionId } = (await request.json()) as { regionId: string };
 
     if (!/^[a-z0-9-]+$/.test(regionId)) {
-      return NextResponse.json({ error: "Invalid region id — use lowercase letters, numbers and hyphens only" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid region id — use lowercase letters, numbers and hyphens only" },
+        { status: 400 },
+      );
     }
 
     const regionPath = path.resolve(REGIONS_ROOT, regionId);
@@ -28,7 +31,10 @@ export async function POST(request: NextRequest) {
 
     const regionName = regionId.charAt(0).toUpperCase() + regionId.slice(1);
     fs.mkdirSync(regionPath, { recursive: true });
-    fs.writeFileSync(path.resolve(regionPath, "index.ts"), generateRegionIndexTs(regionId, regionName));
+    fs.writeFileSync(
+      path.resolve(regionPath, "index.ts"),
+      generateRegionIndexTs(regionId, regionName),
+    );
 
     return NextResponse.json({ ok: true });
   } catch (err) {

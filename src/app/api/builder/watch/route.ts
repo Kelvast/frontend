@@ -14,26 +14,23 @@ export async function GET() {
     return NextResponse.json({ error: "Only available in development" }, { status: 403 });
   }
 
+  const encoder = new TextEncoder();
+
   const stream = new ReadableStream({
     start(controller) {
-      const encoder = new TextEncoder();
-
       const send: Subscriber = (data) => {
-        controller.enqueue(encoder.encode(`event: chunk_changed\ndata: ${data}\n\n`));
+        try {
+          controller.enqueue(encoder.encode(`event: chunk_changed\ndata: ${data}\n\n`));
+        } catch {
+          subscribers.delete(send);
+        }
       };
 
       subscribers.add(send);
 
-      const keepAlive = setInterval(() => {
-        controller.enqueue(encoder.encode(`: ping\n\n`));
-      }, 15000);
-
-      const cleanup = () => {
-        clearInterval(keepAlive);
+      controller.close = () => {
         subscribers.delete(send);
       };
-
-      controller.close = cleanup;
     },
   });
 

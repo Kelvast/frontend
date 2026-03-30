@@ -1,4 +1,11 @@
-import { Color3, Mesh, PointerEventTypes, PointerInfo, Scene, StandardMaterial } from "@babylonjs/core";
+import {
+  Color3,
+  Mesh,
+  PointerEventTypes,
+  PointerInfo,
+  Scene,
+  StandardMaterial,
+} from "@babylonjs/core";
 import { PlayerManager } from "../entities/players";
 import { WORLD } from "../constants";
 import { logger } from "../../utils/logger";
@@ -7,7 +14,10 @@ export class PointerInput {
   private hoveredMesh: Mesh | null = null;
   private hoveredOriginalColor: Color3 | null = null;
 
-  constructor(scene: Scene, private players: PlayerManager) {
+  constructor(
+    scene: Scene,
+    private players: PlayerManager,
+  ) {
     scene.onPointerObservable.add((pi) => this._onPointer(pi));
     logger.game("PointerInput initialised");
   }

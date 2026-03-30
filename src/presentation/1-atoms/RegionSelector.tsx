@@ -45,15 +45,34 @@ const RegionSelector: FC<Props> = ({ regions, value, onChange, onCreateRegion })
           <input
             autoFocus
             value={newId}
-            onChange={(e) => { setNewId(e.target.value); setError(""); }}
-            onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setCreating(false); }}
+            onChange={(e) => {
+              setNewId(e.target.value);
+              setError("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleCreate();
+              if (e.key === "Escape") setCreating(false);
+            }}
             placeholder="region-name"
             className="bg-gray-700 px-2 py-1 rounded text-sm text-white w-full"
           />
           {error && <p className="text-xs text-red-400">{error}</p>}
           <div className="flex gap-1">
-            <button onClick={handleCreate} className="flex-1 bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded text-xs">Create</button>
-            <button onClick={() => { setCreating(false); setError(""); }} className="flex-1 bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-xs">Cancel</button>
+            <button
+              onClick={handleCreate}
+              className="flex-1 bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded text-xs"
+            >
+              Create
+            </button>
+            <button
+              onClick={() => {
+                setCreating(false);
+                setError("");
+              }}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-xs"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       ) : (
@@ -63,7 +82,11 @@ const RegionSelector: FC<Props> = ({ regions, value, onChange, onCreateRegion })
           className="bg-gray-700 px-2 py-1 rounded text-sm text-white w-full"
         >
           {value === "" && <option value="">Select region…</option>}
-          {regions.map((r) => <option key={r} value={r}>{r}</option>)}
+          {regions.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
           <option value={NEW_REGION}>+ New region</option>
         </select>
       )}

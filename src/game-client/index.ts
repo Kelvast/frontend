@@ -17,8 +17,14 @@ let _world: GameWorld | null = null;
 let _canvas: HTMLCanvasElement | null = null;
 let _watcherEs: EventSource | null = null;
 
-async function fetchChunkTiles(regionId: string, chunkX: number, chunkZ: number): Promise<Tile[][] | null> {
-  const res = await fetch(`/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`);
+async function fetchChunkTiles(
+  regionId: string,
+  chunkX: number,
+  chunkZ: number,
+): Promise<Tile[][] | null> {
+  const res = await fetch(
+    `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
+  );
   if (!res.ok) return null;
   const { tiles } = await res.json();
   return tiles as Tile[][];
@@ -34,13 +40,16 @@ async function fetchAllRegions(): Promise<Region[]> {
       const chunkEntries = await Promise.all(
         r.chunks.map(async (c) => {
           const tiles = await fetchChunkTiles(r.id, c.chunkX, c.chunkZ);
-          return [`${c.chunkX},${c.chunkZ}`, {
-            chunkX: c.chunkX,
-            chunkZ: c.chunkZ,
-            region: r.id,
-            pvp: false,
-            tiles: tiles ?? [],
-          } as ChunkData];
+          return [
+            `${c.chunkX},${c.chunkZ}`,
+            {
+              chunkX: c.chunkX,
+              chunkZ: c.chunkZ,
+              region: r.id,
+              pvp: false,
+              tiles: tiles ?? [],
+            } as ChunkData,
+          ];
         }),
       );
       return { id: r.id, name: r.id, chunks: Object.fromEntries(chunkEntries) } as Region;

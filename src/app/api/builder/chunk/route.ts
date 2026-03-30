@@ -9,7 +9,11 @@ import { notifyChunkChanged } from "../watch/route";
 
 const REGIONS_ROOT = path.resolve("src/game-client/world/regions");
 
-function safeChunkPath(regionId: string, chunkX: string | number, chunkZ: string | number): string | null {
+function safeChunkPath(
+  regionId: string,
+  chunkX: string | number,
+  chunkZ: string | number,
+): string | null {
   if (!/^[a-z0-9-]+$/.test(regionId)) return null;
   if (!/^-?\d+$/.test(String(chunkX)) || !/^-?\d+$/.test(String(chunkZ))) return null;
   const resolved = path.resolve(REGIONS_ROOT, regionId, `${chunkX}_${chunkZ}.ts`);
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json() as BuilderSaveRequest;
+    const body = (await request.json()) as BuilderSaveRequest;
     const { regionId, chunkX, chunkZ, tiles, pvp, previousRegionId } = body;
 
     const filePath = safeChunkPath(regionId, chunkX, chunkZ);

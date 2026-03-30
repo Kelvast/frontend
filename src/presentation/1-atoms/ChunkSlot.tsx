@@ -17,7 +17,14 @@ interface Props {
   onMouseLeave: () => void;
 }
 
-const ChunkSlot: FC<Props> = ({ tiles, selected, hovered, onClick, onMouseEnter, onMouseLeave }) => {
+const ChunkSlot: FC<Props> = ({
+  tiles,
+  selected,
+  hovered,
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -34,8 +41,8 @@ const ChunkSlot: FC<Props> = ({ tiles, selected, hovered, onClick, onMouseEnter,
   const overlay = selected
     ? "rgba(96,165,250,0.25)"
     : hovered
-    ? "rgba(255,255,255,0.12)"
-    : "transparent";
+      ? "rgba(255,255,255,0.12)"
+      : "transparent";
 
   if (!tiles) {
     return (

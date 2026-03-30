@@ -27,9 +27,11 @@ const TileGrid: FC<Props> = ({ tiles, onPaint }) => {
             key={`${rowIdx}-${colIdx}`}
             color={TILE_COLORS[t.type]}
             onMouseDown={() => onPaint(rowIdx, colIdx)}
-            onMouseEnter={() => { if (isPainting) onPaint(rowIdx, colIdx); }}
+            onMouseEnter={() => {
+              if (isPainting) onPaint(rowIdx, colIdx);
+            }}
           />
-        ))
+        )),
       )}
     </div>
   );

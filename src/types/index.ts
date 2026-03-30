@@ -7,6 +7,18 @@ export type { UserSettings, CameraSettings, GraphicsSettings, AudioSettings } fr
 export { DEFAULT_SETTINGS } from "./mmo/settings";
 export { TileType, TileHeight, TILE_WALKABLE, tile } from "./mmo/world";
 export type { Tile, ChunkData, Region, World } from "./mmo/world";
-export { WallType, DoorState, emptyWallFace, emptyWallConfig, emptyFloor, emptyStructure } from "./mmo/structure";
+export {
+  WallType,
+  DoorState,
+  emptyWallFace,
+  emptyWallConfig,
+  emptyFloor,
+  emptyStructure,
+} from "./mmo/structure";
 export type { WallFace, WallConfig, Floor, Structure } from "./mmo/structure";
-export type { BuilderChunk, BuilderRegion, BuilderRegionsResponse, BuilderSaveRequest } from "./mmo/builder";
+export type {
+  BuilderChunk,
+  BuilderRegion,
+  BuilderRegionsResponse,
+  BuilderSaveRequest,
+} from "./mmo/builder";

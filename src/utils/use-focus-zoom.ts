@@ -119,5 +119,14 @@ export function useFocusZoom(): FocusZoomState {
     setTranslate({ x: 0, y: 0 });
   }, []);
 
-  return { zoom, translate, isPanning, focusChunk, manualZoomIn, manualZoomOut, resetView, attachWheel };
+  return {
+    zoom,
+    translate,
+    isPanning,
+    focusChunk,
+    manualZoomIn,
+    manualZoomOut,
+    resetView,
+    attachWheel,
+  };
 }

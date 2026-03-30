@@ -17,8 +17,14 @@ export function useZoom(initial = 1): UseZoom {
   const [zoom, setZoom] = useState(initial);
 
   const clamp = useCallback((v: number) => Math.min(MAX, Math.max(MIN, v)), []);
-  const zoomIn = useCallback(() => setZoom((z) => clamp(parseFloat((z + STEP).toFixed(2)))), [clamp]);
-  const zoomOut = useCallback(() => setZoom((z) => clamp(parseFloat((z - STEP).toFixed(2)))), [clamp]);
+  const zoomIn = useCallback(
+    () => setZoom((z) => clamp(parseFloat((z + STEP).toFixed(2)))),
+    [clamp],
+  );
+  const zoomOut = useCallback(
+    () => setZoom((z) => clamp(parseFloat((z - STEP).toFixed(2)))),
+    [clamp],
+  );
   const resetZoom = useCallback(() => setZoom(1), []);
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
