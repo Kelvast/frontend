@@ -12,6 +12,7 @@ import {
 import { ChunkData } from "../../types/mmo/world";
 import { WORLD } from "../constants";
 import { TILE_CONFIG } from "./tile-config";
+import { tileWorldY } from "./tile-height";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
 
@@ -30,22 +31,21 @@ export class Chunk {
 
   private spawn(): void {
     const { chunkX, chunkZ, tiles } = this.data;
-
     const outlineMat = DEV_MODE ? this._makeOutlineMat() : null;
 
     for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
       for (let col = 0; col < WORLD.CHUNK_SIZE; col++) {
         const tile = tiles[row][col];
-
         const worldX = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE;
         const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
+        const worldY = tileWorldY(tile.y);
 
         const mesh = MeshBuilder.CreateGround(
           `tile-${chunkX}-${chunkZ}-${col}-${row}`,
           { width: WORLD.TILE_SIZE, height: WORLD.TILE_SIZE },
           this.scene,
         );
-        mesh.position = new Vector3(worldX, tile.y, worldZ);
+        mesh.position = new Vector3(worldX, worldY, worldZ);
 
         const mat = new StandardMaterial(`mat-${chunkX}-${chunkZ}-${col}-${row}`, this.scene);
         mat.diffuseColor = TILE_CONFIG[tile.type].color;
@@ -72,7 +72,7 @@ export class Chunk {
               { width: WORLD.TILE_SIZE * 0.97, height: WORLD.TILE_SIZE * 0.97 },
               this.scene,
             );
-            outline.position = new Vector3(worldX, tile.y + 0.001, worldZ);
+            outline.position = new Vector3(worldX, worldY + 0.001, worldZ);
             outline.material = outlineMat;
             outline.isPickable = false;
             this.outlines.push(outline);

@@ -1,3 +1,5 @@
+import { Structure } from "./structure";
+
 export enum TileType {
   GRASS = "GRASS",
   WATER = "WATER",
@@ -29,6 +31,7 @@ export const TILE_WALKABLE: Record<TileType, boolean> = {
 export interface Tile {
   type: TileType;
   y: TileHeight;
+  structure?: Structure;
 }
 
 export const tile = (type: TileType, y: TileHeight = TileHeight.GROUND): Tile => ({ type, y });

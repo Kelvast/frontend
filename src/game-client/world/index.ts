@@ -8,7 +8,7 @@ import {
 } from "@babylonjs/core";
 import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
-import { Region } from "../../types";
+import { Region, ChunkData } from "../../types";
 import { DEV_MODE } from "../../utils/dev";
 
 export class GameWorld {
@@ -53,6 +53,16 @@ export class GameWorld {
     } else {
       this.loadRegion(fresh);
     }
+  }
+
+  reloadChunk(chunkData: ChunkData): void {
+    const region = this.regions.get(chunkData.region);
+    if (!region) {
+      logger.game(`reloadChunk — region "${chunkData.region}" not loaded, skipping`);
+      return;
+    }
+    const key = `${chunkData.chunkX},${chunkData.chunkZ}`;
+    region.reloadChunk(key, chunkData);
   }
 
   dispose(): void {

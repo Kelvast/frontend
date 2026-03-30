@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import { generateChunkTs } from "../../../../utils/chunk-export";
+import { generateRegionIndexTs } from "../../../../utils/region-index-gen";
+import { parseChunkTs } from "../../../../utils/chunk-parse";
+import { BuilderSaveRequest } from "../../../../types";
+import { notifyChunkChanged } from "../watch/route";
+
+const REGIONS_ROOT = path.resolve("src/game-client/world/regions");
+
+function safeChunkPath(regionId: string, chunkX: string | number, chunkZ: string | number): string | null {
+  if (!/^[a-z0-9-]+$/.test(regionId)) return null;
+  if (!/^-?\d+$/.test(String(chunkX)) || !/^-?\d+$/.test(String(chunkZ))) return null;
+  const resolved = path.resolve(REGIONS_ROOT, regionId, `${chunkX}_${chunkZ}.ts`);
+  if (!resolved.startsWith(REGIONS_ROOT)) return null;
+  return resolved;
+}
+
+function ensureRegionIndex(regionId: string): void {
+  const regionPath = path.resolve(REGIONS_ROOT, regionId);
+  const indexPath = path.resolve(regionPath, "index.ts");
+  if (!fs.existsSync(indexPath)) {
+    const regionName = regionId.charAt(0).toUpperCase() + regionId.slice(1);
+    fs.mkdirSync(regionPath, { recursive: true });
+    fs.writeFileSync(indexPath, generateRegionIndexTs(regionId, regionName));
+  }
+}
+
+export async function GET(request: NextRequest) {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Only available in development" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const regionId = searchParams.get("regionId") ?? "";
+  const chunkX = searchParams.get("chunkX") ?? "";
+  const chunkZ = searchParams.get("chunkZ") ?? "";
+
+  const filePath = safeChunkPath(regionId, chunkX, chunkZ);
+  if (!filePath) {
+    return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
+  }
+
+  if (!fs.existsSync(filePath)) {
+    return NextResponse.json({ error: "Chunk not found" }, { status: 404 });
+  }
+
+  try {
+    const source = fs.readFileSync(filePath, "utf-8");
+    const parsed = parseChunkTs(source);
+    if (!parsed) {
+      return NextResponse.json({ error: "Failed to parse chunk file" }, { status: 500 });
+    }
+    return NextResponse.json({ tiles: parsed.tiles, pvp: parsed.pvp });
+  } catch (err) {
+    console.error("[builder/chunk GET]", err);
+    return NextResponse.json({ error: "Failed to read chunk" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Only available in development" }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json() as BuilderSaveRequest;
+    const { regionId, chunkX, chunkZ, tiles, pvp, previousRegionId } = body;
+
+    const filePath = safeChunkPath(regionId, chunkX, chunkZ);
+    if (!filePath) {
+      return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
+    }
+
+    ensureRegionIndex(regionId);
+    fs.writeFileSync(filePath, generateChunkTs({ chunkX, chunkZ, region: regionId, pvp, tiles }));
+    notifyChunkChanged(regionId, chunkX, chunkZ);
+
+    if (previousRegionId && previousRegionId !== regionId) {
+      const oldPath = safeChunkPath(previousRegionId, chunkX, chunkZ);
+      if (oldPath && fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[builder/chunk POST]", err);
+    return NextResponse.json({ error: "Failed to save chunk" }, { status: 500 });
+  }
+}
