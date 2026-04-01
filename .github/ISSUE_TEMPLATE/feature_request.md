@@ -8,16 +8,14 @@ labels: enhancement
 
 <!-- One clear sentence -->
 
-## Which systems does it touch?
-
-- [ ] mmo-client
-- [ ] mmo-server
-- [ ] mmo-shared
-
 ## Does it require a protocol change?
 
 - [ ] No
 - [ ] Yes — describe the new/changed message type(s) below
+
+## Cross-repo impact
+
+<!-- If this needs work in the other repos, note it here. Otherwise delete this section. -->
 
 ## Related open tasks
 
