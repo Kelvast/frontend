@@ -1,5 +1,5 @@
 export type { Position, ZERO_POSITION } from "./mmo/position";
-export type { PlayerStats, PlayerState } from "./mmo/player";
+export type { PlayerState } from "./mmo/player";
 export type { LoginPayload, RegisterPayload } from "./mmo/network";
 export type { GameStoreState } from "./mmo/game-state";
 export type { NPC, Interactable } from "./mmo/entities";

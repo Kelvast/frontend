@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { GameStoreState, PlayerState } from "../types";
-import { UserSettings } from "../types/mmo/settings";
+import type { GameStoreState } from "../types";
+import type { UserSettings } from "../types/mmo/settings";
 import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
-import { defaultSkills, skillFromXp } from "../types/mmo/skills";
+import { defaultSkills, defaultInventory, defaultEquipment } from "mmo-shared";
 import { maxHpFromSkills } from "./xp";
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -14,10 +14,9 @@ export const useGameStore = create<GameStoreState>((set) => ({
   latency: 0,
   sessionToken: null,
   sessionExpiresAt: null,
-  indexRegistry: new Map(),
   settings: loadSettings(),
 
-  setMyId: (id: string) => {
+  setMyId: (id: number) => {
     logger.game("My ID set:", id);
     set({ myId: id });
   },
@@ -40,102 +39,84 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set({ settings: updated });
   },
 
+  // Called on login_success. The server sends the full skill XP record and
+  // inventory so we hydrate everything in one shot rather than round-tripping.
   hydrateLocalPlayer: (msg) =>
     set((state) => {
-      const skills = Object.fromEntries(
-        Object.entries(msg.skills).map(([name, xp]) => [name, skillFromXp(xp as number)]),
-      ) as ReturnType<typeof defaultSkills>;
-      const player: PlayerState = {
+      const player = {
         id: msg.id,
-        name: "",
+        uuid: msg.uuid,
+        name: msg.name,
         position: { x: msg.x, y: msg.y, z: msg.z },
-        facing: 0,
+        facing: msg.facing,
+        skills: msg.skills,
+        inventory: msg.inventory,
+        equipment: defaultEquipment(),
         isMoving: false,
-        pace: "walk",
+        pace: "walk" as const,
         lastUpdated: Date.now(),
-        animationState: "idle",
-        stats: {
-          level: 1,
-          experience: 0,
-          currentHp: maxHpFromSkills(skills.hitpoints.level),
-          mana: 0,
-          maxMana: 0,
-          skills,
-        },
+        animationState: "idle" as const,
       };
-      logger.game("Local player hydrated — id:", msg.id);
+      logger.game("Local player hydrated — id:", msg.id, "uuid:", msg.uuid);
+      logger.game("HP:", maxHpFromSkills(msg.skills));
       const exists = state.nearbyPlayers.some((p) => p.id === msg.id);
       return {
         myId: msg.id,
-        indexRegistry: new Map(state.indexRegistry).set(msg.index, msg.id),
         nearbyPlayers: exists
           ? state.nearbyPlayers.map((p) => (p.id === msg.id ? { ...p, ...player } : p))
           : [...state.nearbyPlayers, player],
       };
     }),
 
+  // Called when a player_join message arrives for someone else in range.
+  // We don't have their skills/inventory — seed with defaults until the
+  // server sends a dedicated state message for them (future work).
   registerPlayer: (msg) =>
     set((state) => {
-      const registry = new Map(state.indexRegistry);
-      registry.set(msg.index, msg.id);
-      const skills = defaultSkills();
-      const player: PlayerState = {
-        id: msg.id,
-        name: msg.name,
-        position: { x: msg.x, y: msg.y, z: msg.z },
-        facing: 0,
+      const player = {
+        id: msg.player.id,
+        uuid: "",
+        name: msg.player.name,
+        position: { x: msg.player.x, y: msg.player.y, z: msg.player.z },
+        facing: msg.player.facing,
+        skills: defaultSkills(),
+        inventory: defaultInventory(),
+        equipment: defaultEquipment(),
         isMoving: false,
-        pace: "walk",
+        pace: "walk" as const,
         lastUpdated: Date.now(),
-        animationState: "idle",
-        stats: {
-          level: 1,
-          experience: 0,
-          currentHp: maxHpFromSkills(skills.hitpoints.level),
-          mana: 0,
-          maxMana: 0,
-          skills,
-        },
+        animationState: "idle" as const,
       };
-      logger.game("Player registered — index:", msg.index, "id:", msg.id);
-      const exists = state.nearbyPlayers.some((p) => p.id === msg.id);
+      logger.game("Player registered — id:", msg.player.id, "name:", msg.player.name);
+      const exists = state.nearbyPlayers.some((p) => p.id === msg.player.id);
       return {
-        indexRegistry: registry,
         nearbyPlayers: exists
-          ? state.nearbyPlayers.map((p) => (p.id === msg.id ? { ...p, ...player } : p))
+          ? state.nearbyPlayers.map((p) => (p.id === msg.player.id ? { ...p, ...player } : p))
           : [...state.nearbyPlayers, player],
       };
     }),
 
-  unregisterPlayer: (index) =>
+  // Called on player_leave. The server sends the session ID directly —
+  // no index registry needed since the new protocol uses id on every message.
+  unregisterPlayer: (id) =>
     set((state) => {
-      const id = state.indexRegistry.get(index);
-      const registry = new Map(state.indexRegistry);
-      registry.delete(index);
-      logger.game("Player unregistered — index:", index, "id:", id);
+      logger.game("Player unregistered — id:", id);
       return {
-        indexRegistry: registry,
         nearbyPlayers: state.nearbyPlayers.filter((p) => p.id !== id),
       };
     }),
 
   applyTick: ({ p }) =>
     set((state) => {
+      // Build a Map for O(1) lookup per player rather than O(n*m) nested loops.
       const updates = new Map(
-        p.map(([idx, x, y, z, facing]) => {
-          const id = state.indexRegistry.get(idx);
-          return [id, { position: { x, y, z }, facing, isMoving: true }];
-        }),
+        p.map(([id, x, y, z, facing]) => [id, { position: { x, y, z }, facing, isMoving: true }]),
       );
       return {
         nearbyPlayers: state.nearbyPlayers.map((player) => {
           const delta = updates.get(player.id);
-          if (!delta) return { ...player };
-          return {
-            ...player,
-            ...delta,
-            lastUpdated: Date.now(),
-          };
+          if (!delta) return player;
+          return { ...player, ...delta, lastUpdated: Date.now() };
         }),
       };
     }),
