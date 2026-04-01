@@ -149,7 +149,16 @@ interface GameStoreState {
 
 ### Index Registry
 
-The `indexRegistry` is a `Map<number, string>` that translates a server-assigned session index into the player's persistent UUID. It is built as `player_init` messages arrive and entries are removed on `player_leave`. The `applyTick` action uses it to resolve delta tuples `[index, x, z, facing, hp]` back to `PlayerState` entries.
+The `indexRegistry` is a `Map<number, string>` that translates a server-assigned session index into the player's persistent UUID. It is built as `player_init` messages arrive and entries are removed on `player_leave`. The `applyTick` action uses it to resolve delta tuples `[index, x, y, z, facing]` back to `PlayerState` entries.
+
+### `PlayerDelta` tuple — client expected format
+
+```ts
+type PlayerDelta = [index: number, x: number, y: number, z: number, facing: Facing]
+//                  [0]            [1]         [2]floor   [3]         [4]
+```
+
+`y` is the floor index. The `Facing` type is imported from `mmo-shared`.
 
 ---
 
@@ -164,18 +173,23 @@ Singleton — one `WebSocket` instance per tab. `connectWS(token?)` is the only 
 
 | `data.type` | Action |
 |---|---|
-| `loginSuccess` | `setMyId`, `setSession` |
+| `login_success` | `setMyId`, `setSession` |
+| `world_state` | process each player as `registerPlayer` — bulk viewport init on login |
 | `player_init` | `registerPlayer` |
 | `player_leave` | `unregisterPlayer` |
+| `player_stopped` | snap local player back to server-authoritative position |
 | `tick` | `applyTick` |
-| `state` | Legacy fallback — maps old broadcast to `registerPlayer` / `unregisterPlayer` |
+| `pong` | update `latency` from round-trip delta |
+| `state` | 🗑️ Legacy shim — maps old broadcast to `registerPlayer`/`unregisterPlayer` |
 | unknown | `logger.warn` — never throw |
 
-The `state` handler is a **temporary compatibility shim** while the server is migrated to the `player_init` / `tick` / `player_leave` protocol. Remove it once the server emits those message types.
+The `state` handler is a **temporary compatibility shim** while the server migrates to `player_init` / `tick` / `player_leave`. Remove it once those message types are live.
 
 ### Outbound
 
-`sendPlayerUpdate(position)` sends `{ type: "player_move", position }`. This will be replaced with the binary XOR+HMAC-2B frame once the encrypted channel is wired in.
+`sendAction(action, x, y, z, targetId?)` sends an `ActionPacket`. Replaces the old `sendPlayerUpdate(position)` JSON `player_move` packet.
+
+Once the binary channel is wired, outbound action packets will use the XOR+HMAC-2B frame from `mmo-shared/crypto`.
 
 ---
 
@@ -187,13 +201,17 @@ Mount → check localStorage for sessionToken
   └─ absent → render LoginForm  → POST /api/login or /api/register
                                   → on success: store token, connectGame(token)
 
-loginSuccess received:
+login_success received:
   setMyId(data.id)
   setSession({ sessionToken, sessionExpiresAt })
   → transition to game view
+
+world_state received:
+  process each entry as registerPlayer
+  → populates indexRegistry and nearbyPlayers for the initial viewport
 ```
 
-The raw session key (`Buffer`, 32 bytes) is **never** written to `localStorage`. It lives only in memory for the duration of the tab session. The `sessionToken` (opaque string) is stored in `localStorage` for resume.
+The raw session key (`Buffer`, 32 bytes) is **never** written to `localStorage`. It lives only in memory for the duration of the tab session.
 
 ---
 
@@ -218,22 +236,15 @@ Local player has its own `localMesh` reference (blue box). Remote players are or
 - `reloadChunk(chunk)` — disposes and rebuilds a single chunk's meshes (used by SSE hot-reload)
 - `reloadRegion(fresh)` — diffs and reloads changed chunks across a full region
 
-`GameRegion` owns the `Map<string, Chunk>` and `Map<string, ChunkData>`. Key methods:
-
-- `loadChunk(key, data)` — no-op if already loaded; otherwise spawns meshes
-- `reloadChunk(key, data)` — dispose + rebuild unconditionally
-- `hasChunk(x, z)` — key existence check
-- `reloadAll(fresh)` — diff-based reload for HMR
-
-`Chunk` constructs 256 `CreateGround` tile meshes in a 16×16 grid, coloured from `TILE_COLORS`. `dispose()` destroys all meshes.
+`GameRegion` owns the `Map<string, Chunk>` and `Map<string, ChunkData>`. `Chunk` constructs 256 `CreateGround` tile meshes in a 16×16 grid, coloured from `TILE_COLORS`. `dispose()` destroys all meshes.
 
 ---
 
 ## Constants Reference (`game-client/constants.ts`)
 
 ```ts
-WORLD.TILE_SIZE  = 1   // visual size of a tile in Babylon units
-WORLD.CHUNK_SIZE = 16  // tiles per chunk edge — import from mmo-shared once PR #2 is merged
+WORLD.TILE_SIZE  = 1    // visual size of a tile in Babylon units
+WORLD.CHUNK_SIZE = 16   // import from mmo-shared — must stay in sync
 
 CHUNK_LOADING.SEED_X = 0  // player spawn chunk X
 CHUNK_LOADING.SEED_Z = 0  // player spawn chunk Z
@@ -259,7 +270,7 @@ MOVEMENT.AGILITY_FACTOR  = 0.05
 
 All game code uses world tile coordinates `(x, y, z)`:
 - `x` — east/west
-- `y` — height (driven by `TileHeight`)
+- `y` — floor index (integer — multi-floor support via `spatialKey`)
 - `z` — north/south
 
 Chunk coordinates are always derived: `chunkX = Math.floor(x / 16)`, `chunkZ = Math.floor(z / 16)`. They are never stored on the player or entity.
@@ -284,17 +295,20 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 
 ## Open Tasks
 
-- [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared` (once mmo-shared PR #2 is merged)
-- [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern, `CHUNK_LOADING.SEED_X/Z` seeds the origin)
+- [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared`
+- [ ] Wire `sendAction` — replace `sendPlayerUpdate` JSON `player_move` with `ActionPacket`
+- [ ] Handle `world_state` message — bulk `registerPlayer` on login
+- [ ] Handle `player_stopped` message — snap local player to server position
+- [ ] Handle `pong` message — compute and store latency
+- [ ] Remove legacy `state` message handler once server emits `player_init` / `tick` / `player_leave`
+- [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern)
 - [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
-- [ ] Wire binary XOR+HMAC-2B channel for outbound action packets (replace `sendPlayerUpdate` JSON)
+- [ ] Wire binary XOR+HMAC-2B channel for outbound action packets
 - [ ] Wire `decrypt` into inbound message handler for binary game-loop frames
-- [ ] Implement `ResumePacket` auto-send on mount from stored `sessionToken`
 - [ ] Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
 - [ ] `snapToTile` utility — snap click point to tile centre before sending
 - [ ] HUD components: HP bar, XP per skill, inventory panel
 - [ ] NPC rendering — `entities/npcs.ts` is a stub
-- [ ] Remove legacy `state` message handler once server emits `player_init` / `tick` / `player_leave`
-- [ ] `ClickPacket` — wire canvas right-click / ground click to server with tile coordinates
+- [ ] `ClickPacket` → `ActionPacket` canvas wiring (ground click → `sendAction`)
 - [ ] Quest state machine and UI
 - [ ] Combat — melee range check, attack packet, death/respawn flow
