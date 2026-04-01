@@ -4,12 +4,6 @@ about: Something is broken
 labels: bug
 ---
 
-## Repo
-
-- [ ] mmo-client
-- [ ] mmo-server
-- [ ] mmo-shared
-
 ## What happened?
 
 <!-- What did you see? -->
@@ -26,4 +20,4 @@ labels: bug
 
 ## Relevant context
 
-<!-- WS message type, tick data, browser console output, server logs -- anything useful -->
+<!-- WS message type, tick data, browser console output, server logs — anything useful -->
