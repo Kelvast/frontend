@@ -5,20 +5,20 @@
 All changes — including documentation — go through a feature branch and a pull request. **Nothing is ever committed directly to `main`, without exception.**
 
 ```
-1. Create a feature branch from main (or the current active branch)
+1. Create a feature branch from main
 2. Do all work on that branch
-3. Open a PR targeting main (or the relevant base branch)
+3. Open a PR targeting main
 4. Do NOT merge — leave it open for review and approval
-5. The branch stays active until the PR is approved and merged
 ```
-
-**This applies to every change including CONTEXT.md and README.md.** Docs updates get their own branch (e.g. `docs/context-readme-update`) and a PR, same as code.
 
 **Never commit to `main` directly.** If a branch cannot be found, stop and ask — do not fall back to `main`.
 
-**The active branch is whichever feature branch is currently open.** There is no single long-lived development branch — each piece of work gets its own branch. When a PR is merged, that branch is done and the next task gets a new branch from the updated base.
+## PR & Checklist Rules
 
-Current active branch: `map-builder-chunk-api-later` (PR pending → `main`).
+- Checklists only contain items relevant to this repo — no cross-repo todos
+- Only include checklist items for things the PR has actually changed
+- Do not add "Branch created from main" or "PR targets main" to checklists
+- Cross-repo follow-up tasks go in the Open Tasks section of the relevant repo's CONTEXT.md, not the PR checklist
 
 ---
 
@@ -233,7 +233,7 @@ Local player has its own `localMesh` reference (blue box). Remote players are or
 
 ```ts
 WORLD.TILE_SIZE  = 1   // visual size of a tile in Babylon units
-WORLD.CHUNK_SIZE = 16  // tiles per chunk edge
+WORLD.CHUNK_SIZE = 16  // tiles per chunk edge — import from mmo-shared once PR #2 is merged
 
 CHUNK_LOADING.SEED_X = 0  // player spawn chunk X
 CHUNK_LOADING.SEED_Z = 0  // player spawn chunk Z
@@ -284,6 +284,7 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 
 ## Open Tasks
 
+- [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared` (once mmo-shared PR #2 is merged)
 - [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern, `CHUNK_LOADING.SEED_X/Z` seeds the origin)
 - [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
 - [ ] Wire binary XOR+HMAC-2B channel for outbound action packets (replace `sendPlayerUpdate` JSON)
