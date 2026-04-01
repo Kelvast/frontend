@@ -4,8 +4,6 @@
 
 ## Checklist
 
-- [ ] Branch created from `main` (or the current active base branch)
-- [ ] PR targets `main` — not another feature branch (unless intentional, explain below)
 - [ ] Full files returned — no partial snippets unless explicitly agreed
 - [ ] No `console.log` — all logging via `logger.ts`
 - [ ] No `any` — strict TypeScript throughout (bridging raw WS data is the only exception)
@@ -20,7 +18,7 @@
 - [ ] No
 - [ ] Yes — `PROTOCOL.md` in `mmo-shared` updated to match
 
-## Does this touch `mmo-shared`?
+## Does this require changes in `mmo-server` or `mmo-shared`?
 
 - [ ] No
-- [ ] Yes — `mmo-shared` rebuilt (`npm run build`) and consuming repos updated
+- [ ] Yes — follow-up tasks added to the relevant repo's `CONTEXT.md` open tasks
