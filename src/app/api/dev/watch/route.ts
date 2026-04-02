@@ -21,9 +21,9 @@ function startFsWatcher(): void {
   fs.watch(GAME_CLIENT_ROOT, { recursive: true }, (_event, filename) => {
     if (!filename) return;
     if (!filename.endsWith(".ts") && !filename.endsWith(".tsx")) return;
-    if (filename.includes("__pycache__") || filename.startsWith(".")) return;
+    if (filename.startsWith(".")) return;
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => notify(filename), 500); // 500ms not 50ms
+    debounceTimer = setTimeout(() => notify(filename), 500);
   });
 }
 
@@ -43,7 +43,7 @@ export async function GET() {
     start(controller) {
       send = (data) => {
         try {
-          controller.enqueue(encoder.encode(`event: reload\ndata: ${data}\n\n`));
+          controller.enqueue(encoder.encode(`event: file_changed\ndata: ${data}\n\n`));
         } catch {
           subscribers.delete(send!);
           send = null;
