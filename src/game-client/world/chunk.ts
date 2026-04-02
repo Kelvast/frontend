@@ -1,5 +1,4 @@
 import {
-  MeshBuilder,
   StandardMaterial,
   Color3,
   Vector3,
@@ -9,12 +8,14 @@ import {
   ExecuteCodeAction,
   HighlightLayer,
   DynamicTexture,
+  MeshBuilder,
 } from "@babylonjs/core";
-import { ChunkData, WORLD } from "mmo-shared";
-import { TILE_RENDER } from "./tile-render";
-import { tileWorldY } from "./tile-height";
+import { ChunkData, TileData, WORLD } from "mmo-shared";
+import { getTileRenderConfig, TILE_RENDER } from "./tile-render";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
+import { buildTileMesh } from "./tile-mesh";
+import { makeTerrainMaterial, makeDevMaterial } from "../scene-material";
 
 export class Chunk {
   private meshes: Mesh[] = [];
@@ -30,6 +31,16 @@ export class Chunk {
     this.spawn();
   }
 
+  getTileAt(localCol: number, localRow: number): TileData | null {
+    const row = this.data.tiles[localRow];
+    if (!row) return null;
+    return row[localCol] ?? null;
+  }
+
+  getMeshes(): Mesh[] {
+    return this.meshes;
+  }
+
   private spawn(): void {
     const { chunkX, chunkZ, tiles } = this.data;
     const outlineMat = DEV_MODE ? this._makeOutlineMat() : null;
@@ -39,19 +50,14 @@ export class Chunk {
         const tile = tiles[row][col];
         const worldX = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE;
         const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
-        const worldY = tileWorldY(tile.y);
 
-        const mesh = MeshBuilder.CreateGround(
-          `tile-${chunkX}-${chunkZ}-${col}-${row}`,
-          { width: WORLD.TILE_SIZE, height: WORLD.TILE_SIZE },
+        const mesh = buildTileMesh(tiles, row, col, chunkX, chunkZ, this.scene);
+
+        mesh.material = makeTerrainMaterial(
+          `mat-${chunkX}-${chunkZ}-${col}-${row}`,
+          getTileRenderConfig(tile).color,
           this.scene,
         );
-        mesh.position = new Vector3(worldX, worldY, worldZ);
-
-        const mat = new StandardMaterial(`mat-${chunkX}-${chunkZ}-${col}-${row}`, this.scene);
-        mat.diffuseColor = TILE_RENDER[tile.type].color;
-        mat.specularColor = Color3.Black();
-        mesh.material = mat;
 
         if (DEV_MODE && this.highlightLayer) {
           const hl = this.highlightLayer;
@@ -68,12 +74,10 @@ export class Chunk {
           );
 
           if (outlineMat) {
-            const outline = MeshBuilder.CreateGround(
-              `outline-${chunkX}-${chunkZ}-${col}-${row}`,
-              { width: WORLD.TILE_SIZE * 0.97, height: WORLD.TILE_SIZE * 0.97 },
-              this.scene,
-            );
-            outline.position = new Vector3(worldX, worldY + 0.001, worldZ);
+            const outline = buildTileMesh(tiles, row, col, chunkX, chunkZ, this.scene);
+            outline.name = `outline-${chunkX}-${chunkZ}-${col}-${row}`;
+            outline.scaling = new Vector3(0.97, 1, 0.97);
+            outline.position.y += 0.001;
             outline.material = outlineMat;
             outline.isPickable = false;
             this.outlines.push(outline);
@@ -83,7 +87,6 @@ export class Chunk {
             chunkX * WORLD.CHUNK_SIZE + col,
             chunkZ * WORLD.CHUNK_SIZE + row,
             worldX,
-            worldY,
             worldZ,
             `label-${chunkX}-${chunkZ}-${col}-${row}`,
           );
@@ -101,7 +104,6 @@ export class Chunk {
     tileX: number,
     tileZ: number,
     worldX: number,
-    worldY: number,
     worldZ: number,
     name: string,
   ): Mesh {
@@ -110,7 +112,11 @@ export class Chunk {
     const lineHeight = 28;
     const font = "bold 22px monospace";
 
-    const tex = new DynamicTexture(`tex-${name}`, { width: resolution, height: resolution }, this.scene);
+    const tex = new DynamicTexture(
+      `tex-${name}`,
+      { width: resolution, height: resolution },
+      this.scene,
+    );
     tex.hasAlpha = true;
 
     const ctx = tex.getContext();
@@ -127,12 +133,8 @@ export class Chunk {
     ctx.fillText(labelZ, zOffset, resolution / 2 + lineHeight / 2);
     tex.update();
 
-    const plane = MeshBuilder.CreateGround(
-      name,
-      { width: size, height: size },
-      this.scene,
-    );
-    plane.position = new Vector3(worldX, worldY + 0.002, worldZ);
+    const plane = MeshBuilder.CreateGround(name, { width: size, height: size }, this.scene);
+    plane.position = new Vector3(worldX, 0.002, worldZ);
     plane.isPickable = false;
 
     const mat = new StandardMaterial(`mat-${name}`, this.scene);
@@ -146,14 +148,11 @@ export class Chunk {
   }
 
   private _makeOutlineMat(): StandardMaterial {
-    const mat = new StandardMaterial(
+    return makeDevMaterial(
       `outline-mat-${this.data.chunkX}-${this.data.chunkZ}`,
+      Color3.Black(),
       this.scene,
     );
-    mat.diffuseColor = Color3.Black();
-    mat.emissiveColor = Color3.Black();
-    mat.wireframe = true;
-    return mat;
   }
 
   dispose(): void {

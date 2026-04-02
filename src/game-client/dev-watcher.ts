@@ -46,7 +46,9 @@ export function createDevWatcher(getWorld: () => GameWorld | null): () => void {
       }
       const delay = RETRY_BASE_MS * 2 ** retryCount;
       retryCount++;
-      logger.game(`Watcher disconnected — retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})`);
+      logger.game(
+        `Watcher disconnected — retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})`,
+      );
       setTimeout(start, delay);
     });
   }

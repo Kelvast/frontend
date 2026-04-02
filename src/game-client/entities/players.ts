@@ -9,13 +9,18 @@ import {
 } from "@babylonjs/core";
 import { PLAYER } from "../constants";
 import { buildWaypoints, buildMoveAnimation } from "../movement";
+import { tileWorldY } from "../world/tile-height";
+import { GameWorld } from "../world";
 import { logger } from "../../utils/logger";
 
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;
   private onArrival: ((x: number, z: number) => void) | null = null;
 
-  constructor(private scene: Scene) {
+  constructor(
+    private scene: Scene,
+    private world: GameWorld,
+  ) {
     logger.game("PlayerManager initialised");
   }
 
@@ -48,9 +53,16 @@ export class PlayerManager {
     const waypoints = buildWaypoints(this.localMesh.position, worldX, worldZ);
     if (waypoints.length === 0) return;
 
+    // resolve the ground Y for each waypoint so the player sits on top of slopes
+    const waypointsWithY: Vector3[] = waypoints.map((wp) => {
+      const tile = this.world.getTileAt(wp.x, wp.z);
+      const groundY = tile ? tileWorldY(tile.y) + PLAYER.Y_OFFSET : PLAYER.Y_OFFSET;
+      return new Vector3(wp.x, groundY, wp.z);
+    });
+
     const { keys, totalFrames, fps } = buildMoveAnimation(
       this.localMesh.position.clone(),
-      waypoints,
+      waypointsWithY,
     );
 
     const anim = new Animation(
@@ -64,7 +76,7 @@ export class PlayerManager {
 
     this.localMesh.animations = [anim];
     this.scene.beginAnimation(this.localMesh, 0, totalFrames, false, 1, () => {
-      const dest = waypoints[waypoints.length - 1];
+      const dest = waypointsWithY[waypointsWithY.length - 1];
       logger.game("Arrived", { x: dest.x, z: dest.z });
       this.onArrival?.(dest.x, dest.z);
     });

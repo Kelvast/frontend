@@ -1,7 +1,7 @@
 import { Scene, HighlightLayer } from "@babylonjs/core";
 import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
-import { Region, ChunkData } from "mmo-shared";
+import { Region, ChunkData, TileData } from "mmo-shared";
 import { DEV_MODE } from "../../utils/dev";
 import { setupLighting } from "../scene-setup";
 
@@ -18,6 +18,14 @@ export class GameWorld {
     }
     setupLighting(scene);
     logger.game("World ready");
+  }
+
+  getTileAt(tileX: number, tileZ: number): TileData | null {
+    for (const region of this.regions.values()) {
+      const tile = region.getTileAt(tileX, tileZ);
+      if (tile) return tile;
+    }
+    return null;
   }
 
   loadRegion(data: Region): void {

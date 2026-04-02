@@ -30,13 +30,19 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
   logger.game("Initialising game");
 
   const engine = new GameEngine(canvas);
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
 
   const scene = engine.scene;
   const world = new GameWorld(scene);
 
   await loadAllRegions(world, signal);
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
 
   _engine = engine;
   _world = world;

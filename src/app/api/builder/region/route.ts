@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { generateRegionIndexTs, generateRegionsRootIndexTs } from "../../../../utils/region-index-gen";
+import {
+  generateRegionIndexTs,
+  generateRegionsRootIndexTs,
+} from "../../../../utils/region-index-gen";
 
 const REGIONS_ROOT = path.resolve("src/game-client/world/regions");
 
@@ -30,10 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     fs.mkdirSync(regionPath, { recursive: true });
-    fs.writeFileSync(
-      path.resolve(regionPath, "index.ts"),
-      generateRegionIndexTs(regionId, []),
-    );
+    fs.writeFileSync(path.resolve(regionPath, "index.ts"), generateRegionIndexTs(regionId, []));
 
     const existingIds = fs
       .readdirSync(REGIONS_ROOT, { withFileTypes: true })

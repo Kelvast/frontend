@@ -1,4 +1,4 @@
-import type { Facing, Player } from "mmo-shared";
+import type { Direction, Player } from "mmo-shared";
 import type { MovementType } from "../../game-client/movement";
 
 export type AnimationState = MovementType | "idle" | "attacking";
@@ -27,7 +27,7 @@ export interface NearbyPlayer {
   x: number;
   y: number;
   z: number;
-  facing: Facing;
+  facing: Direction;
   isMoving: boolean;
   lastUpdated: number;
   animationState: AnimationState;

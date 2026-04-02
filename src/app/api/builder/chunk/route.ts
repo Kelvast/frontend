@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { generateChunkTs } from "../../../../utils/chunk-export";
-import { generateRegionIndexTs, generateRegionsRootIndexTs } from "../../../../utils/region-index-gen";
+import {
+  generateRegionIndexTs,
+  generateRegionsRootIndexTs,
+} from "../../../../utils/region-index-gen";
 import { parseChunkTs } from "../../../../utils/chunk-parse";
 import { BuilderSaveRequest } from "../../../../types";
 
@@ -42,10 +45,7 @@ function rebuildRootIndex(): void {
     .filter((e) => e.isDirectory())
     .map((e) => e.name);
 
-  fs.writeFileSync(
-    path.resolve(REGIONS_ROOT, "index.ts"),
-    generateRegionsRootIndexTs(regionIds),
-  );
+  fs.writeFileSync(path.resolve(REGIONS_ROOT, "index.ts"), generateRegionsRootIndexTs(regionIds));
 }
 
 export async function GET(request: NextRequest) {
@@ -60,7 +60,8 @@ export async function GET(request: NextRequest) {
 
   const filePath = safeChunkPath(regionId, chunkX, chunkZ);
   if (!filePath) return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
-  if (!fs.existsSync(filePath)) return NextResponse.json({ error: "Chunk not found" }, { status: 404 });
+  if (!fs.existsSync(filePath))
+    return NextResponse.json({ error: "Chunk not found" }, { status: 404 });
 
   try {
     const source = fs.readFileSync(filePath, "utf-8");

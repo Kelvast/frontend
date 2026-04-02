@@ -13,14 +13,14 @@ async function fetchChunkTiles(
     { signal },
   );
   if (!res.ok) return null;
-  const { tiles } = await res.json() as { tiles: TileData[][] };
+  const { tiles } = (await res.json()) as { tiles: TileData[][] };
   return tiles;
 }
 
 async function fetchAllRegions(signal: AbortSignal): Promise<Region[]> {
   const res = await fetch("/api/builder/regions", { signal });
   if (!res.ok) return [];
-  const { regions } = await res.json() as {
+  const { regions } = (await res.json()) as {
     regions: { id: string; chunks: { chunkX: number; chunkZ: number }[] }[];
   };
 

@@ -1,5 +1,5 @@
 import { Scene, HighlightLayer } from "@babylonjs/core";
-import { Region, ChunkData } from "mmo-shared";
+import { Region, ChunkData, TileData, WORLD } from "mmo-shared";
 import { Chunk } from "./chunk";
 import { logger } from "../../utils/logger";
 
@@ -20,6 +20,17 @@ export class GameRegion {
       this.rawData.set(key, chunkData);
     });
     logger.game(`Region "${data.name}" ready`);
+  }
+
+  getTileAt(tileX: number, tileZ: number): TileData | null {
+    const chunkX = Math.floor(tileX / WORLD.CHUNK_SIZE);
+    const chunkZ = Math.floor(tileZ / WORLD.CHUNK_SIZE);
+    const key = `${chunkX},${chunkZ}`;
+    const chunkData = this.rawData.get(key);
+    if (!chunkData) return null;
+    const localCol = tileX - chunkX * WORLD.CHUNK_SIZE;
+    const localRow = tileZ - chunkZ * WORLD.CHUNK_SIZE;
+    return chunkData.tiles[localRow]?.[localCol] ?? null;
   }
 
   private hasChanged(key: string, fresh: ChunkData): boolean {
