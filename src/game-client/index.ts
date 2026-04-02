@@ -48,7 +48,7 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
   _world = world;
 
   const camera = new GameCamera(scene);
-  const players = new PlayerManager(scene);
+  const players = new PlayerManager(scene, world);
   const localMesh = players.spawnLocalPlayer();
   camera.attachToMesh(localMesh);
 

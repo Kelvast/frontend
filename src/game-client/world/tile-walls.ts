@@ -1,6 +1,7 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, Scene, Mesh } from "@babylonjs/core";
-import { TileData, tileWorldY, WORLD } from "mmo-shared";
+import { TileData, WORLD } from "mmo-shared";
 import { TILE_RENDER } from "./tile-render";
+import { tileWorldY } from "./tile-height";
 
 const NEIGHBOURS = [
   { dr: -1, dc: 0, axis: "z" as const, sign: -1 }, // north

@@ -1,5 +1,6 @@
 import { Mesh, VertexData, Scene } from "@babylonjs/core";
-import { TileData, tileWorldY, WORLD } from "mmo-shared";
+import { TileData, WORLD } from "mmo-shared";
+import { tileWorldY } from "./tile-height";
 
 function cornerY(tiles: TileData[][], row: number, col: number, dr: number, dc: number): number {
   const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v));

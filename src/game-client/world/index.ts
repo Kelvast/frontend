@@ -3,7 +3,7 @@ import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
 import { Region, ChunkData, TileData } from "mmo-shared";
 import { DEV_MODE } from "../../utils/dev";
-import { setupLighting } from "../scene-setup";
+import { setupScene } from "../scene-setup";
 
 export class GameWorld {
   private regions: Map<string, GameRegion> = new Map();
@@ -16,7 +16,7 @@ export class GameWorld {
       this.highlightLayer.innerGlow = false;
       this.highlightLayer.outerGlow = false;
     }
-    setupLighting(scene);
+    setupScene(scene);
     logger.game("World ready");
   }
 
