@@ -45,7 +45,7 @@ Babylon.js owns the canvas and runs independently of React's render cycle. The i
 4. Creates `PlayerManager` (spawns local player box mesh)
 5. Attaches input handlers
 6. Starts the render loop
-7. Fetches all chunk data via the builder API and loads into the world
+7. Fetches all chunk data via the builder API and loads into the world — guarded with an `AbortController` so React StrictMode's double-mount does not cause a double-fetch
 8. In dev: opens SSE watcher for live chunk hot-reload
 
 `destroyGame()` disposes the engine, closes the SSE watcher, and nulls all refs. Call it in the `useEffect` cleanup.
@@ -78,7 +78,7 @@ All routes are dev-only (return 403 in production).
 | `/api/builder/region` | POST | Creates a new region folder |
 | `/api/builder/watch` | GET | SSE stream — pushes `chunk_changed` events when a chunk is saved |
 
-The batch endpoint (`/api/builder/chunks`) is the primary load path — used by both the map builder and the game client on init. The individual chunk GET is only used by the SSE hot-reload path.
+The individual chunk GET is used by both `reloadChunkFromApi` (SSE hot-reload path) and the `loadAllRegions` init path. The batch endpoint (`/api/builder/chunks`) is available but `loadAllRegions` currently fetches chunks individually in parallel after resolving the regions list.
 
 ---
 
@@ -88,9 +88,20 @@ In development the game client opens a persistent SSE connection to `/api/builde
 
 - When the map builder saves a chunk (`POST /api/builder/chunk`), the route calls `notifyChunkChanged(regionId, chunkX, chunkZ)`
 - This pushes a `chunk_changed` SSE event to all open connections
-- The game client receives it, fetches the updated chunk via `GET /api/builder/chunk`, and calls `GameWorld.reloadChunk(chunk)`
+- The game client receives it, calls `reloadChunkFromApi`, which fetches the updated chunk via `GET /api/builder/chunk` and calls `GameWorld.reloadChunk(chunk)`
 - No page reload required — the tile meshes for that chunk are disposed and rebuilt in-place
 - SSE auto-reconnects after 3s on disconnect
+
+---
+
+## Chunk Loader (`game-client/world/loader.ts`)
+
+Two exported functions:
+
+- `loadAllRegions(world, signal)` — called on init. Fetches `GET /api/builder/regions` to get region + chunk coords, then fetches each chunk's tile data in parallel. The `AbortSignal` is threaded through every `fetch` call so in-flight requests are cancelled cleanly if React StrictMode unmounts before completion. `AbortError` is swallowed; any other error propagates.
+- `reloadChunkFromApi(world, regionId, chunkX, chunkZ)` — called by the SSE hot-reload handler. Uses its own internal `AbortController`; has no external lifecycle to hook into.
+
+Neither function uses the batch `/api/builder/chunks` endpoint — they build the region list from `/api/builder/regions` and fetch tiles per-chunk.
 
 ---
 
@@ -117,6 +128,9 @@ Manages zoom + translate state for the map builder viewport. Key behaviours:
 - `focusChunk(px, pz)` — centers the given grid-relative pixel coords at the current focus zoom
 - `lastFocusZoomRef` — persists last zoom across chunk selections without triggering re-renders
 - `isPanning` — exposed as state so the CSS transition can be disabled during drag
+
+### `useZoom` (`utils/use-zoom.ts`)
+Simpler standalone hook for elements that need pinch/wheel zoom without the full focus-chunk logic. Used by the map builder's tile palette panel.
 
 ---
 
@@ -151,7 +165,7 @@ There is **no** `indexRegistry` — the server now sends a numeric `id` on every
 
 ### `hydrateLocalPlayer`
 
-Called on `login_success`. Builds the full `PlayerState` from `LoginSuccessMsg` (which now includes `skills` and `inventory`) and upserts into `nearbyPlayers`. Also sets `myId`.
+Called on `login_success`. Builds the full `PlayerState` from `LoginSuccessMsg` (which includes `skills` and `inventory`) and upserts into `nearbyPlayers`. Also sets `myId`.
 
 ### `registerPlayer`
 
@@ -160,6 +174,22 @@ Called on `player_join` and `world_state` entries. Remote players seed `skills`/
 ### `applyTick`
 
 Receives `TickMsg` (`{ t, p: [id, x, y, z, facing][] }`). Builds a `Map<id, delta>` for O(1) lookup and patches matching `PlayerState` entries.
+
+### `updateSettings`
+
+Updates a single top-level key on `settings` in the store. Also persists via `saveSettings` from `utils/settings.ts`.
+
+---
+
+## Settings (`utils/settings.ts`)
+
+Persists `UserSettings` to `localStorage` under the key `mmo-settings`.
+
+- `loadSettings()` — reads and merges with `DEFAULT_SETTINGS` so new keys added to the type are always present
+- `saveSettings(settings)` — writes the full settings object as JSON
+- `patchSettings(key, value)` — loads, merges a single key at the object level, saves, and returns the updated value
+
+`UserSettings` and `DEFAULT_SETTINGS` are defined in `src/types/mmo/settings.ts`.
 
 ---
 
@@ -181,6 +211,7 @@ Singleton — one `WebSocket` instance per tab. `connectWS(token?)` is the only 
 | `player_stopped` | snap position via `applyTick` synthetic delta |
 | `tick` | `applyTick` |
 | `pong` | update `latency` from round-trip delta |
+| `logout_success` | clear session, disconnect |
 | `auth_fail` | dev: auto-register; prod: `logger.error` |
 | `error` | `logger.error` |
 | unknown | `logger.warn` — never throw |
@@ -192,6 +223,15 @@ Singleton — one `WebSocket` instance per tab. `connectWS(token?)` is the only 
 | `sendPlayerMove(x, y, z, facing)` | `{ type: "move", x, y, z, facing }` |
 | `sendPing()` | `{ type: "ping", t: Date.now() }` |
 | `sendSettings(settings)` | `{ type: "save_settings", settings }` |
+
+---
+
+## HTTP Client (`utils/http.ts`)
+
+Axios wrapper. Provides two exports:
+
+- `httpClient` — preconfigured `AxiosInstance` with `baseURL` from `NEXT_PUBLIC_API_URL`, 12s timeout, JSON headers
+- `request<T>(config)` — thin wrapper around `httpClient.request`. Normalises Axios errors into `{ message, status }` objects so call sites receive a consistent error shape. Used by all server-side API calls (auth, builder).
 
 ---
 
@@ -241,12 +281,16 @@ Types are split between this repo and `mmo-shared`:
 | `src/types/mmo/player.ts` | `PlayerState`, `AnimationState` — client-only render state |
 | `src/types/mmo/game-state.ts` | `GameStoreState` — Zustand store shape |
 | `src/types/mmo/network.ts` | `LoginPayload`, `RegisterPayload` — HTTP auth form shapes |
-| `src/types/mmo/settings.ts` | `UserSettings`, `CameraSettings`, etc. |
+| `src/types/mmo/settings.ts` | `UserSettings`, `CameraSettings`, `DEFAULT_SETTINGS` |
 | `src/types/mmo/world.ts` | `Tile`, `ChunkData`, `Region`, `World`, `TileType`, `TileHeight` |
 | `src/types/mmo/structure.ts` | `Structure`, `WallFace`, `Floor`, etc. |
 | `src/types/mmo/builder.ts` | `BuilderRegion`, `BuilderRegionsResponse`, `BuilderSaveRequest` |
+| `src/types/mmo/entities.ts` | `NPC`, `Interactable` |
+| `src/types/mmo/position.ts` | `Position`, `ZERO_POSITION` |
 
-`src/types/ws-protocol.ts` has been **removed** — all WS types now come from `mmo-shared`.
+`src/types/ws-protocol.ts` and `src/types/mmo/skills.ts` have been **removed** — all WS and skill types now come from `mmo-shared`.
+
+`src/types/index.ts` is the barrel — it re-exports all client-only types. Always import from `../../types` not directly from the `mmo/` sub-files in game-client code.
 
 ---
 
@@ -311,6 +355,12 @@ All game code uses world tile coordinates `(x, y, z)`:
 Chunk coordinates are always derived: `chunkX = Math.floor(x / 16)`, `chunkZ = Math.floor(z / 16)`. They are never stored on the player or entity.
 
 Babylon world units match tile units 1:1 (`TILE_SIZE = 1`).
+
+---
+
+## Babylon.js Inspector (Dev)
+
+`@babylonjs/inspector` is installed as a direct dependency and transpiled via `transpilePackages` in `next.config.mjs` (the package ships untranspiled ESM which Next.js cannot handle otherwise). The inspector is dynamically imported in the scene setup — it is never included in production bundles.
 
 ---
 
