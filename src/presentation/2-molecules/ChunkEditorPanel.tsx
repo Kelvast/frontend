@@ -6,11 +6,11 @@ import TileGrid from "./TileGrid";
 import TilePalette from "./TilePalette";
 import ChunkExporter from "./ChunkExporter";
 import RegionSelector from "../1-atoms/RegionSelector";
-import { ChunkData, TileData, TileHeight, TileType, Tile, WORLD, tileData } from "mmo-shared";
+import { ChunkData, TileData, TileHeight, TileType, WORLD, tileData } from "mmo-shared";
 
 function makeEmptyChunk(): TileData[][] {
   return Array.from({ length: WORLD.CHUNK_SIZE }, () =>
-    Array.from({ length: WORLD.CHUNK_SIZE }, () => tileData(Tile.Grass)),
+    Array.from({ length: WORLD.CHUNK_SIZE }, () => tileData("grass")),
   );
 }
 
@@ -60,7 +60,7 @@ const ChunkEditorPanel: FC<Props> = ({
   const [tiles, setTiles] = useState<TileData[][]>(() =>
     initialTiles ? initialTiles.map((r) => [...r]) : makeEmptyChunk(),
   );
-  const [selectedType, setSelectedType] = useState<TileType>(Tile.Grass);
+  const [selectedType, setSelectedType] = useState<TileType>("grass");
   const [selectedHeight, setSelectedHeight] = useState<TileHeight>(TileHeight.GROUND);
   const [regionId, setRegionId] = useState<string>(
     initialRegionId || inferRegion(chunkX, chunkZ, regions),

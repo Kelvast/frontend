@@ -1,24 +1,28 @@
-import { Tile, TileHeight, TileData, ChunkData, TILE_META } from "mmo-shared";
+import { TileHeight, TileData, ChunkData } from "mmo-shared";
 
 const HEIGHT_KEY_MAP = Object.fromEntries(
-  Object.entries(TileHeight).map(([k, v]) => [v, k]),
+  Object.entries(TileHeight)
+    .filter(([, v]) => typeof v === "number")
+    .map(([k, v]) => [v, k]),
 ) as Record<number, string>;
 
+function displayName(type: string): string {
+  return type[0].toUpperCase() + type.slice(1);
+}
+
 function aliasName(t: TileData): string {
-  const name = TILE_META[t.type].displayName;
+  const name = displayName(t.type);
   if (t.y === TileHeight.GROUND) return name;
   const heightKey = HEIGHT_KEY_MAP[t.y];
   if (!heightKey) throw new Error(`Unknown TileHeight value: ${t.y}`);
-  // e.g. Stone_SLOPE_HIGH
   return `${name}_${heightKey}`;
 }
 
 function tileExpr(t: TileData): string {
-  const name = TILE_META[t.type].displayName;
-  if (t.y === TileHeight.GROUND) return `tileData(Tile.${name})`;
+  if (t.y === TileHeight.GROUND) return `tileData("${t.type}")`;
   const heightKey = HEIGHT_KEY_MAP[t.y];
   if (!heightKey) throw new Error(`Unknown TileHeight value: ${t.y}`);
-  return `tileData(Tile.${name}, TileHeight.${heightKey})`;
+  return `tileData("${t.type}", TileHeight.${heightKey})`;
 }
 
 export function generateChunkTs(data: ChunkData): string {
@@ -40,7 +44,7 @@ export function generateChunkTs(data: ChunkData): string {
     })
     .join("\n");
 
-  return `import { ChunkData, tileData, Tile, TileHeight } from "mmo-shared";
+  return `import { ChunkData, tileData, TileHeight } from "mmo-shared";
 
 ${aliases}
 

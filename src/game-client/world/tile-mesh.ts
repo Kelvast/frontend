@@ -1,21 +1,27 @@
 import { Mesh, VertexData, Scene } from "@babylonjs/core";
-import { TileData, WORLD } from "mmo-shared";
+import { TileData, TileHeight, WORLD } from "mmo-shared";
 import { tileWorldY } from "./tile-height";
 
-function cornerY(tiles: TileData[][], row: number, col: number, dr: number, dc: number): number {
-  const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v));
-  const r0 = clamp(row, tiles.length - 1);
-  const c0 = clamp(col, tiles[0].length - 1);
-  const r1 = clamp(row + dr, tiles.length - 1);
-  const c1 = clamp(col + dc, tiles[0].length - 1);
+type TileGrid = ReadonlyArray<ReadonlyArray<TileData>>;
 
-  const samples = [tiles[r0][c0], tiles[r1][c0], tiles[r0][c1], tiles[r1][c1]];
+function cornerY(tiles: TileGrid, row: number, col: number, dr: number, dc: number): number {
+  const clampRow = Math.max(0, Math.min(tiles.length - 1, row + dr));
+  const clampCol = Math.max(0, Math.min(tiles[0].length - 1, col + dc));
+  const r0 = Math.max(0, Math.min(tiles.length - 1, row));
+  const c0 = Math.max(0, Math.min(tiles[0].length - 1, col));
 
-  return samples.reduce((sum, t) => sum + tileWorldY(t.y), 0) / samples.length;
+  const samples: TileHeight[] = [
+    tiles[r0][c0].y,
+    tiles[clampRow][c0].y,
+    tiles[r0][clampCol].y,
+    tiles[clampRow][clampCol].y,
+  ];
+
+  return samples.reduce((sum, h) => sum + tileWorldY(h), 0) / samples.length;
 }
 
 export function buildTileMesh(
-  tiles: TileData[][],
+  tiles: TileGrid,
   row: number,
   col: number,
   chunkX: number,
@@ -23,29 +29,29 @@ export function buildTileMesh(
   scene: Scene,
 ): Mesh {
   const s = WORLD.TILE_SIZE;
-  const half = s / 2;
 
   const worldX = (chunkX * WORLD.CHUNK_SIZE + col) * s;
   const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * s;
 
   const yNW = cornerY(tiles, row, col, -1, -1);
-  const yNE = cornerY(tiles, row, col, -1, 1);
-  const ySW = cornerY(tiles, row, col, 1, -1);
-  const ySE = cornerY(tiles, row, col, 1, 1);
+  const yNE = cornerY(tiles, row, col, -1,  1);
+  const ySW = cornerY(tiles, row, col,  1, -1);
+  const ySE = cornerY(tiles, row, col,  1,  1);
 
-  const positions = [-half, yNW, -half, half, yNE, -half, half, ySE, half, -half, ySW, half];
-
-  const indices = [0, 1, 2, 0, 2, 3];
-  const uvs = [0, 1, 1, 1, 1, 0, 0, 0];
-  const normals: number[] = [];
+  // vertices run 0→s so mesh.position is tile top-left corner
+  // Math.floor(hit.x / TILE_SIZE) gives exact tile coord with no offset
+  const positions: number[] = [0, yNW, 0,  s, yNE, 0,  s, ySE, s,  0, ySW, s];
+  const indices:   number[] = [0, 1, 2,  0, 2, 3];
+  const uvs:       number[] = [0, 1,  1, 1,  1, 0,  0, 0];
+  const normals:   number[] = [];
 
   VertexData.ComputeNormals(positions, indices, normals);
 
   const vertexData = new VertexData();
   vertexData.positions = positions;
-  vertexData.indices = indices;
-  vertexData.normals = normals;
-  vertexData.uvs = uvs;
+  vertexData.indices   = indices;
+  vertexData.normals   = normals;
+  vertexData.uvs       = uvs;
 
   const mesh = new Mesh(`tile-${chunkX}-${chunkZ}-${col}-${row}`, scene);
   vertexData.applyToMesh(mesh);

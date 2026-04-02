@@ -1,8 +1,7 @@
 "use client";
 
 import { FC, memo } from "react";
-import { Tile, TileHeight } from "mmo-shared";
-import type { TileType } from "mmo-shared";
+import { TileHeight, TileType, TILE_WALKABLE } from "mmo-shared";
 import { TILE_COLORS } from "../../game-client/world/tile-colors";
 import PaletteButton from "../1-atoms/PaletteButton";
 import SectionLabel from "../1-atoms/SectionLabel";
@@ -14,8 +13,10 @@ interface Props {
   onSelectHeight: (h: TileHeight) => void;
 }
 
-const HEIGHTS = Object.entries(TileHeight) as [string, TileHeight][];
-const TILE_TYPES = Object.values(Tile) as TileType[];
+const TILE_TYPES = Object.keys(TILE_WALKABLE) as TileType[];
+const HEIGHTS = Object.entries(TileHeight).filter(
+  (entry): entry is [string, TileHeight] => typeof entry[1] === "number",
+);
 
 const TilePalette: FC<Props> = ({ selectedType, selectedHeight, onSelectType, onSelectHeight }) => (
   <div className="flex flex-col gap-4">
