@@ -11,11 +11,24 @@ const GameCanvas = ({ token }: GameCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    initGame(canvasRef.current);
-    connectGame(token);
-    return () => destroyGame();
-  }, []);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let active = true;
+
+    initGame(canvas).then(() => {
+      if (!active) {
+        destroyGame();
+        return;
+      }
+      connectGame(token);
+    });
+
+    return () => {
+      active = false;
+      destroyGame();
+    };
+  }, [token]);
 
   return (
     <canvas

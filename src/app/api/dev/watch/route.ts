@@ -19,9 +19,11 @@ function startFsWatcher(): void {
   if (!fs.existsSync(GAME_CLIENT_ROOT)) return;
 
   fs.watch(GAME_CLIENT_ROOT, { recursive: true }, (_event, filename) => {
-    if (!filename || !filename.endsWith(".ts")) return;
+    if (!filename) return;
+    if (!filename.endsWith(".ts") && !filename.endsWith(".tsx")) return;
+    if (filename.includes("__pycache__") || filename.startsWith(".")) return;
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => notify(filename), 50);
+    debounceTimer = setTimeout(() => notify(filename), 500); // 500ms not 50ms
   });
 }
 

@@ -6,7 +6,7 @@ import { KeysInput } from "./input/keys";
 import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
 import { DEV_MODE } from "../utils/dev";
-import { Region, ChunkData, Tile } from "../types";
+import { loadAllRegions } from "./world/loader";
 import type { InspectorToken } from "@babylonjs/inspector";
 
 export { GameCamera } from "./camera";
@@ -19,52 +19,7 @@ let _world: GameWorld | null = null;
 let _canvas: HTMLCanvasElement | null = null;
 let _watcherEs: EventSource | null = null;
 let _inspector: InspectorToken | null = null;
-
-async function fetchChunkTiles(
-  regionId: string,
-  chunkX: number,
-  chunkZ: number,
-): Promise<Tile[][] | null> {
-  const res = await fetch(
-    `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
-  );
-  if (!res.ok) return null;
-  const { tiles } = await res.json();
-  return tiles as Tile[][];
-}
-
-async function fetchAllRegions(): Promise<Region[]> {
-  const res = await fetch("/api/builder/regions");
-  if (!res.ok) return [];
-  const { regions } = await res.json();
-
-  return Promise.all(
-    regions.map(async (r: { id: string; chunks: { chunkX: number; chunkZ: number }[] }) => {
-      const chunkEntries = await Promise.all(
-        r.chunks.map(async (c) => {
-          const tiles = await fetchChunkTiles(r.id, c.chunkX, c.chunkZ);
-          return [
-            `${c.chunkX},${c.chunkZ}`,
-            {
-              chunkX: c.chunkX,
-              chunkZ: c.chunkZ,
-              region: r.id,
-              pvp: false,
-              tiles: tiles ?? [],
-            } as ChunkData,
-          ];
-        }),
-      );
-      return { id: r.id, name: r.id, chunks: Object.fromEntries(chunkEntries) } as Region;
-    }),
-  );
-}
-
-async function loadAllRegions(world: GameWorld): Promise<void> {
-  const regions = await fetchAllRegions();
-  regions.forEach((r) => world.loadRegion(r));
-  logger.game(`Loaded ${regions.length} region(s)`);
-}
+let _initAbort: AbortController | null = null;
 
 export async function initGame(canvas: HTMLCanvasElement): Promise<void> {
   if (_engine) {
@@ -72,34 +27,54 @@ export async function initGame(canvas: HTMLCanvasElement): Promise<void> {
     return;
   }
 
+  _initAbort?.abort();
+  const abort = new AbortController();
+  _initAbort = abort;
+
   _canvas = canvas;
   logger.game("Initialising game");
 
-  _engine = new GameEngine(canvas);
-  const scene = _engine.scene;
+  const engine = new GameEngine(canvas);
+  const scene = engine.scene;
+  _engine = engine;
 
-  _world = new GameWorld(scene);
-  await loadAllRegions(_world);
+  const world = new GameWorld(scene);
+  _world = world;
+
+  // Pass signal so loadAllRegions can abandon in-flight fetches
+  await loadAllRegions(world, abort.signal);
+
+  if (abort.signal.aborted || !_engine) {
+    logger.game("initGame aborted — destroyed while loading regions");
+    engine.dispose();
+    _engine = null;
+    return;
+  }
 
   const camera = new GameCamera(scene);
   const players = new PlayerManager(scene);
-  const localMesh = players.spawnLocalPlayer();
-  camera.attachToMesh(localMesh);
+  camera.attachToMesh(players.spawnLocalPlayer());
+
+  engine.engine.runRenderLoop(() => {
+    if (!scene.isDisposed) scene.render();
+  });
 
   new KeysInput(scene, camera);
   new PointerInput(scene, players);
 
-  _engine.engine.runRenderLoop(() => scene.render());
+  logger.game("Game ready");
 
   if (DEV_MODE) {
-    import("@babylonjs/inspector").then(({ ShowInspector }) => {
-      _inspector = ShowInspector(scene);
-      logger.game("Babylon inspector open");
-    });
+    void openInspector(scene);
     startWatcher();
   }
+}
 
-  logger.game("Game ready");
+async function openInspector(scene: import("@babylonjs/core").Scene): Promise<void> {
+  const { ShowInspector } = await import("@babylonjs/inspector");
+  if (!_engine) return;
+  _inspector = ShowInspector(scene, { layoutMode: "overlay" });
+  logger.game("Babylon inspector open");
 }
 
 export function connectGame(_token?: string): void {
@@ -108,6 +83,8 @@ export function connectGame(_token?: string): void {
 
 export function destroyGame(): void {
   if (!_engine) return;
+  _initAbort?.abort();
+  _initAbort = null;
   logger.game("Destroying game");
   _inspector?.dispose();
   _inspector = null;
