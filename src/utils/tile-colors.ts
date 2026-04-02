@@ -1,9 +1,9 @@
 import { Tile, TileType } from "mmo-shared";
 
 /**
- * Hex color strings for each tile type.
+ * Hex colour strings for each tile type.
  * Used by the builder grid and any non-Babylon UI that needs tile colours.
- * For Babylon scene rendering use TILE_CONFIG in world/tile-config.ts instead.
+ * For Babylon scene rendering use TILE_RENDER in world/tile-render.ts instead.
  */
 export const TILE_COLORS: Record<TileType, string> = {
   [Tile.Grass]: "#336633",

@@ -11,7 +11,7 @@ import {
   DynamicTexture,
 } from "@babylonjs/core";
 import { ChunkData, WORLD } from "mmo-shared";
-import { TILE_CONFIG } from "./tile-config";
+import { TILE_RENDER } from "./tile-render";
 import { tileWorldY } from "./tile-height";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
@@ -49,7 +49,7 @@ export class Chunk {
         mesh.position = new Vector3(worldX, worldY, worldZ);
 
         const mat = new StandardMaterial(`mat-${chunkX}-${chunkZ}-${col}-${row}`, this.scene);
-        mat.diffuseColor = TILE_CONFIG[tile.type].color;
+        mat.diffuseColor = TILE_RENDER[tile.type].color;
         mat.specularColor = Color3.Black();
         mesh.material = mat;
 
