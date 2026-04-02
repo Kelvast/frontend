@@ -5,7 +5,6 @@ import { PlayerManager } from "./entities/players";
 import { KeysInput } from "./input/keys";
 import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
-import { ChunkData } from "../types";
 import { loadAllRegions, reloadChunkFromApi } from "./world/loader";
 
 export { GameCamera } from "./camera";
@@ -96,8 +95,7 @@ function startWatcher(): void {
     logger.game("Watcher connected");
   });
 
-  _watcherEs.addEventListener("file_changed", async (e: MessageEvent) => {
-    if (!_world) return;
+  _watcherEs.addEventListener("file_changed", (e: MessageEvent) => {
     const { filename } = JSON.parse(e.data) as { filename: string };
     logger.game(`Watcher — file changed: ${filename}`);
   });

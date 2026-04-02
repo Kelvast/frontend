@@ -118,9 +118,14 @@ export class Chunk {
     ctx.clearRect(0, 0, resolution, resolution);
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = font;
-    ctx.textAlign = "center";
-    ctx.fillText(`x: ${tileX}`, resolution / 2, resolution / 2 - lineHeight / 2);
-    ctx.fillText(`z: ${tileZ}`, resolution / 2, resolution / 2 + lineHeight / 2);
+
+    const labelX = `x: ${tileX}`;
+    const labelZ = `z: ${tileZ}`;
+    const xOffset = (resolution - ctx.measureText(labelX).width) / 2;
+    const zOffset = (resolution - ctx.measureText(labelZ).width) / 2;
+
+    ctx.fillText(labelX, xOffset, resolution / 2 - lineHeight / 2);
+    ctx.fillText(labelZ, zOffset, resolution / 2 + lineHeight / 2);
     tex.update();
 
     const plane = MeshBuilder.CreateGround(

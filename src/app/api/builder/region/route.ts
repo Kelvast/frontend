@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { generateRegionIndexTs } from "../../../../utils/region-index-gen";
+import { generateRegionIndexTs, generateRegionsRootIndexTs } from "../../../../utils/region-index-gen";
 
 const REGIONS_ROOT = path.resolve("src/game-client/world/regions");
 
@@ -29,11 +29,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Region already exists" }, { status: 409 });
     }
 
-    const regionName = regionId.charAt(0).toUpperCase() + regionId.slice(1);
     fs.mkdirSync(regionPath, { recursive: true });
     fs.writeFileSync(
       path.resolve(regionPath, "index.ts"),
-      generateRegionIndexTs(regionId, regionName),
+      generateRegionIndexTs(regionId, []),
+    );
+
+    const existingIds = fs
+      .readdirSync(REGIONS_ROOT, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name !== regionId)
+      .map((d) => d.name);
+
+    fs.writeFileSync(
+      path.resolve(REGIONS_ROOT, "index.ts"),
+      generateRegionsRootIndexTs([...existingIds, regionId]),
     );
 
     return NextResponse.json({ ok: true });
