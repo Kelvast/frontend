@@ -9,24 +9,35 @@ interface GameCanvasProps {
 
 const GameCanvas = ({ token }: GameCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const initRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let active = true;
+    let cancelled = false;
 
-    initGame(canvas).then(() => {
-      if (!active) {
+    const run = async () => {
+      const p = initGame(canvas);
+      initRef.current = p;
+      await p;
+      initRef.current = null;
+      if (cancelled) {
         destroyGame();
         return;
       }
       connectGame(token);
-    });
+    };
+
+    void run();
 
     return () => {
-      active = false;
-      destroyGame();
+      cancelled = true;
+      // Wait for any in-progress init to finish before destroying,
+      // so destroyGame never races initGame mid-flight
+      void (initRef.current ?? Promise.resolve()).then(() => {
+        if (cancelled) destroyGame();
+      });
     };
   }, [token]);
 

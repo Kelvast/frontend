@@ -22,14 +22,14 @@ let _inspector: InspectorToken | null = null;
 let _initAbort: AbortController | null = null;
 
 export async function initGame(canvas: HTMLCanvasElement): Promise<void> {
+  const abort = new AbortController();
+  _initAbort?.abort();
+  _initAbort = abort;
+
   if (_engine) {
     logger.game("initGame called but engine already running — skipping");
     return;
   }
-
-  _initAbort?.abort();
-  const abort = new AbortController();
-  _initAbort = abort;
 
   _canvas = canvas;
   logger.game("Initialising game");
@@ -41,7 +41,6 @@ export async function initGame(canvas: HTMLCanvasElement): Promise<void> {
   const world = new GameWorld(scene);
   _world = world;
 
-  // Pass signal so loadAllRegions can abandon in-flight fetches
   await loadAllRegions(world, abort.signal);
 
   if (abort.signal.aborted || !_engine) {
@@ -83,8 +82,6 @@ export function connectGame(_token?: string): void {
 
 export function destroyGame(): void {
   if (!_engine) return;
-  _initAbort?.abort();
-  _initAbort = null;
   logger.game("Destroying game");
   _inspector?.dispose();
   _inspector = null;
