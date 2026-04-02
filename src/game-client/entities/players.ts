@@ -36,9 +36,8 @@ export class PlayerManager {
       { width: PLAYER.SIZE, height: PLAYER.HEIGHT, depth: PLAYER.SIZE },
       this.scene,
     );
-    // spawn at tile (0,0) centre
-    const s = WORLD.TILE_SIZE;
-    mesh.position = new Vector3(s / 2, PLAYER.Y_OFFSET, s / 2);
+    const half = WORLD.TILE_SIZE / 2;
+    mesh.position = new Vector3(half, PLAYER.Y_OFFSET, half);
 
     const mat = new StandardMaterial("localPlayerMat", this.scene);
     mat.diffuseColor = new Color3(0, 0.7, 1);
@@ -60,7 +59,6 @@ export class PlayerManager {
     const waypoints = buildWaypoints(this.localMesh.position, destWorldX, destWorldZ);
     if (waypoints.length === 0) return;
 
-    // getTileAt takes tile indices — convert world waypoint back to tile coords
     const waypointsWithY: Vector3[] = waypoints.map((wp) => {
       const wpTileX = Math.floor(wp.x / s);
       const wpTileZ = Math.floor(wp.z / s);
