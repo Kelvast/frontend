@@ -1,7 +1,8 @@
 "use client";
 
 import { FC, memo } from "react";
-import { TileType, TileHeight } from "../../types";
+import { Tile, TileHeight } from "../../types";
+import type { TileType } from "../../types";
 import { TILE_COLORS } from "../../utils/tile-colors";
 import PaletteButton from "../1-atoms/PaletteButton";
 import SectionLabel from "../1-atoms/SectionLabel";
@@ -14,13 +15,14 @@ interface Props {
 }
 
 const HEIGHTS = Object.entries(TileHeight) as [string, TileHeight][];
+const TILE_TYPES = Object.values(Tile) as TileType[];
 
 const TilePalette: FC<Props> = ({ selectedType, selectedHeight, onSelectType, onSelectHeight }) => (
   <div className="flex flex-col gap-4">
     <div>
       <SectionLabel>Tile Type</SectionLabel>
       <div className="flex flex-col gap-1 mt-2">
-        {Object.values(TileType).map((t) => (
+        {TILE_TYPES.map((t) => (
           <PaletteButton
             key={t}
             label={t}

@@ -1,3 +1,17 @@
-// Wire-format world types live in mmo-shared.
-// Re-exported here for any client code that imports from this path.
-export { TileHeight, TileData, tileData, ChunkData, Region, World } from "mmo-shared";
+export {
+  Tile,
+  TileHeight,
+  TILE_META,
+  TILE_ID_REGISTRY,
+  BLOCKED_EDGES,
+  tileData,
+} from "mmo-shared";
+
+export type {
+  TileType,
+  TileDefinition,
+  TileData,
+  ChunkData,
+  Region,
+  World,
+} from "mmo-shared";

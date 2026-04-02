@@ -1,7 +1,7 @@
 "use client";
 
-import { FC, memo, useEffect, useRef, useState } from "react";
-import { Tile } from "../../types";
+import { FC, memo, useEffect, useRef } from "react";
+import type { TileData } from "../../types";
 import { TILE_COLORS } from "../../utils/tile-colors";
 import { WORLD } from "mmo-shared";
 
@@ -9,7 +9,7 @@ const CELL = 4;
 export const CHUNK_PX = WORLD.CHUNK_SIZE * CELL;
 
 interface Props {
-  tiles: Tile[][] | null;
+  tiles: TileData[][] | null;
   selected: boolean;
   hovered: boolean;
   onClick: () => void;
