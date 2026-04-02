@@ -12,7 +12,7 @@ export {
   TILE_ID_REGISTRY,
   BLOCKED_EDGES,
   tileData,
-} from "./mmo/world";
+} from "mmo-shared";
 export type {
   TileType,
   TileDefinition,
@@ -20,7 +20,7 @@ export type {
   ChunkData,
   Region,
   World,
-} from "./mmo/world";
+} from "mmo-shared";
 export {
   WallType,
   DoorState,

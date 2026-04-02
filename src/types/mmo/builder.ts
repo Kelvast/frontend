@@ -1,4 +1,4 @@
-import type { TileData } from "./world";
+import type { TileData } from "mmo-shared";
 
 export interface BuilderChunk {
   regionId: string;

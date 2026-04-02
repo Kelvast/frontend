@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, memo, useEffect, useRef } from "react";
-import type { TileData } from "../../types";
+import type { TileData } from "mmo-shared";
 import { TILE_COLORS } from "../../utils/tile-colors";
 import { WORLD } from "mmo-shared";
 
