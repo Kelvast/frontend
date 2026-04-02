@@ -1,5 +1,5 @@
 import { Scene, HighlightLayer } from "@babylonjs/core";
-import { Region, ChunkData } from "../../types";
+import { Region, ChunkData } from "mmo-shared";
 import { Chunk } from "./chunk";
 import { logger } from "../../utils/logger";
 

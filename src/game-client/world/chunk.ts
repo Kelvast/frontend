@@ -10,12 +10,11 @@ import {
   HighlightLayer,
   DynamicTexture,
 } from "@babylonjs/core";
-import { ChunkData } from "../../types/mmo/world";
+import { ChunkData, WORLD } from "mmo-shared";
 import { TILE_CONFIG } from "./tile-config";
 import { tileWorldY } from "./tile-height";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
-import { WORLD } from "mmo-shared";
 
 export class Chunk {
   private meshes: Mesh[] = [];
