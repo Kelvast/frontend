@@ -78,6 +78,7 @@ export class Chunk {
 
   private _spawnDevOverlay(tiles: TileData[][], chunkX: number, chunkZ: number, grid: Mesh): void {
     const hl = this.highlightLayer!;
+    const half = WORLD.TILE_SIZE / 2;
     const outlineMat = new StandardMaterial(`outline-mat-${chunkX}-${chunkZ}`, this.scene);
     outlineMat.emissiveColor = Color3.Black();
     outlineMat.wireframe = true;
@@ -85,8 +86,8 @@ export class Chunk {
     for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
       for (let col = 0; col < WORLD.CHUNK_SIZE; col++) {
         const tile = tiles[row][col];
-        const worldX = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE;
-        const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
+        const worldX = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE + half;
+        const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE + half;
         const worldY = tileWorldY(tile.y);
 
         const outline = buildTileMesh(tiles, row, col, chunkX, chunkZ, this.scene);

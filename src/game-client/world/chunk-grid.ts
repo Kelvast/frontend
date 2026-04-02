@@ -11,9 +11,9 @@ export function buildChunkGrid(chunkX: number, chunkZ: number, scene: Scene): Me
   );
 
   grid.position = new Vector3(
-    (chunkX * WORLD.CHUNK_SIZE + WORLD.CHUNK_SIZE / 2 - 0.5) * WORLD.TILE_SIZE,
+    chunkX * size + size / 2,
     0.01,
-    (chunkZ * WORLD.CHUNK_SIZE + WORLD.CHUNK_SIZE / 2 - 0.5) * WORLD.TILE_SIZE,
+    chunkZ * size + size / 2,
   );
 
   grid.isVisible = false;

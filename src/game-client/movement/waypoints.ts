@@ -1,13 +1,28 @@
 import { Vector3 } from "@babylonjs/core";
-import { buildWaypoints as sharedBuildWaypoints } from "mmo-shared";
+import { WORLD } from "mmo-shared";
 import { PLAYER } from "../constants";
 
-/**
- * Client adapter for the shared buildWaypoints utility.
- * Converts the plain {x, z} results to Babylon Vector3 with the player Y offset applied.
- */
+const s = WORLD.TILE_SIZE;
+
+function tileCentre(worldCoord: number): number {
+  return Math.floor(worldCoord / s) * s + s / 2;
+}
+
 export function buildWaypoints(from: Vector3, toX: number, toZ: number): Vector3[] {
-  return sharedBuildWaypoints(from.x, from.z, toX, toZ).map(
-    ({ x, z }) => new Vector3(x, PLAYER.Y_OFFSET, z),
-  );
+  let x = tileCentre(from.x);
+  let z = tileCentre(from.z);
+  const endX = tileCentre(toX);
+  const endZ = tileCentre(toZ);
+
+  if (x === endX && z === endZ) return [];
+
+  const waypoints: Vector3[] = [];
+
+  while (x !== endX || z !== endZ) {
+    if (x !== endX) x += x < endX ? s : -s;
+    if (z !== endZ) z += z < endZ ? s : -s;
+    waypoints.push(new Vector3(x, PLAYER.Y_OFFSET, z));
+  }
+
+  return waypoints;
 }

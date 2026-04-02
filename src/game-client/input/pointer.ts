@@ -1,5 +1,4 @@
 import {
-  Mesh,
   PointerEventTypes,
   PointerInfo,
   Scene,
@@ -10,13 +9,10 @@ import { DEV_MODE } from "../../utils/dev";
 import { WORLD } from "mmo-shared";
 
 export class PointerInput {
-  private scene: Scene;
-
   constructor(
-    scene: Scene,
+    private scene: Scene,
     private players: PlayerManager,
   ) {
-    this.scene = scene;
     scene.onPointerObservable.add((pi) => this._onPointer(pi));
     logger.game("PointerInput initialised");
   }
@@ -48,12 +44,15 @@ export class PointerInput {
       return;
     }
 
-    const tileX = Math.floor(pick.pickedPoint.x / WORLD.TILE_SIZE);
-    const tileZ = Math.floor(pick.pickedPoint.z / WORLD.TILE_SIZE);
-    const worldX = tileX * WORLD.TILE_SIZE;
-    const worldZ = tileZ * WORLD.TILE_SIZE;
+    const s = WORLD.TILE_SIZE;
+    const tileX = Math.floor(pick.pickedPoint.x / s);
+    const tileZ = Math.floor(pick.pickedPoint.z / s);
+
+    // world position = tile centre
+    const worldX = tileX * s + s / 2;
+    const worldZ = tileZ * s + s / 2;
 
     logger.game("Tile clicked", { tileX, tileZ, worldX, worldZ });
-    this.players.moveTo(worldX, worldZ);
+    this.players.moveTo(tileX, tileZ);
   }
 }
