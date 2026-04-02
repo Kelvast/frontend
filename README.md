@@ -13,6 +13,7 @@ Browser-based 3D MMO client. Players move around a tile-based world, interact wi
 | State | Zustand |
 | Real-time | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
 | HTTP | Axios wrapper (`http.ts`) |
+| Shared types/logic | `mmo-shared` (protocol, skills, XP, items) |
 | Language | TypeScript — strict throughout |
 
 ---
@@ -20,8 +21,6 @@ Browser-based 3D MMO client. Players move around a tile-based world, interact wi
 ## Branch
 
 Active development is on feature branches off `main`. All PRs target `main`.
-
-Current: `map-builder-chunk-api-later`
 
 ---
 
@@ -103,20 +102,23 @@ src/
 │   └── 5-pages/
 │
 ├── types/
-│   ├── index.ts
-│   ├── ws-protocol.ts
+│   ├── index.ts                # Barrel — re-exports all client-only types
 │   └── mmo/
 │       ├── builder.ts          # BuilderRegion, BuilderRegionsResponse, BuilderSaveRequest
 │       ├── world.ts            # Region, ChunkData, Tile, TileType, TileHeight
-│       ├── player.ts
-│       ├── entities.ts
-│       ├── game-state.ts
-│       ├── network.ts
-│       └── position.ts
+│       ├── player.ts           # PlayerState, AnimationState (client render state)
+│       ├── game-state.ts       # GameStoreState (Zustand store shape)
+│       ├── entities.ts         # NPC, Interactable
+│       ├── network.ts          # LoginPayload, RegisterPayload (HTTP auth forms)
+│       ├── position.ts         # Position, ZERO_POSITION
+│       ├── settings.ts         # UserSettings, CameraSettings, etc.
+│       ├── structure.ts        # Structure, WallFace, Floor, etc.
+│       └── (ws-protocol.ts — REMOVED: all WS types come from mmo-shared)
 │
 └── utils/
     ├── game-store.ts
     ├── ws-client.ts
+    ├── xp.ts                   # Re-exports xpToLevel etc. from mmo-shared; maxHpFromSkills
     ├── logger.ts               # Never use raw console.log
     ├── use-focus-zoom.ts       # Map builder zoom/pan/focus hook
     ├── chunk-spiral.ts         # Spiral coord generator for chunk streaming
@@ -182,19 +184,30 @@ Available at `/map-builder` in dev. Paint tiles, set heights, assign regions, sa
 
 ### Movement
 
-Players move by clicking a tile. The click is snapped to tile centre and a `player_move` message is sent. Remote players lerp to their updated position each render frame.
+Players move by clicking a tile. The click is snapped to tile centre and a `move` message is sent. Remote players lerp to their updated position each render frame.
 
 ### Player Sync
 
+All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
+
 | Message | When | Contains |
 |---|---|---|
-| `player_init` | Enters interest area | Full state: id, index, name, hp, x, z |
-| `tick` | Every 100ms | `{ t, p: [index, x, z, facing, hp][] }` |
-| `player_leave` | Exits interest area | `{ index }` |
+| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `skills`, `inventory`, `sessionToken`, `sessionExpiresAt` |
+| `world_state` | After login | Array of nearby player snapshots |
+| `player_join` | Player enters range | `player: { id, name, x, y, z, facing }` |
+| `player_leave` | Player exits range | `{ id }` |
+| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing][] }` |
+| `player_stopped` | Move rejected | `{ id, x, y, z, facing }` — authoritative correction |
 
 ### Skills
 
-Players have skills (Combat, Woodcutting, Mining, Fishing). XP → level via curve in `utils/xp.ts`.
+Skill XP and level logic lives in `mmo-shared`. The client holds raw XP in `PlayerState.skills` (a `Skills` record keyed by `SkillId`) and derives levels via `xpToLevel` / `getSkillLevel` imported from `mmo-shared`. Never store derived level values.
+
+The client-only `maxHpFromSkills(skills)` helper lives in `src/utils/xp.ts`:
+
+```ts
+xpToLevel(player.skills[0].xp, 0) * 10  // skill 0 = hitpoints
+```
 
 ### Combat
 
@@ -216,8 +229,8 @@ Fixed-size item grid. Pick up from / drop onto world tiles.
 | Functions | `camelCase` | `initGame`, `loadChunk`, `focusChunk` |
 | Types | `PascalCase` | `Tile`, `ChunkData`, `BuilderRegion` |
 | Constants | `UPPER_SNAKE_CASE` | `CHUNK_SIZE`, `FOCUS_ZOOM` |
-| WS message types | `snake_case` strings | `player_init`, `chunk_changed` |
-| Zustand actions | verb-prefixed `camelCase` | `setMyId`, `registerPlayer` |
+| WS message types | `snake_case` strings | `login_success`, `player_join`, `tick` |
+| Zustand actions | verb-prefixed `camelCase` | `setMyId`, `registerPlayer`, `hydrateLocalPlayer` |
 
 ---
 

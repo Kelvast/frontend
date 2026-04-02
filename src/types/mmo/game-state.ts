@@ -1,25 +1,23 @@
-import { PlayerInitMsg, TickMsg, LoginSuccessMsg } from "../ws-protocol";
-import { PlayerState } from "./player";
-import { UserSettings } from "./settings";
+import type { LoginSuccessMsg, PlayerJoinMsg, TickMsg } from "mmo-shared";
+import type { PlayerState, NearbyPlayer } from "./player";
+import type { UserSettings } from "./settings";
 
 export interface GameStoreState {
-  myId: string | null;
-  nearbyPlayers: PlayerState[];
+  localPlayer: PlayerState | null;
+  nearbyPlayers: NearbyPlayer[];
   worldTime: number;
   isConnected: boolean;
   latency: number;
   sessionToken: string | null;
   sessionExpiresAt: number | null;
-  indexRegistry: Map<number, string>;
   settings: UserSettings;
 
-  setMyId: (id: string) => void;
   setConnected: (connected: boolean) => void;
   setLatency: (latency: number) => void;
   setSession: (session: { sessionToken: string; sessionExpiresAt: number }) => void;
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;
   hydrateLocalPlayer: (msg: LoginSuccessMsg) => void;
-  registerPlayer: (msg: PlayerInitMsg) => void;
-  unregisterPlayer: (index: number) => void;
+  registerPlayer: (msg: PlayerJoinMsg) => void;
+  unregisterPlayer: (id: number) => void;
   applyTick: (msg: TickMsg) => void;
 }

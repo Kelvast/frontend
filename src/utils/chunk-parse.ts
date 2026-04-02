@@ -1,13 +1,5 @@
 import { Tile, TileType, TileHeight } from "../types";
 
-const TYPE_FROM_ALIAS: Record<string, TileType> = {
-  G: TileType.GRASS,
-  W: TileType.WATER,
-  S: TileType.STONE,
-  D: TileType.SAND,
-  P: TileType.PATH,
-};
-
 const HEIGHT_FROM_KEY: Record<string, TileHeight> = Object.fromEntries(
   Object.entries(TileHeight).map(([k, v]) => [k, v as TileHeight]),
 );
@@ -53,12 +45,31 @@ function parseInlineTile(expr: string, aliases: AliasMap): Tile | null {
   return null;
 }
 
+function extractTilesBlock(source: string): string | null {
+  const start = source.indexOf("tiles:");
+  if (start === -1) return null;
+
+  const bracketStart = source.indexOf("[", start);
+  if (bracketStart === -1) return null;
+
+  let depth = 0;
+  for (let i = bracketStart; i < source.length; i++) {
+    if (source[i] === "[") depth++;
+    else if (source[i] === "]") {
+      depth--;
+      if (depth === 0) return source.slice(bracketStart + 1, i);
+    }
+  }
+
+  return null;
+}
+
 export function parseChunkTs(source: string): { tiles: Tile[][]; pvp: boolean } | null {
   try {
     const aliases = parseAliases(source);
 
-    const tilesMatch = source.match(/tiles:\s*\[([\s\S]*?)\],?\s*\}/);
-    if (!tilesMatch) return null;
+    const tilesBlock = extractTilesBlock(source);
+    if (!tilesBlock) return null;
 
     const pvpMatch = source.match(/pvp:\s*(true|false)/);
     const pvp = pvpMatch?.[1] === "true";
@@ -67,7 +78,7 @@ export function parseChunkTs(source: string): { tiles: Tile[][]; pvp: boolean } 
     const tiles: Tile[][] = [];
     let rowMatch: RegExpExecArray | null;
 
-    while ((rowMatch = rowRe.exec(tilesMatch[1])) !== null) {
+    while ((rowMatch = rowRe.exec(tilesBlock)) !== null) {
       const cells = rowMatch[1].split(",").map((c) => parseInlineTile(c, aliases));
       if (cells.some((c) => c === null)) return null;
       tiles.push(cells as Tile[]);

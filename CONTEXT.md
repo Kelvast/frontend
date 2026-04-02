@@ -122,43 +122,44 @@ Manages zoom + translate state for the map builder viewport. Key behaviours:
 
 ## Zustand Store (`utils/game-store.ts`)
 
-Single store, no slices. Full shape:
+Single store, no slices. All WS message types are imported from `mmo-shared`. Full shape:
 
 ```ts
 interface GameStoreState {
-  myId:             string | null
-  player:           PlayerState | null
+  myId:             number | null
   nearbyPlayers:    PlayerState[]
   worldTime:        number
   isConnected:      boolean
   latency:          number
   sessionToken:     string | null
   sessionExpiresAt: number | null
-  indexRegistry:    Map<number, string>  // session index → uuid
+  settings:         UserSettings
 
-  setMyId:           (id: string) => void
+  setMyId:           (id: number) => void
   setConnected:      (connected: boolean) => void
   setLatency:        (latency: number) => void
   setSession:        ({ sessionToken, sessionExpiresAt }) => void
-  updatePlayer:      (player: Partial<PlayerState> & { id: string }) => void
-  registerPlayer:    (msg: PlayerInitMsg) => void
-  unregisterPlayer:  (index: number) => void
-  applyTick:         ({ t, p }) => void
+  updateSettings:    <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void
+  hydrateLocalPlayer:(msg: LoginSuccessMsg) => void
+  registerPlayer:    (msg: PlayerJoinMsg) => void
+  unregisterPlayer:  (id: number) => void
+  applyTick:         (msg: TickMsg) => void
 }
 ```
 
-### Index Registry
+There is **no** `indexRegistry` — the server now sends a numeric `id` on every message and `PlayerState` is keyed by `id` directly.
 
-The `indexRegistry` is a `Map<number, string>` that translates a server-assigned session index into the player's persistent UUID. It is built as `player_init` messages arrive and entries are removed on `player_leave`. The `applyTick` action uses it to resolve delta tuples `[index, x, y, z, facing]` back to `PlayerState` entries.
+### `hydrateLocalPlayer`
 
-### `PlayerDelta` tuple — client expected format
+Called on `login_success`. Builds the full `PlayerState` from `LoginSuccessMsg` (which now includes `skills` and `inventory`) and upserts into `nearbyPlayers`. Also sets `myId`.
 
-```ts
-type PlayerDelta = [index: number, x: number, y: number, z: number, facing: Facing]
-//                  [0]            [1]         [2]floor   [3]         [4]
-```
+### `registerPlayer`
 
-`y` is the floor index. The `Facing` type is imported from `mmo-shared`.
+Called on `player_join` and `world_state` entries. Remote players seed `skills`/`inventory`/`equipment` with `defaultSkills()` / `defaultInventory()` / `defaultEquipment()` from `mmo-shared` until a dedicated state message arrives.
+
+### `applyTick`
+
+Receives `TickMsg` (`{ t, p: [id, x, y, z, facing][] }`). Builds a `Map<id, delta>` for O(1) lookup and patches matching `PlayerState` entries.
 
 ---
 
@@ -173,23 +174,24 @@ Singleton — one `WebSocket` instance per tab. `connectWS(token?)` is the only 
 
 | `data.type` | Action |
 |---|---|
-| `login_success` | `setMyId`, `setSession` |
-| `world_state` | process each player as `registerPlayer` — bulk viewport init on login |
-| `player_init` | `registerPlayer` |
-| `player_leave` | `unregisterPlayer` |
-| `player_stopped` | snap local player back to server-authoritative position |
+| `login_success` | `hydrateLocalPlayer`, `setSession` |
+| `world_state` | `registerPlayer` for each player in snapshot — bulk viewport init on login |
+| `player_join` | `registerPlayer` |
+| `player_leave` | `unregisterPlayer(data.id)` |
+| `player_stopped` | snap position via `applyTick` synthetic delta |
 | `tick` | `applyTick` |
 | `pong` | update `latency` from round-trip delta |
-| `state` | 🗑️ Legacy shim — maps old broadcast to `registerPlayer`/`unregisterPlayer` |
+| `auth_fail` | dev: auto-register; prod: `logger.error` |
+| `error` | `logger.error` |
 | unknown | `logger.warn` — never throw |
-
-The `state` handler is a **temporary compatibility shim** while the server migrates to `player_init` / `tick` / `player_leave`. Remove it once those message types are live.
 
 ### Outbound
 
-`sendAction(action, x, y, z, targetId?)` sends an `ActionPacket`. Replaces the old `sendPlayerUpdate(position)` JSON `player_move` packet.
-
-Once the binary channel is wired, outbound action packets will use the XOR+HMAC-2B frame from `mmo-shared/crypto`.
+| Function | Packet sent |
+|---|---|
+| `sendPlayerMove(x, y, z, facing)` | `{ type: "move", x, y, z, facing }` |
+| `sendPing()` | `{ type: "ping", t: Date.now() }` |
+| `sendSettings(settings)` | `{ type: "save_settings", settings }` |
 
 ---
 
@@ -202,22 +204,55 @@ Mount → check localStorage for sessionToken
                                   → on success: store token, connectGame(token)
 
 login_success received:
-  setMyId(data.id)
+  hydrateLocalPlayer(data)   ← sets myId + full PlayerState incl. skills/inventory
   setSession({ sessionToken, sessionExpiresAt })
   → transition to game view
 
 world_state received:
-  process each entry as registerPlayer
-  → populates indexRegistry and nearbyPlayers for the initial viewport
+  registerPlayer for each entry
+  → populates nearbyPlayers for the initial viewport
 ```
 
 The raw session key (`Buffer`, 32 bytes) is **never** written to `localStorage`. It lives only in memory for the duration of the tab session.
 
 ---
 
+## XP & Skills (`utils/xp.ts`)
+
+All XP/level maths live in `mmo-shared`. `src/utils/xp.ts` re-exports what the client needs:
+
+```ts
+export { xpToLevel, levelToXp, xpToNextLevel, getSkillLevel, addXp } from "mmo-shared";
+```
+
+`maxHpFromSkills(skills)` is the only client-only helper — it lives in `xp.ts` and is not in `mmo-shared` because combat is not yet on the server.
+
+`PlayerState.skills` stores raw XP (`Skills` type from `mmo-shared`). Never store derived levels — always call `xpToLevel` / `getSkillLevel` when you need a level value.
+
+---
+
+## Types (`src/types/`)
+
+Types are split between this repo and `mmo-shared`:
+
+| Source | Types |
+|---|---|
+| `mmo-shared` | `Skills`, `SkillId`, `Inventory`, `Equipment`, `Facing`, all WS message/packet types |
+| `src/types/mmo/player.ts` | `PlayerState`, `AnimationState` — client-only render state |
+| `src/types/mmo/game-state.ts` | `GameStoreState` — Zustand store shape |
+| `src/types/mmo/network.ts` | `LoginPayload`, `RegisterPayload` — HTTP auth form shapes |
+| `src/types/mmo/settings.ts` | `UserSettings`, `CameraSettings`, etc. |
+| `src/types/mmo/world.ts` | `Tile`, `ChunkData`, `Region`, `World`, `TileType`, `TileHeight` |
+| `src/types/mmo/structure.ts` | `Structure`, `WallFace`, `Floor`, etc. |
+| `src/types/mmo/builder.ts` | `BuilderRegion`, `BuilderRegionsResponse`, `BuilderSaveRequest` |
+
+`src/types/ws-protocol.ts` has been **removed** — all WS types now come from `mmo-shared`.
+
+---
+
 ## Player Rendering (`entities/players.ts`)
 
-`PlayerManager` holds a `meshes: Record<string, AbstractMesh>` map keyed by player UUID. Each render frame, `syncPlayers(nearbyPlayers, myId)` is called:
+`PlayerManager` holds a `meshes: Record<string, AbstractMesh>` map keyed by player `id`. Each render frame, `syncPlayers(nearbyPlayers, myId)` is called:
 
 1. For each player in store — if no mesh exists, `spawnPlayer` creates a box mesh; otherwise `updatePlayer` lerps its position
 2. For each mesh key not in the store — `removePlayer` disposes the mesh
@@ -296,11 +331,6 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 ## Open Tasks
 
 - [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared`
-- [ ] Wire `sendAction` — replace `sendPlayerUpdate` JSON `player_move` with `ActionPacket`
-- [ ] Handle `world_state` message — bulk `registerPlayer` on login
-- [ ] Handle `player_stopped` message — snap local player to server position
-- [ ] Handle `pong` message — compute and store latency
-- [ ] Remove legacy `state` message handler once server emits `player_init` / `tick` / `player_leave`
 - [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern)
 - [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
 - [ ] Wire binary XOR+HMAC-2B channel for outbound action packets

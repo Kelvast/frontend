@@ -8,17 +8,19 @@ import {
   ActionManager,
   ExecuteCodeAction,
   HighlightLayer,
+  DynamicTexture,
 } from "@babylonjs/core";
 import { ChunkData } from "../../types/mmo/world";
-import { WORLD } from "../constants";
 import { TILE_CONFIG } from "./tile-config";
 import { tileWorldY } from "./tile-height";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
+import { WORLD } from "mmo-shared";
 
 export class Chunk {
   private meshes: Mesh[] = [];
   private outlines: Mesh[] = [];
+  private labels: Mesh[] = [];
 
   constructor(
     private data: ChunkData,
@@ -77,6 +79,16 @@ export class Chunk {
             outline.isPickable = false;
             this.outlines.push(outline);
           }
+
+          const label = this._makeCoordLabel(
+            chunkX * WORLD.CHUNK_SIZE + col,
+            chunkZ * WORLD.CHUNK_SIZE + row,
+            worldX,
+            worldY,
+            worldZ,
+            `label-${chunkX}-${chunkZ}-${col}-${row}`,
+          );
+          this.labels.push(label);
         }
 
         this.meshes.push(mesh);
@@ -84,6 +96,54 @@ export class Chunk {
     }
 
     logger.game(`Chunk (${chunkX}, ${chunkZ}) spawned — ${this.meshes.length} tiles`);
+  }
+
+  private _makeCoordLabel(
+    tileX: number,
+    tileZ: number,
+    worldX: number,
+    worldY: number,
+    worldZ: number,
+    name: string,
+  ): Mesh {
+    const size = WORLD.TILE_SIZE * 0.9;
+    const resolution = 128;
+    const lineHeight = 28;
+    const font = "bold 22px monospace";
+
+    const tex = new DynamicTexture(`tex-${name}`, { width: resolution, height: resolution }, this.scene);
+    tex.hasAlpha = true;
+
+    const ctx = tex.getContext();
+    ctx.clearRect(0, 0, resolution, resolution);
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.font = font;
+
+    const labelX = `x: ${tileX}`;
+    const labelZ = `z: ${tileZ}`;
+    const xOffset = (resolution - ctx.measureText(labelX).width) / 2;
+    const zOffset = (resolution - ctx.measureText(labelZ).width) / 2;
+
+    ctx.fillText(labelX, xOffset, resolution / 2 - lineHeight / 2);
+    ctx.fillText(labelZ, zOffset, resolution / 2 + lineHeight / 2);
+    tex.update();
+
+    const plane = MeshBuilder.CreateGround(
+      name,
+      { width: size, height: size },
+      this.scene,
+    );
+    plane.position = new Vector3(worldX, worldY + 0.002, worldZ);
+    plane.isPickable = false;
+
+    const mat = new StandardMaterial(`mat-${name}`, this.scene);
+    mat.diffuseTexture = tex;
+    mat.opacityTexture = tex;
+    mat.specularColor = Color3.Black();
+    mat.emissiveColor = Color3.White();
+    plane.material = mat;
+
+    return plane;
   }
 
   private _makeOutlineMat(): StandardMaterial {
@@ -101,7 +161,9 @@ export class Chunk {
     logger.game(`Disposing chunk (${this.data.chunkX}, ${this.data.chunkZ})`);
     this.meshes.forEach((m) => m.dispose());
     this.outlines.forEach((m) => m.dispose());
+    this.labels.forEach((m) => m.dispose());
     this.meshes = [];
     this.outlines = [];
+    this.labels = [];
   }
 }
