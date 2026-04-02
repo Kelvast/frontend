@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { generateChunkTs } from "../../../../utils/chunk-export";
-import { generateRegionIndexTs } from "../../../../utils/region-index-gen";
+import { generateRegionIndexTs, generateRegionsRootIndexTs } from "../../../../utils/region-index-gen";
 import { parseChunkTs } from "../../../../utils/chunk-parse";
 import { BuilderSaveRequest } from "../../../../types";
 
@@ -20,14 +20,32 @@ function safeChunkPath(
   return resolved;
 }
 
-function ensureRegionIndex(regionId: string): void {
+function rebuildRegionIndex(regionId: string): void {
   const regionPath = path.resolve(REGIONS_ROOT, regionId);
-  const indexPath = path.resolve(regionPath, "index.ts");
-  if (!fs.existsSync(indexPath)) {
-    const regionName = regionId.charAt(0).toUpperCase() + regionId.slice(1);
-    fs.mkdirSync(regionPath, { recursive: true });
-    fs.writeFileSync(indexPath, generateRegionIndexTs(regionId, regionName));
-  }
+  fs.mkdirSync(regionPath, { recursive: true });
+
+  const chunkKeys = fs
+    .readdirSync(regionPath)
+    .map((f) => f.match(/^(-?\d+)_(-?\d+)\.ts$/))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => `${m[1]}_${m[2]}`);
+
+  fs.writeFileSync(
+    path.resolve(regionPath, "index.ts"),
+    generateRegionIndexTs(regionId, chunkKeys),
+  );
+}
+
+function rebuildRootIndex(): void {
+  const regionIds = fs
+    .readdirSync(REGIONS_ROOT, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
+
+  fs.writeFileSync(
+    path.resolve(REGIONS_ROOT, "index.ts"),
+    generateRegionsRootIndexTs(regionIds),
+  );
 }
 
 export async function GET(request: NextRequest) {
@@ -41,20 +59,13 @@ export async function GET(request: NextRequest) {
   const chunkZ = searchParams.get("chunkZ") ?? "";
 
   const filePath = safeChunkPath(regionId, chunkX, chunkZ);
-  if (!filePath) {
-    return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
-  }
-
-  if (!fs.existsSync(filePath)) {
-    return NextResponse.json({ error: "Chunk not found" }, { status: 404 });
-  }
+  if (!filePath) return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
+  if (!fs.existsSync(filePath)) return NextResponse.json({ error: "Chunk not found" }, { status: 404 });
 
   try {
     const source = fs.readFileSync(filePath, "utf-8");
     const parsed = parseChunkTs(source);
-    if (!parsed) {
-      return NextResponse.json({ error: "Failed to parse chunk file" }, { status: 500 });
-    }
+    if (!parsed) return NextResponse.json({ error: "Failed to parse chunk file" }, { status: 500 });
     return NextResponse.json({ tiles: parsed.tiles, pvp: parsed.pvp });
   } catch (err) {
     console.error("[builder/chunk GET]", err);
@@ -72,17 +83,19 @@ export async function POST(request: NextRequest) {
     const { regionId, chunkX, chunkZ, tiles, pvp, previousRegionId } = body;
 
     const filePath = safeChunkPath(regionId, chunkX, chunkZ);
-    if (!filePath) {
-      return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
-    }
+    if (!filePath) return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
 
-    ensureRegionIndex(regionId);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, generateChunkTs({ chunkX, chunkZ, region: regionId, pvp, tiles }));
 
     if (previousRegionId && previousRegionId !== regionId) {
       const oldPath = safeChunkPath(previousRegionId, chunkX, chunkZ);
       if (oldPath && fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      rebuildRegionIndex(previousRegionId);
     }
+
+    rebuildRegionIndex(regionId);
+    rebuildRootIndex();
 
     return NextResponse.json({ ok: true });
   } catch (err) {

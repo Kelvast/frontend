@@ -6,9 +6,9 @@ const S = tile(TileType.STONE);
 export default {
   pvp: false,
   tiles: [
-    [G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
-    [S, S, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
-    [G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
+    [G, G, G, G, S, G, G, G, G, G, G, G, G, G, G, G],
+    [S, S, G, G, G, G, S, G, G, G, G, G, G, G, G, G],
+    [G, G, G, G, S, G, G, G, G, G, G, G, G, G, G, G],
     [G, G, G, G, G, G, G, S, S, G, S, G, G, G, G, G],
     [G, G, G, S, G, S, G, G, G, G, G, G, G, S, G, G],
     [G, G, S, S, G, G, G, S, G, G, G, G, S, G, S, G],

@@ -5,9 +5,7 @@ import { PlayerManager } from "./entities/players";
 import { KeysInput } from "./input/keys";
 import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
-import { DEV_MODE } from "../utils/dev";
-import { loadAllRegions } from "./world/loader";
-import type { InspectorToken } from "@babylonjs/inspector";
+import { Region, ChunkData, Tile } from "../types";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -16,64 +14,99 @@ export { PlayerManager } from "./entities/players";
 
 let _engine: GameEngine | null = null;
 let _world: GameWorld | null = null;
-let _canvas: HTMLCanvasElement | null = null;
 let _watcherEs: EventSource | null = null;
-let _inspector: InspectorToken | null = null;
-let _initAbort: AbortController | null = null;
+let _watcherRetryCount = 0;
+let _destroyPromise: Promise<void> | null = null;
 
-export async function initGame(canvas: HTMLCanvasElement): Promise<void> {
-  const abort = new AbortController();
-  _initAbort?.abort();
-  _initAbort = abort;
+const WATCHER_MAX_RETRIES = 5;
+const WATCHER_RETRY_BASE_MS = 3000;
+
+async function fetchChunkTiles(
+  regionId: string,
+  chunkX: number,
+  chunkZ: number,
+): Promise<Tile[][] | null> {
+  const res = await fetch(
+    `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
+  );
+  if (!res.ok) return null;
+  const { tiles } = await res.json();
+  return tiles as Tile[][];
+}
+
+async function fetchAllRegions(): Promise<Region[]> {
+  const res = await fetch("/api/builder/regions");
+  if (!res.ok) return [];
+  const { regions } = await res.json();
+
+  return Promise.all(
+    regions.map(async (r: { id: string; chunks: { chunkX: number; chunkZ: number }[] }) => {
+      const chunkEntries = await Promise.all(
+        r.chunks.map(async (c) => {
+          const tiles = await fetchChunkTiles(r.id, c.chunkX, c.chunkZ);
+          return [
+            `${c.chunkX},${c.chunkZ}`,
+            {
+              chunkX: c.chunkX,
+              chunkZ: c.chunkZ,
+              region: r.id,
+              pvp: false,
+              tiles: tiles ?? [],
+            } as ChunkData,
+          ];
+        }),
+      );
+      return { id: r.id, name: r.id, chunks: Object.fromEntries(chunkEntries) } as Region;
+    }),
+  );
+}
+
+async function loadAllRegions(world: GameWorld): Promise<void> {
+  const regions = await fetchAllRegions();
+  regions.forEach((r) => world.loadRegion(r));
+  logger.game(`Loaded ${regions.length} region(s)`);
+}
+
+export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): Promise<boolean> {
+  if (_destroyPromise) await _destroyPromise;
+
+  if (signal.aborted) return false;
 
   if (_engine) {
     logger.game("initGame called but engine already running — skipping");
-    return;
+    return false;
   }
 
-  _canvas = canvas;
   logger.game("Initialising game");
 
   const engine = new GameEngine(canvas);
+  if (signal.aborted) { engine.dispose(); return false; }
+
   const scene = engine.scene;
-  _engine = engine;
-
   const world = new GameWorld(scene);
+
+  await loadAllRegions(world);
+  if (signal.aborted) { engine.dispose(); return false; }
+
+  _engine = engine;
   _world = world;
-
-  await loadAllRegions(world, abort.signal);
-
-  if (abort.signal.aborted || !_engine) {
-    logger.game("initGame aborted — destroyed while loading regions");
-    engine.dispose();
-    _engine = null;
-    return;
-  }
 
   const camera = new GameCamera(scene);
   const players = new PlayerManager(scene);
-  camera.attachToMesh(players.spawnLocalPlayer());
-
-  engine.engine.runRenderLoop(() => {
-    if (!scene.isDisposed) scene.render();
-  });
+  const localMesh = players.spawnLocalPlayer();
+  camera.attachToMesh(localMesh);
 
   new KeysInput(scene, camera);
   new PointerInput(scene, players);
 
-  logger.game("Game ready");
+  _engine.engine.runRenderLoop(() => scene.render());
 
-  if (DEV_MODE) {
-    void openInspector(scene);
+  if (process.env.NODE_ENV === "development") {
     startWatcher();
   }
-}
 
-async function openInspector(scene: import("@babylonjs/core").Scene): Promise<void> {
-  const { ShowInspector } = await import("@babylonjs/inspector");
-  if (!_engine) return;
-  _inspector = ShowInspector(scene, { layoutMode: "overlay" });
-  logger.game("Babylon inspector open");
+  logger.game("Game ready");
+  return true;
 }
 
 export function connectGame(_token?: string): void {
@@ -82,33 +115,53 @@ export function connectGame(_token?: string): void {
 
 export function destroyGame(): void {
   if (!_engine) return;
+
   logger.game("Destroying game");
-  _inspector?.dispose();
-  _inspector = null;
   _watcherEs?.close();
   _watcherEs = null;
-  _engine.dispose();
+  _watcherRetryCount = 0;
+
+  const engine = _engine;
   _engine = null;
   _world = null;
+
+  _destroyPromise = Promise.resolve().then(() => {
+    engine.dispose();
+    logger.game("Engine disposed");
+    _destroyPromise = null;
+  });
 }
 
 function startWatcher(): void {
   if (_watcherEs) return;
-  _watcherEs = new EventSource("/api/dev/watch");
+  _watcherEs = new EventSource("/api/builder/watch");
 
-  _watcherEs.addEventListener("reload", async (e: MessageEvent) => {
-    const { filename } = JSON.parse(e.data) as { filename: string };
-    logger.game(`File changed: ${filename} — reloading game`);
-    if (_canvas) {
-      destroyGame();
-      await initGame(_canvas);
-    }
+  _watcherEs.addEventListener("chunk_changed", async (e: MessageEvent) => {
+    if (!_world) return;
+    const { regionId, chunkX, chunkZ } = JSON.parse(e.data) as {
+      regionId: string;
+      chunkX: number;
+      chunkZ: number;
+    };
+    logger.game(`Watcher — chunk changed (${chunkX}, ${chunkZ}) in "${regionId}"`);
+    const tiles = await fetchChunkTiles(regionId, chunkX, chunkZ);
+    if (!tiles) return;
+    const chunk: ChunkData = { chunkX, chunkZ, region: regionId, pvp: false, tiles };
+    _world.reloadChunk(chunk);
   });
 
   _watcherEs.addEventListener("error", () => {
-    logger.game("Watcher disconnected — retrying in 3s");
     _watcherEs?.close();
     _watcherEs = null;
-    setTimeout(startWatcher, 3000);
+
+    if (_watcherRetryCount >= WATCHER_MAX_RETRIES) {
+      logger.game("Watcher — max retries reached, giving up");
+      return;
+    }
+
+    const delay = WATCHER_RETRY_BASE_MS * 2 ** _watcherRetryCount;
+    _watcherRetryCount++;
+    logger.game(`Watcher disconnected — retrying in ${delay}ms (attempt ${_watcherRetryCount}/${WATCHER_MAX_RETRIES})`);
+    setTimeout(startWatcher, delay);
   });
 }

@@ -1,53 +1,11 @@
 import { logger } from "../../utils/logger";
-import { Region, ChunkData, Tile } from "../../types";
+import { Tile } from "../../types";
 import { GameWorld } from "./index";
+import REGIONS from "./regions";
 
-async function fetchChunkTiles(
-  regionId: string,
-  chunkX: number,
-  chunkZ: number,
-  signal: AbortSignal,
-): Promise<Tile[][] | null> {
-  const res = await fetch(
-    `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
-    { signal },
-  );
-  if (!res.ok) return null;
-  const { tiles } = await res.json();
-  return tiles as Tile[][];
-}
-
-async function fetchAllRegions(signal: AbortSignal): Promise<Region[]> {
-  const res = await fetch("/api/builder/regions", { signal });
-  if (!res.ok) return [];
-  const { regions } = await res.json() as {
-    regions: { id: string; chunks: { chunkX: number; chunkZ: number }[] }[];
-  };
-
-  return Promise.all(
-    regions.map(async (r) => {
-      const chunkEntries = await Promise.all(
-        r.chunks.map(async (c) => {
-          const tiles = await fetchChunkTiles(r.id, c.chunkX, c.chunkZ, signal);
-          const chunk: ChunkData = { chunkX: c.chunkX, chunkZ: c.chunkZ, region: r.id, pvp: false, tiles: tiles ?? [] };
-          return [`${c.chunkX},${c.chunkZ}`, chunk] as const;
-        }),
-      );
-      return { id: r.id, name: r.id, chunks: Object.fromEntries(chunkEntries) } as Region;
-    }),
-  );
-}
-
-export async function loadAllRegions(world: GameWorld, signal: AbortSignal): Promise<void> {
-  try {
-    const regions = await fetchAllRegions(signal);
-    if (signal.aborted) return;
-    regions.forEach((r) => world.loadRegion(r));
-    logger.game(`Loaded ${regions.length} region(s)`);
-  } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") return;
-    throw err;
-  }
+export function loadAllRegions(world: GameWorld): void {
+  REGIONS.forEach((r) => world.loadRegion(r));
+  logger.game(`Loaded ${REGIONS.length} region(s)`);
 }
 
 export async function reloadChunkFromApi(
@@ -56,10 +14,13 @@ export async function reloadChunkFromApi(
   chunkX: number,
   chunkZ: number,
 ): Promise<void> {
-  const tiles = await fetchChunkTiles(regionId, chunkX, chunkZ, new AbortController().signal);
-  if (!tiles) {
+  const res = await fetch(
+    `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
+  );
+  if (!res.ok) {
     logger.game(`reloadChunkFromApi — failed to fetch chunk ${chunkX},${chunkZ} in "${regionId}"`);
     return;
   }
-  world.reloadChunk({ chunkX, chunkZ, region: regionId, pvp: false, tiles });
+  const { tiles, pvp } = await res.json() as { tiles: Tile[][]; pvp: boolean };
+  world.reloadChunk({ chunkX, chunkZ, region: regionId, pvp, tiles });
 }
