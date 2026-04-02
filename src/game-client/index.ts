@@ -5,7 +5,8 @@ import { PlayerManager } from "./entities/players";
 import { KeysInput } from "./input/keys";
 import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
-import { Region, ChunkData, Tile } from "../types";
+import { ChunkData } from "../types";
+import { loadAllRegions, reloadChunkFromApi } from "./world/loader";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -20,52 +21,6 @@ let _destroyPromise: Promise<void> | null = null;
 
 const WATCHER_MAX_RETRIES = 5;
 const WATCHER_RETRY_BASE_MS = 3000;
-
-async function fetchChunkTiles(
-  regionId: string,
-  chunkX: number,
-  chunkZ: number,
-): Promise<Tile[][] | null> {
-  const res = await fetch(
-    `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
-  );
-  if (!res.ok) return null;
-  const { tiles } = await res.json();
-  return tiles as Tile[][];
-}
-
-async function fetchAllRegions(): Promise<Region[]> {
-  const res = await fetch("/api/builder/regions");
-  if (!res.ok) return [];
-  const { regions } = await res.json();
-
-  return Promise.all(
-    regions.map(async (r: { id: string; chunks: { chunkX: number; chunkZ: number }[] }) => {
-      const chunkEntries = await Promise.all(
-        r.chunks.map(async (c) => {
-          const tiles = await fetchChunkTiles(r.id, c.chunkX, c.chunkZ);
-          return [
-            `${c.chunkX},${c.chunkZ}`,
-            {
-              chunkX: c.chunkX,
-              chunkZ: c.chunkZ,
-              region: r.id,
-              pvp: false,
-              tiles: tiles ?? [],
-            } as ChunkData,
-          ];
-        }),
-      );
-      return { id: r.id, name: r.id, chunks: Object.fromEntries(chunkEntries) } as Region;
-    }),
-  );
-}
-
-async function loadAllRegions(world: GameWorld): Promise<void> {
-  const regions = await fetchAllRegions();
-  regions.forEach((r) => world.loadRegion(r));
-  logger.game(`Loaded ${regions.length} region(s)`);
-}
 
 export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): Promise<boolean> {
   if (_destroyPromise) await _destroyPromise;
@@ -85,7 +40,7 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
   const scene = engine.scene;
   const world = new GameWorld(scene);
 
-  await loadAllRegions(world);
+  await loadAllRegions(world, signal);
   if (signal.aborted) { engine.dispose(); return false; }
 
   _engine = engine;
@@ -134,7 +89,18 @@ export function destroyGame(): void {
 
 function startWatcher(): void {
   if (_watcherEs) return;
-  _watcherEs = new EventSource("/api/builder/watch");
+  _watcherEs = new EventSource("/api/dev/watch");
+
+  _watcherEs.addEventListener("open", () => {
+    _watcherRetryCount = 0;
+    logger.game("Watcher connected");
+  });
+
+  _watcherEs.addEventListener("file_changed", async (e: MessageEvent) => {
+    if (!_world) return;
+    const { filename } = JSON.parse(e.data) as { filename: string };
+    logger.game(`Watcher — file changed: ${filename}`);
+  });
 
   _watcherEs.addEventListener("chunk_changed", async (e: MessageEvent) => {
     if (!_world) return;
@@ -144,10 +110,7 @@ function startWatcher(): void {
       chunkZ: number;
     };
     logger.game(`Watcher — chunk changed (${chunkX}, ${chunkZ}) in "${regionId}"`);
-    const tiles = await fetchChunkTiles(regionId, chunkX, chunkZ);
-    if (!tiles) return;
-    const chunk: ChunkData = { chunkX, chunkZ, region: regionId, pvp: false, tiles };
-    _world.reloadChunk(chunk);
+    await reloadChunkFromApi(_world, regionId, chunkX, chunkZ);
   });
 
   _watcherEs.addEventListener("error", () => {
