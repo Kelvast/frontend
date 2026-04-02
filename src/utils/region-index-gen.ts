@@ -16,7 +16,7 @@ export function generateRegionIndexTs(regionId: string, chunkKeys: string[]): st
     })
     .join("\n");
 
-  return `import { Region } from "../../../../types";
+  return `import { Region } from "mmo-shared";
 
 ${imports}
 
@@ -33,13 +33,11 @@ export default region;
 }
 
 export function generateRegionsRootIndexTs(regionIds: string[]): string {
-  const imports = regionIds
-    .map((id) => `import ${id}Region from "./${id}";`)
-    .join("\n");
+  const imports = regionIds.map((id) => `import ${id}Region from "./${id}";`).join("\n");
 
   const exports = regionIds.map((id) => `  ${id}Region,`).join("\n");
 
-  return `import { Region } from "../../../types";
+  return `import { Region } from "mmo-shared";
 
 ${imports}
 

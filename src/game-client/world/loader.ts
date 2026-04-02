@@ -1,5 +1,5 @@
+import { Region, ChunkData, TileData } from "mmo-shared";
 import { logger } from "../../utils/logger";
-import { Region, ChunkData, Tile } from "../../types";
 import { GameWorld } from "./index";
 
 async function fetchChunkTiles(
@@ -7,20 +7,20 @@ async function fetchChunkTiles(
   chunkX: number,
   chunkZ: number,
   signal: AbortSignal,
-): Promise<Tile[][] | null> {
+): Promise<TileData[][] | null> {
   const res = await fetch(
     `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
     { signal },
   );
   if (!res.ok) return null;
-  const { tiles } = await res.json() as { tiles: Tile[][] };
+  const { tiles } = (await res.json()) as { tiles: TileData[][] };
   return tiles;
 }
 
 async function fetchAllRegions(signal: AbortSignal): Promise<Region[]> {
   const res = await fetch("/api/builder/regions", { signal });
   if (!res.ok) return [];
-  const { regions } = await res.json() as {
+  const { regions } = (await res.json()) as {
     regions: { id: string; chunks: { chunkX: number; chunkZ: number }[] }[];
   };
 

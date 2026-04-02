@@ -1,17 +1,16 @@
 "use client";
 
 import { FC, memo, useState } from "react";
-import { Tile, TileType, TileHeight, tile, ChunkData } from "../../types";
 import { BuilderRegion } from "../../types";
 import TileGrid from "./TileGrid";
 import TilePalette from "./TilePalette";
 import ChunkExporter from "./ChunkExporter";
 import RegionSelector from "../1-atoms/RegionSelector";
-import { WORLD } from "mmo-shared";
+import { ChunkData, TileData, TileHeight, TileType, WORLD, tileData } from "mmo-shared";
 
-function makeEmptyChunk(): Tile[][] {
+function makeEmptyChunk(): TileData[][] {
   return Array.from({ length: WORLD.CHUNK_SIZE }, () =>
-    Array.from({ length: WORLD.CHUNK_SIZE }, () => tile(TileType.GRASS)),
+    Array.from({ length: WORLD.CHUNK_SIZE }, () => tileData("grass")),
   );
 }
 
@@ -42,7 +41,7 @@ interface Props {
   chunkX: number;
   chunkZ: number;
   initialRegionId: string;
-  initialTiles?: Tile[][];
+  initialTiles?: TileData[][];
   regions: BuilderRegion[];
   onSaved: () => void;
   onCreateRegion: (regionId: string) => void;
@@ -58,10 +57,10 @@ const ChunkEditorPanel: FC<Props> = ({
   onCreateRegion,
 }) => {
   const isNew = !initialTiles;
-  const [tiles, setTiles] = useState<Tile[][]>(() =>
+  const [tiles, setTiles] = useState<TileData[][]>(() =>
     initialTiles ? initialTiles.map((r) => [...r]) : makeEmptyChunk(),
   );
-  const [selectedType, setSelectedType] = useState<TileType>(TileType.GRASS);
+  const [selectedType, setSelectedType] = useState<TileType>("grass");
   const [selectedHeight, setSelectedHeight] = useState<TileHeight>(TileHeight.GROUND);
   const [regionId, setRegionId] = useState<string>(
     initialRegionId || inferRegion(chunkX, chunkZ, regions),
@@ -71,7 +70,7 @@ const ChunkEditorPanel: FC<Props> = ({
   function paintTile(row: number, col: number): void {
     setTiles((prev) => {
       const next = prev.map((r) => [...r]);
-      next[row][col] = tile(selectedType, selectedHeight);
+      next[row][col] = tileData(selectedType, selectedHeight);
       return next;
     });
   }

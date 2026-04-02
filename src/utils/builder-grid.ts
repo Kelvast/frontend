@@ -1,4 +1,4 @@
-import { Region, ChunkData } from "../types";
+import { ChunkData, Region } from "mmo-shared";
 
 export interface GridCell {
   chunkX: number;

@@ -1,15 +1,15 @@
 "use client";
 
-import { FC, memo, useEffect, useRef, useState } from "react";
-import { Tile } from "../../types";
-import { TILE_COLORS } from "../../utils/tile-colors";
+import { FC, memo, useEffect, useRef } from "react";
+import type { TileData } from "mmo-shared";
 import { WORLD } from "mmo-shared";
+import { getTileColor } from "../../game-client/world/tile-colors";
 
 const CELL = 4;
 export const CHUNK_PX = WORLD.CHUNK_SIZE * CELL;
 
 interface Props {
-  tiles: Tile[][] | null;
+  tiles: TileData[][] | null;
   selected: boolean;
   hovered: boolean;
   onClick: () => void;
@@ -32,7 +32,7 @@ const ChunkSlot: FC<Props> = ({
     const ctx = canvasRef.current.getContext("2d")!;
     tiles.forEach((row, z) =>
       row.forEach((t, x) => {
-        ctx.fillStyle = TILE_COLORS[t.type];
+        ctx.fillStyle = getTileColor(t);
         ctx.fillRect(x, z, 1, 1);
       }),
     );

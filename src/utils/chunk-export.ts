@@ -1,29 +1,50 @@
-import { ChunkData, TileType, TileHeight } from "../types";
+import { TileHeight, TileData, ChunkData } from "mmo-shared";
 
-const TYPE_ALIAS: Record<TileType, string> = {
-  [TileType.GRASS]: "G",
-  [TileType.WATER]: "W",
-  [TileType.STONE]: "S",
-  [TileType.SAND]: "D",
-  [TileType.PATH]: "P",
-};
+const HEIGHT_KEY_MAP = Object.fromEntries(
+  Object.entries(TileHeight)
+    .filter(([, v]) => typeof v === "number")
+    .map(([k, v]) => [v, k]),
+) as Record<number, string>;
+
+function displayName(type: string): string {
+  return type[0].toUpperCase() + type.slice(1);
+}
+
+function aliasName(t: TileData): string {
+  const name = displayName(t.type);
+  if (t.y === TileHeight.GROUND) return name;
+  const heightKey = HEIGHT_KEY_MAP[t.y];
+  if (!heightKey) throw new Error(`Unknown TileHeight value: ${t.y}`);
+  return `${name}_${heightKey}`;
+}
+
+function tileExpr(t: TileData): string {
+  if (t.y === TileHeight.GROUND) return `tileData("${t.type}")`;
+  const heightKey = HEIGHT_KEY_MAP[t.y];
+  if (!heightKey) throw new Error(`Unknown TileHeight value: ${t.y}`);
+  return `tileData("${t.type}", TileHeight.${heightKey})`;
+}
 
 export function generateChunkTs(data: ChunkData): string {
-  const usedTypes = [...new Set(data.tiles.flat().map((t) => t.type))];
-  const aliases = usedTypes.map((t) => `const ${TYPE_ALIAS[t]} = tile(TileType.${t});`).join("\n");
+  const allTiles = data.tiles.flat();
+
+  const usedKeys = [...new Set(allTiles.map((t) => aliasName(t)))];
+  const aliasByKey = new Map<string, TileData>(
+    usedKeys.map((key) => [key, allTiles.find((t) => aliasName(t) === key)!]),
+  );
+
+  const aliases = [...aliasByKey.entries()]
+    .map(([key, t]) => `const ${key} = ${tileExpr(t)};`)
+    .join("\n");
 
   const rows = data.tiles
     .map((row) => {
-      const cells = row.map((t) => {
-        if (t.y === TileHeight.GROUND) return TYPE_ALIAS[t.type];
-        const heightKey = Object.entries(TileHeight).find(([, v]) => v === t.y)?.[0];
-        return `tile(TileType.${t.type}, TileHeight.${heightKey})`;
-      });
+      const cells = row.map((t) => aliasName(t));
       return `    [${cells.join(", ")}],`;
     })
     .join("\n");
 
-  return `import { ChunkData, tile, TileType, TileHeight } from "../../../../types";
+  return `import { ChunkData, tileData, TileHeight } from "mmo-shared";
 
 ${aliases}
 

@@ -1,22 +1,27 @@
 import { Vector3 } from "@babylonjs/core";
+import { WORLD } from "mmo-shared";
 import { PLAYER } from "../constants";
 
+const s = WORLD.TILE_SIZE;
+
+function tileCentre(worldCoord: number): number {
+  return Math.floor(worldCoord / s) * s + s / 2;
+}
+
 export function buildWaypoints(from: Vector3, toX: number, toZ: number): Vector3[] {
-  let cx = Math.round(from.x);
-  let cz = Math.round(from.z);
-  const endX = Math.round(toX);
-  const endZ = Math.round(toZ);
+  let x = tileCentre(from.x);
+  let z = tileCentre(from.z);
+  const endX = tileCentre(toX);
+  const endZ = tileCentre(toZ);
+
+  if (x === endX && z === endZ) return [];
+
   const waypoints: Vector3[] = [];
 
-  while (cx !== endX || cz !== endZ) {
-    const dx = endX - cx;
-    const dz = endZ - cz;
-    if (Math.abs(dx) >= Math.abs(dz)) {
-      cx += Math.sign(dx);
-    } else {
-      cz += Math.sign(dz);
-    }
-    waypoints.push(new Vector3(cx, PLAYER.Y_OFFSET, cz));
+  while (x !== endX || z !== endZ) {
+    if (x !== endX) x += x < endX ? s : -s;
+    if (z !== endZ) z += z < endZ ? s : -s;
+    waypoints.push(new Vector3(x, PLAYER.Y_OFFSET, z));
   }
 
   return waypoints;

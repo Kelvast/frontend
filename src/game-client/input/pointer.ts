@@ -1,21 +1,16 @@
 import {
-  Color3,
-  Mesh,
   PointerEventTypes,
   PointerInfo,
   Scene,
-  StandardMaterial,
 } from "@babylonjs/core";
 import { PlayerManager } from "../entities/players";
 import { logger } from "../../utils/logger";
+import { DEV_MODE } from "../../utils/dev";
 import { WORLD } from "mmo-shared";
 
 export class PointerInput {
-  private hoveredMesh: Mesh | null = null;
-  private hoveredOriginalColor: Color3 | null = null;
-
   constructor(
-    scene: Scene,
+    private scene: Scene,
     private players: PlayerManager,
   ) {
     scene.onPointerObservable.add((pi) => this._onPointer(pi));
@@ -23,51 +18,41 @@ export class PointerInput {
   }
 
   private _onPointer(pi: PointerInfo): void {
-    if (pi.type === PointerEventTypes.POINTERMOVE) {
-      this._handleHover(pi.pickInfo?.pickedMesh as Mesh | null);
-    }
-    if (pi.type === PointerEventTypes.POINTERDOWN) {
-      this._handleDown(pi);
+    try {
+      if (pi.type === PointerEventTypes.POINTERDOWN) {
+        this._handleDown(pi);
+      }
+    } catch (err) {
+      if (DEV_MODE) logger.game("PointerInput error", { err });
     }
   }
 
   private _handleDown(pi: PointerInfo): void {
-    if (!pi.pickInfo?.hit || !pi.pickInfo.pickedMesh) return;
     const button = (pi.event as PointerEvent).button;
-    if (button === 0) this._handleLeftClick(pi.pickInfo.pickedMesh as Mesh);
-  }
+    if (button !== 0) return;
 
-  private _handleLeftClick(mesh: Mesh): void {
-    const parts = mesh.name.split("-");
-    if (parts[0] !== "tile" || parts.length !== 5) return;
+    const pick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (mesh) => mesh.name.startsWith("grid-"),
+    );
 
-    const chunkX = parseInt(parts[1], 10);
-    const chunkZ = parseInt(parts[2], 10);
-    const col = parseInt(parts[3], 10);
-    const row = parseInt(parts[4], 10);
+    if (DEV_MODE) logger.game("POINTERDOWN", { hit: pick.hit, mesh: pick.pickedMesh?.name ?? null, point: pick.pickedPoint });
 
-    const x = (chunkX * WORLD.CHUNK_SIZE + col) * WORLD.TILE_SIZE;
-    const z = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE;
-
-    logger.game("Tile clicked", { x, z });
-    this.players.moveTo(x, z);
-  }
-
-  private _handleHover(mesh: Mesh | null): void {
-    if (mesh === this.hoveredMesh) return;
-
-    if (this.hoveredMesh?.material && this.hoveredOriginalColor) {
-      (this.hoveredMesh.material as StandardMaterial).diffuseColor = this.hoveredOriginalColor;
+    if (!pick.hit || !pick.pickedPoint) {
+      if (DEV_MODE) logger.game("Click missed — no grid mesh hit");
+      return;
     }
 
-    if (mesh?.name.startsWith("tile-")) {
-      const mat = mesh.material as StandardMaterial;
-      this.hoveredOriginalColor = mat.diffuseColor.clone();
-      mat.diffuseColor = Color3.Lerp(mat.diffuseColor, Color3.White(), 0.35);
-      this.hoveredMesh = mesh;
-    } else {
-      this.hoveredMesh = null;
-      this.hoveredOriginalColor = null;
-    }
+    const s = WORLD.TILE_SIZE;
+    const tileX = Math.floor(pick.pickedPoint.x / s);
+    const tileZ = Math.floor(pick.pickedPoint.z / s);
+
+    // world position = tile centre
+    const worldX = tileX * s + s / 2;
+    const worldZ = tileZ * s + s / 2;
+
+    logger.game("Tile clicked", { tileX, tileZ, worldX, worldZ });
+    this.players.moveTo(tileX, tileZ);
   }
 }

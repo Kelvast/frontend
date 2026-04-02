@@ -12,10 +12,10 @@ export const CAMERA = {
 const PLAYER_HEIGHT = 1.8;
 
 export const PLAYER = {
-  SIZE: 0.75,                  // Mesh collision radius — visual only, not game logic
+  SIZE: 0.75, // Mesh collision radius — visual only, not game logic
   HEIGHT: PLAYER_HEIGHT,
   Y_OFFSET: PLAYER_HEIGHT / 2, // Mesh origin is centre-mass, offset to sit on floor
-  LERP_SPEED: 0.12,            // Interpolation factor per frame toward target position
+  LERP_SPEED: 0.12, // Interpolation factor per frame toward target position
 } as const;
 
 export const FLOOR = {

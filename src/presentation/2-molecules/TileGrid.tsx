@@ -1,12 +1,12 @@
 "use client";
 
 import { FC, memo, useState } from "react";
-import { Tile } from "../../types";
-import { TILE_COLORS } from "../../utils/tile-colors";
+import type { TileData } from "mmo-shared";
 import TileCell from "../1-atoms/TileCell";
+import { getTileColor } from "../../game-client/world/tile-colors";
 
 interface Props {
-  tiles: Tile[][];
+  tiles: TileData[][];
   onPaint: (row: number, col: number) => void;
 }
 
@@ -25,7 +25,7 @@ const TileGrid: FC<Props> = ({ tiles, onPaint }) => {
         row.map((t, colIdx) => (
           <TileCell
             key={`${rowIdx}-${colIdx}`}
-            color={TILE_COLORS[t.type]}
+            color={getTileColor(t)}
             onMouseDown={() => onPaint(rowIdx, colIdx)}
             onMouseEnter={() => {
               if (isPainting) onPaint(rowIdx, colIdx);

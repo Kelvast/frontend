@@ -1,15 +1,9 @@
-import {
-  Scene,
-  HemisphericLight,
-  Vector3,
-  DirectionalLight,
-  Color3,
-  HighlightLayer,
-} from "@babylonjs/core";
+import { Scene, HighlightLayer } from "@babylonjs/core";
 import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
-import { Region, ChunkData } from "../../types";
+import { Region, ChunkData, TileData } from "mmo-shared";
 import { DEV_MODE } from "../../utils/dev";
+import { setupScene } from "../scene-setup";
 
 export class GameWorld {
   private regions: Map<string, GameRegion> = new Map();
@@ -22,20 +16,16 @@ export class GameWorld {
       this.highlightLayer.innerGlow = false;
       this.highlightLayer.outerGlow = false;
     }
-    this._setupLighting();
+    setupScene(scene);
     logger.game("World ready");
   }
 
-  private _setupLighting(): void {
-    const ambient = new HemisphericLight("ambient", new Vector3(0, 1, 0), this.scene);
-    ambient.intensity = 0.6;
-    ambient.diffuse = new Color3(1, 1, 1);
-    ambient.groundColor = new Color3(0.3, 0.3, 0.3);
-
-    const sun = new DirectionalLight("sun", new Vector3(-1, -2, -1), this.scene);
-    sun.intensity = 0.8;
-    sun.diffuse = new Color3(1, 0.95, 0.8);
-    logger.game("Lighting set up");
+  getTileAt(tileX: number, tileZ: number): TileData | null {
+    for (const region of this.regions.values()) {
+      const tile = region.getTileAt(tileX, tileZ);
+      if (tile) return tile;
+    }
+    return null;
   }
 
   loadRegion(data: Region): void {

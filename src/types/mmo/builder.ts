@@ -1,10 +1,10 @@
-import { Tile } from "./world";
+import type { TileData } from "mmo-shared";
 
 export interface BuilderChunk {
   regionId: string;
   chunkX: number;
   chunkZ: number;
-  tiles: Tile[][];
+  tiles: TileData[][];
   pvp: boolean;
 }
 
