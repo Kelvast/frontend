@@ -1,15 +1,16 @@
 "use client";
 
 import { FC, useState, useEffect, useCallback, useRef } from "react";
-import { BuilderRegion, BuilderRegionsResponse, Region, ChunkData, Tile } from "../../types";
+import { BuilderRegion, BuilderRegionsResponse } from "../../types";
 import { buildWorldGrid, GridCell } from "../../utils/builder-grid";
 import { useFocusZoom } from "../../utils/use-focus-zoom";
 import { CHUNK_PX } from "../1-atoms/ChunkSlot";
 import WorldGrid from "../2-molecules/WorldGrid";
 import ChunkEditorPanel from "../2-molecules/ChunkEditorPanel";
 import ZoomControls from "../1-atoms/ZoomControls";
+import { Region, ChunkData, TileData } from "mmo-shared";
 
-type TileCache = Map<string, Tile[][]>;
+type TileCache = Map<string, TileData[][]>;
 
 function builderRegionsToRegions(builderRegions: BuilderRegion[], cache: TileCache): Region[] {
   return builderRegions.map((br) => ({
@@ -74,13 +75,13 @@ const MapBuilder: FC = () => {
   } = useFocusZoom();
 
   const fetchChunkTiles = useCallback(
-    async (regionId: string, chunkX: number, chunkZ: number): Promise<Tile[][] | null> => {
+    async (regionId: string, chunkX: number, chunkZ: number): Promise<TileData[][] | null> => {
       const res = await fetch(
         `/api/builder/chunk?regionId=${regionId}&chunkX=${chunkX}&chunkZ=${chunkZ}`,
       );
       if (!res.ok) return null;
       const { tiles } = await res.json();
-      return tiles as Tile[][];
+      return tiles as TileData[][];
     },
     [],
   );
@@ -95,11 +96,11 @@ const MapBuilder: FC = () => {
         r.chunks.map(async (c) => {
           const key = `${r.id}/${c.chunkX},${c.chunkZ}`;
           const tiles = await fetchChunkTiles(r.id, c.chunkX, c.chunkZ);
-          return [key, tiles] as [string, Tile[][] | null];
+          return [key, tiles] as [string, TileData[][] | null];
         }),
       ),
     );
-    setTileCache(new Map(entries.filter((e): e is [string, Tile[][]] => e[1] !== null)));
+    setTileCache(new Map(entries.filter((e): e is [string, TileData[][]] => e[1] !== null)));
   }, [fetchChunkTiles]);
 
   useEffect(() => {

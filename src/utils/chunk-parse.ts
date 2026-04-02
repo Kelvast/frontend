@@ -1,28 +1,29 @@
-import { Tile, TileType, TileHeight } from "../types";
+// src/utils/chunk-parse.ts
+import { Tile, TileType, TileData, TileHeight } from "mmo-shared";
 
 const HEIGHT_FROM_KEY: Record<string, TileHeight> = Object.fromEntries(
   Object.entries(TileHeight).map(([k, v]) => [k, v as TileHeight]),
 );
 
-interface AliasMap {
-  [alias: string]: Tile;
-}
+type AliasMap = Record<string, TileData>;
 
 function parseAliases(source: string): AliasMap {
   const map: AliasMap = {};
 
-  const shortRe = /^const (\w+) = tile\(TileType\.(\w+)\);$/gm;
+  // matches: const Grass = tileData(Tile.Grass);
+  const shortRe = /^const (\w+) = tileData\(Tile\.(\w+)\);$/gm;
   let m: RegExpExecArray | null;
   while ((m = shortRe.exec(source)) !== null) {
-    const [, alias, typeName] = m;
-    const type = TileType[typeName as keyof typeof TileType];
+    const [, alias, tileName] = m;
+    const type = Tile[tileName as keyof typeof Tile] as TileType | undefined;
     if (type) map[alias] = { type, y: TileHeight.GROUND };
   }
 
-  const heightRe = /^const (\w+) = tile\(TileType\.(\w+),\s*TileHeight\.(\w+)\);$/gm;
+  // matches: const SlopeLow = tileData(Tile.Stone, TileHeight.SLOPE_LOW);
+  const heightRe = /^const (\w+) = tileData\(Tile\.(\w+),\s*TileHeight\.(\w+)\);$/gm;
   while ((m = heightRe.exec(source)) !== null) {
-    const [, alias, typeName, heightName] = m;
-    const type = TileType[typeName as keyof typeof TileType];
+    const [, alias, tileName, heightName] = m;
+    const type = Tile[tileName as keyof typeof Tile] as TileType | undefined;
     const y = HEIGHT_FROM_KEY[heightName];
     if (type && y !== undefined) map[alias] = { type, y };
   }
@@ -30,14 +31,15 @@ function parseAliases(source: string): AliasMap {
   return map;
 }
 
-function parseInlineTile(expr: string, aliases: AliasMap): Tile | null {
+function parseInlineTile(expr: string, aliases: AliasMap): TileData | null {
   const trimmed = expr.trim();
 
   if (aliases[trimmed]) return aliases[trimmed];
 
-  const m = trimmed.match(/^tile\(TileType\.(\w+)(?:,\s*TileHeight\.(\w+))?\)$/);
+  // matches: tileData(Tile.Stone, TileHeight.SLOPE_LOW)  or  tileData(Tile.Grass)
+  const m = trimmed.match(/^tileData\(Tile\.(\w+)(?:,\s*TileHeight\.(\w+))?\)$/);
   if (m) {
-    const type = TileType[m[1] as keyof typeof TileType];
+    const type = Tile[m[1] as keyof typeof Tile] as TileType | undefined;
     const y = m[2] ? HEIGHT_FROM_KEY[m[2]] : TileHeight.GROUND;
     if (type && y !== undefined) return { type, y };
   }
@@ -64,10 +66,9 @@ function extractTilesBlock(source: string): string | null {
   return null;
 }
 
-export function parseChunkTs(source: string): { tiles: Tile[][]; pvp: boolean } | null {
+export function parseChunkTs(source: string): { tiles: TileData[][]; pvp: boolean } | null {
   try {
     const aliases = parseAliases(source);
-
     const tilesBlock = extractTilesBlock(source);
     if (!tilesBlock) return null;
 
@@ -75,13 +76,13 @@ export function parseChunkTs(source: string): { tiles: Tile[][]; pvp: boolean } 
     const pvp = pvpMatch?.[1] === "true";
 
     const rowRe = /\[([^\]]+)\]/g;
-    const tiles: Tile[][] = [];
+    const tiles: TileData[][] = [];
     let rowMatch: RegExpExecArray | null;
 
     while ((rowMatch = rowRe.exec(tilesBlock)) !== null) {
       const cells = rowMatch[1].split(",").map((c) => parseInlineTile(c, aliases));
       if (cells.some((c) => c === null)) return null;
-      tiles.push(cells as Tile[]);
+      tiles.push(cells as TileData[]);
     }
 
     return { tiles, pvp };

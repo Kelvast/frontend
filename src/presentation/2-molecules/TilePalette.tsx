@@ -3,7 +3,7 @@
 import { FC, memo } from "react";
 import { Tile, TileHeight } from "mmo-shared";
 import type { TileType } from "mmo-shared";
-import { TILE_COLORS } from "../../utils/tile-colors";
+import { TILE_COLORS } from "../../game-client/world/tile-colors";
 import PaletteButton from "../1-atoms/PaletteButton";
 import SectionLabel from "../1-atoms/SectionLabel";
 

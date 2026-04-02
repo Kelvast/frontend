@@ -1,10 +1,9 @@
 import { Position } from "./position";
-import { TileHeight } from "./world";
 
 export interface NPC {
   id: string;
   name: string;
-  position: Position; // permanent home coords in world space
+  position: Position;
   regionId: string;
 }
 

@@ -1,26 +1,27 @@
-import { ChunkData, tile, TileType, TileHeight } from "../../../../types";
+import { ChunkData, tileData, Tile, TileHeight } from "mmo-shared";
 
-const G = tile(TileType.GRASS);
-const S = tile(TileType.STONE);
+const Grass = tileData(Tile.Grass);
+const Stone = tileData(Tile.Stone);
+const Road = tileData(Tile.Road);
 
 export default {
   pvp: false,
   tiles: [
-    [G, G, G, G, S, G, G, G, G, G, G, G, G, G, G, G],
-    [S, S, G, G, G, G, S, G, G, G, G, G, G, G, G, G],
-    [G, G, G, G, S, G, G, G, G, G, G, G, G, G, G, G],
-    [G, G, G, G, G, G, G, S, S, G, S, G, G, G, G, G],
-    [G, G, G, S, G, S, G, G, G, G, G, G, G, S, G, G],
-    [G, G, S, S, G, G, G, S, G, G, G, G, S, G, S, G],
-    [G, G, G, G, G, G, S, S, G, G, G, G, S, G, S, S],
-    [G, G, S, G, G, G, S, G, S, G, G, G, G, G, G, S],
-    [G, S, S, G, G, G, S, G, G, S, G, G, G, G, G, S],
-    [S, G, G, G, G, G, S, G, G, S, G, G, G, G, S, S],
-    [S, S, G, G, G, G, S, G, G, G, G, G, S, G, G, G],
-    [G, S, S, G, G, G, S, G, S, G, G, G, G, G, G, G],
-    [G, G, S, G, G, S, S, G, S, G, G, G, G, G, G, G],
-    [G, G, G, S, S, S, G, G, G, G, G, G, G, G, G, G],
-    [G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
-    [G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Stone, Grass, Stone, Stone, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Stone, Stone, Stone, Stone, Stone, Stone, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Stone, Stone, Stone, Grass, Grass, Grass, Grass, Grass, Grass, Stone, Grass],
+    [Road, Road, Road, Road, Road, Road, Road, Grass, Stone, Stone, Grass, Grass, Grass, Grass, Stone, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Stone, Road, Road, Road, Grass, Stone, Stone, Stone, Stone, Stone, Grass],
+    [Grass, Grass, Grass, Grass, Stone, Grass, Stone, Grass, Road, Road, Road, Road, Road, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Stone, Grass, Stone, Grass, Grass, Stone, Stone, Road, Road, Road, Road],
+    [Grass, Grass, Grass, Grass, Stone, Stone, Grass, Grass, Stone, Grass, Stone, Grass, Grass, Grass, Grass, Road],
+    [Grass, Grass, Grass, Grass, Stone, Stone, Stone, Stone, Stone, Stone, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Stone, Stone, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
   ],
 } satisfies Pick<ChunkData, "pvp" | "tiles">;

@@ -1,4 +1,4 @@
-import { Region } from "../../../types";
+import { Region } from "mmo-shared";
 
 import spawnRegion from "./spawn";
 

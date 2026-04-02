@@ -2,7 +2,7 @@
 
 import { FC, memo, useEffect, useRef } from "react";
 import type { TileData } from "mmo-shared";
-import { TILE_COLORS } from "../../utils/tile-colors";
+import { TILE_COLORS } from "../../game-client/world/tile-colors";
 import { WORLD } from "mmo-shared";
 
 const CELL = 4;
