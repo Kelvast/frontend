@@ -9,7 +9,7 @@ Browser-based 3D MMO client. Players move around a tile-based world, interact wi
 | Layer | Technology |
 |---|---|
 | Framework | Next.js (App Router) |
-| 3D Engine | Babylon.js |
+| 3D Engine | Babylon.js 9 |
 | State | Zustand |
 | Real-time | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
 | HTTP | Axios wrapper (`http.ts`) |
@@ -71,6 +71,8 @@ src/
 │   ├── map-builder/            # Map builder page (dev only)
 │   └── layout.tsx
 │
+├── config/                     # Environment variable bindings (NEXT_PUBLIC_*)
+│
 ├── game-client/                # All Babylon.js logic — no React inside here
 │   ├── index.ts                # initGame / connectGame / destroyGame (async)
 │   ├── engine.ts               # GameEngine — Babylon Engine + Scene
@@ -88,6 +90,7 @@ src/
 │   │   └── waypoints.ts
 │   └── world/
 │       ├── index.ts            # GameWorld — loadRegion, loadChunk, hasChunk, reloadChunk
+│       ├── loader.ts           # loadAllRegions (AbortSignal), reloadChunkFromApi
 │       ├── region.ts           # GameRegion — per-region chunk lifecycle
 │       ├── chunk.ts            # Chunk — 16×16 tile mesh grid
 │       ├── tile-config.ts
@@ -111,16 +114,18 @@ src/
 │       ├── entities.ts         # NPC, Interactable
 │       ├── network.ts          # LoginPayload, RegisterPayload (HTTP auth forms)
 │       ├── position.ts         # Position, ZERO_POSITION
-│       ├── settings.ts         # UserSettings, CameraSettings, etc.
-│       ├── structure.ts        # Structure, WallFace, Floor, etc.
-│       └── (ws-protocol.ts — REMOVED: all WS types come from mmo-shared)
+│       ├── settings.ts         # UserSettings, CameraSettings, DEFAULT_SETTINGS
+│       └── structure.ts        # Structure, WallFace, Floor, etc.
 │
 └── utils/
-    ├── game-store.ts
-    ├── ws-client.ts
+    ├── game-store.ts           # Zustand store — single store, no slices
+    ├── ws-client.ts            # WebSocket singleton
     ├── xp.ts                   # Re-exports xpToLevel etc. from mmo-shared; maxHpFromSkills
+    ├── settings.ts             # loadSettings / saveSettings / patchSettings (localStorage)
+    ├── http.ts                 # Axios wrapper (httpClient + request<T>)
     ├── logger.ts               # Never use raw console.log
-    ├── use-focus-zoom.ts       # Map builder zoom/pan/focus hook
+    ├── use-focus-zoom.ts       # Map builder viewport zoom/pan/focus hook
+    ├── use-zoom.ts             # Standalone pinch/wheel zoom hook
     ├── chunk-spiral.ts         # Spiral coord generator for chunk streaming
     ├── builder-grid.ts
     ├── chunk-export.ts         # Generate chunk .ts file content
@@ -167,16 +172,13 @@ A named folder of chunk files. The folder name is the region ID. No `index.ts` �
 
 ### Chunk Loading
 
-On game init, `initGame` fetches all chunk data in two parallel requests:
+On game init, `loadAllRegions` in `loader.ts` fetches the region list from `GET /api/builder/regions`, then fetches each chunk's tile data in parallel via `GET /api/builder/chunk`. An `AbortController` signal is passed through every `fetch` call so React StrictMode's double-mount does not cause a double-fetch; `AbortError` is swallowed silently.
 
-1. `GET /api/builder/regions` — region list + chunk coords
-2. `GET /api/builder/chunks` — all tile data in one batch
-
-The engine starts rendering immediately. Chunks are loaded into the world after fetch. In future, chunks will stream outward from the player's spawn position (spiral pattern — `chunk-spiral.ts` is ready).
+In future, chunks will stream outward from the player's spawn position (spiral pattern — `chunk-spiral.ts` is ready).
 
 ### Chunk Hot-Reload (Dev)
 
-In dev, the game client holds an SSE connection to `/api/builder/watch`. When the map builder saves a chunk, the server pushes a `chunk_changed` event. The client re-fetches that chunk and rebuilds its tile meshes without a page reload.
+In dev, the game client holds an SSE connection to `/api/builder/watch`. When the map builder saves a chunk, the server pushes a `chunk_changed` event. The client re-fetches that chunk via `reloadChunkFromApi` and rebuilds its tile meshes without a page reload.
 
 ### Map Builder
 
@@ -208,6 +210,10 @@ The client-only `maxHpFromSkills(skills)` helper lives in `src/utils/xp.ts`:
 ```ts
 xpToLevel(player.skills[0].xp, 0) * 10  // skill 0 = hitpoints
 ```
+
+### Settings
+
+`UserSettings` (defined in `src/types/mmo/settings.ts`) covers camera, controls, and any future user preferences. Settings are persisted to `localStorage` via `utils/settings.ts` and kept in sync with the Zustand store via `updateSettings`. On load, stored settings are merged with `DEFAULT_SETTINGS` so new keys are never missing.
 
 ### Combat
 
