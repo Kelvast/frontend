@@ -108,6 +108,8 @@ export class Chunk {
   ): Mesh {
     const size = WORLD.TILE_SIZE * 0.9;
     const resolution = 128;
+    const lineHeight = 28;
+    const font = "bold 22px monospace";
 
     const tex = new DynamicTexture(`tex-${name}`, { width: resolution, height: resolution }, this.scene);
     tex.hasAlpha = true;
@@ -115,10 +117,10 @@ export class Chunk {
     const ctx = tex.getContext();
     ctx.clearRect(0, 0, resolution, resolution);
     ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.font = "bold 22px monospace";
-    ctx.translate(-33, 0)
-    ctx.fillText(`x: ${tileX}`, resolution / 2, resolution / 2 - 10);
-    ctx.fillText(`z: ${tileZ}`, resolution / 2, resolution / 2 + 18);
+    ctx.font = font;
+    ctx.textAlign = "center";
+    ctx.fillText(`x: ${tileX}`, resolution / 2, resolution / 2 - lineHeight / 2);
+    ctx.fillText(`z: ${tileZ}`, resolution / 2, resolution / 2 + lineHeight / 2);
     tex.update();
 
     const plane = MeshBuilder.CreateGround(
