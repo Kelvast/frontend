@@ -1,29 +1,34 @@
-import type { Position } from "./position";
+import type { Facing, Player } from "mmo-shared";
 import type { MovementType } from "../../game-client/movement";
-import type { Skills, Inventory, Equipment, Facing } from "mmo-shared";
 
 export type AnimationState = MovementType | "idle" | "attacking";
 
 /**
- * Live client-side state for a single player in the scene.
- *
- * id       — numeric session ID from the server (changes each login).
- * uuid     — persistent identifier, stable across sessions.
- * skills   — raw XP record; derive levels via getSkillLevel() / xpToLevel().
- * hp is intentionally not stored here — derive it from skills[0] via
- * maxHpFromSkills() whenever needed so there is one source of truth.
+ * Full client-side state for the local (authenticated) player.
+ * Extends the shared Player type with interpolation and animation fields.
+ * All core fields (id, uuid, name, x, y, z, facing, skills, inventory,
+ * equipment) are inherited from Player — never redeclared here.
  */
-export interface PlayerState {
-  id: number;
-  uuid: string;
-  name: string;
-  position: Position;
-  facing: Facing;
-  skills: Skills;
-  inventory: Inventory;
-  equipment: Equipment;
+export interface PlayerState extends Player {
   isMoving: boolean;
   pace: MovementType;
+  lastUpdated: number;
+  animationState: AnimationState;
+}
+
+/**
+ * Minimal state for other players visible in the scene.
+ * We only know what the server broadcasts — position, facing, name.
+ * Skills and inventory are not available for other players.
+ */
+export interface NearbyPlayer {
+  id: number;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  facing: Facing;
+  isMoving: boolean;
   lastUpdated: number;
   animationState: AnimationState;
 }

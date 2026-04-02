@@ -111,20 +111,15 @@ export function destroyGame(): void {
 
 function startWatcher(): void {
   if (_watcherEs) return;
-  _watcherEs = new EventSource("/api/builder/watch");
+  _watcherEs = new EventSource("/api/dev/watch");
 
-  _watcherEs.addEventListener("chunk_changed", async (e: MessageEvent) => {
-    if (!_world) return;
-    const { regionId, chunkX, chunkZ } = JSON.parse(e.data) as {
-      regionId: string;
-      chunkX: number;
-      chunkZ: number;
-    };
-    logger.game(`Watcher — chunk changed (${chunkX}, ${chunkZ}) in "${regionId}"`);
-    const tiles = await fetchChunkTiles(regionId, chunkX, chunkZ);
-    if (!tiles) return;
-    const chunk: ChunkData = { chunkX, chunkZ, region: regionId, pvp: false, tiles };
-    _world.reloadChunk(chunk);
+  _watcherEs.addEventListener("reload", async (e: MessageEvent) => {
+    const { filename } = JSON.parse(e.data) as { filename: string };
+    logger.game(`File changed: ${filename} — reloading game`);
+    if (_canvas) {
+      destroyGame();
+      await initGame(_canvas);
+    }
   });
 
   _watcherEs.addEventListener("error", () => {

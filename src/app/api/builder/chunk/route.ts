@@ -5,7 +5,6 @@ import { generateChunkTs } from "../../../../utils/chunk-export";
 import { generateRegionIndexTs } from "../../../../utils/region-index-gen";
 import { parseChunkTs } from "../../../../utils/chunk-parse";
 import { BuilderSaveRequest } from "../../../../types";
-import { notifyChunkChanged } from "../watch/route";
 
 const REGIONS_ROOT = path.resolve("src/game-client/world/regions");
 
@@ -79,7 +78,6 @@ export async function POST(request: NextRequest) {
 
     ensureRegionIndex(regionId);
     fs.writeFileSync(filePath, generateChunkTs({ chunkX, chunkZ, region: regionId, pvp, tiles }));
-    notifyChunkChanged(regionId, chunkX, chunkZ);
 
     if (previousRegionId && previousRegionId !== regionId) {
       const oldPath = safeChunkPath(previousRegionId, chunkX, chunkZ);

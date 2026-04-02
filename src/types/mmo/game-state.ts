@@ -1,10 +1,10 @@
 import type { LoginSuccessMsg, PlayerJoinMsg, TickMsg } from "mmo-shared";
-import type { PlayerState } from "./player";
+import type { PlayerState, NearbyPlayer } from "./player";
 import type { UserSettings } from "./settings";
 
 export interface GameStoreState {
-  myId: number | null;
-  nearbyPlayers: PlayerState[];
+  localPlayer: PlayerState | null;
+  nearbyPlayers: NearbyPlayer[];
   worldTime: number;
   isConnected: boolean;
   latency: number;
@@ -12,7 +12,6 @@ export interface GameStoreState {
   sessionExpiresAt: number | null;
   settings: UserSettings;
 
-  setMyId: (id: number) => void;
   setConnected: (connected: boolean) => void;
   setLatency: (latency: number) => void;
   setSession: (session: { sessionToken: string; sessionExpiresAt: number }) => void;

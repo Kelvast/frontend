@@ -7,8 +7,8 @@ import {
   StandardMaterial,
 } from "@babylonjs/core";
 import { PlayerManager } from "../entities/players";
-import { WORLD } from "../constants";
 import { logger } from "../../utils/logger";
+import { WORLD } from "mmo-shared";
 
 export class PointerInput {
   private hoveredMesh: Mesh | null = null;

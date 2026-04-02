@@ -3,11 +3,11 @@
 import { FC, memo, useState } from "react";
 import { Tile, TileType, TileHeight, tile, ChunkData } from "../../types";
 import { BuilderRegion } from "../../types";
-import { WORLD } from "../../game-client/constants";
 import TileGrid from "./TileGrid";
 import TilePalette from "./TilePalette";
 import ChunkExporter from "./ChunkExporter";
 import RegionSelector from "../1-atoms/RegionSelector";
+import { WORLD } from "mmo-shared";
 
 function makeEmptyChunk(): Tile[][] {
   return Array.from({ length: WORLD.CHUNK_SIZE }, () =>
