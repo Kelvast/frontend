@@ -5,7 +5,9 @@ import { PlayerManager } from "./entities/players";
 import { KeysInput } from "./input/keys";
 import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
+import { DEV_MODE } from "../utils/dev";
 import { Region, ChunkData, Tile } from "../types";
+import type { InspectorToken } from "@babylonjs/inspector";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -16,6 +18,7 @@ let _engine: GameEngine | null = null;
 let _world: GameWorld | null = null;
 let _canvas: HTMLCanvasElement | null = null;
 let _watcherEs: EventSource | null = null;
+let _inspector: InspectorToken | null = null;
 
 async function fetchChunkTiles(
   regionId: string,
@@ -88,7 +91,11 @@ export async function initGame(canvas: HTMLCanvasElement): Promise<void> {
 
   _engine.engine.runRenderLoop(() => scene.render());
 
-  if (process.env.NODE_ENV === "development") {
+  if (DEV_MODE) {
+    import("@babylonjs/inspector").then(({ ShowInspector }) => {
+      _inspector = ShowInspector(scene);
+      logger.game("Babylon inspector open");
+    });
     startWatcher();
   }
 
@@ -102,6 +109,8 @@ export function connectGame(_token?: string): void {
 export function destroyGame(): void {
   if (!_engine) return;
   logger.game("Destroying game");
+  _inspector?.dispose();
+  _inspector = null;
   _watcherEs?.close();
   _watcherEs = null;
   _engine.dispose();
