@@ -1,6 +1,8 @@
 import { ChunkData, tileData, Tile, TileHeight } from "mmo-shared";
 
 const Grass = tileData(Tile.Grass);
+const Sand = tileData(Tile.Sand);
+const Water = tileData(Tile.Water);
 
 export default {
   pvp: false,
@@ -18,8 +20,8 @@ export default {
     [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
     [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
     [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
-    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
-    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
-    [Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass, Grass],
+    [Sand, Sand, Sand, Sand, Sand, Sand, Grass, Grass, Grass, Grass, Sand, Sand, Sand, Sand, Sand, Sand],
+    [Water, Water, Water, Water, Water, Sand, Sand, Sand, Sand, Sand, Sand, Water, Water, Water, Water, Water],
+    [Water, Water, Water, Water, Water, Water, Water, Water, Water, Water, Water, Water, Water, Water, Water, Water],
   ],
 } satisfies Pick<ChunkData, "pvp" | "tiles">;

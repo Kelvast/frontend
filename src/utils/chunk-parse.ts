@@ -1,4 +1,3 @@
-// src/utils/chunk-parse.ts
 import { Tile, TileType, TileData, TileHeight } from "mmo-shared";
 
 const HEIGHT_FROM_KEY: Record<string, TileHeight> = Object.fromEntries(
@@ -10,7 +9,6 @@ type AliasMap = Record<string, TileData>;
 function parseAliases(source: string): AliasMap {
   const map: AliasMap = {};
 
-  // matches: const Grass = tileData(Tile.Grass);
   const shortRe = /^const (\w+) = tileData\(Tile\.(\w+)\);$/gm;
   let m: RegExpExecArray | null;
   while ((m = shortRe.exec(source)) !== null) {
@@ -19,7 +17,6 @@ function parseAliases(source: string): AliasMap {
     if (type) map[alias] = { type, y: TileHeight.GROUND };
   }
 
-  // matches: const SlopeLow = tileData(Tile.Stone, TileHeight.SLOPE_LOW);
   const heightRe = /^const (\w+) = tileData\(Tile\.(\w+),\s*TileHeight\.(\w+)\);$/gm;
   while ((m = heightRe.exec(source)) !== null) {
     const [, alias, tileName, heightName] = m;
@@ -31,12 +28,32 @@ function parseAliases(source: string): AliasMap {
   return map;
 }
 
+function splitCells(row: string): string[] {
+  const cells: string[] = [];
+  let depth = 0;
+  let current = "";
+
+  for (const char of row) {
+    if (char === "(") depth++;
+    else if (char === ")") depth--;
+
+    if (char === "," && depth === 0) {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.trim()) cells.push(current.trim());
+  return cells;
+}
+
 function parseInlineTile(expr: string, aliases: AliasMap): TileData | null {
   const trimmed = expr.trim();
 
   if (aliases[trimmed]) return aliases[trimmed];
 
-  // matches: tileData(Tile.Stone, TileHeight.SLOPE_LOW)  or  tileData(Tile.Grass)
   const m = trimmed.match(/^tileData\(Tile\.(\w+)(?:,\s*TileHeight\.(\w+))?\)$/);
   if (m) {
     const type = Tile[m[1] as keyof typeof Tile] as TileType | undefined;
@@ -50,7 +67,6 @@ function parseInlineTile(expr: string, aliases: AliasMap): TileData | null {
 function extractTilesBlock(source: string): string | null {
   const start = source.indexOf("tiles:");
   if (start === -1) return null;
-
   const bracketStart = source.indexOf("[", start);
   if (bracketStart === -1) return null;
 
@@ -62,7 +78,6 @@ function extractTilesBlock(source: string): string | null {
       if (depth === 0) return source.slice(bracketStart + 1, i);
     }
   }
-
   return null;
 }
 
@@ -80,7 +95,7 @@ export function parseChunkTs(source: string): { tiles: TileData[][]; pvp: boolea
     let rowMatch: RegExpExecArray | null;
 
     while ((rowMatch = rowRe.exec(tilesBlock)) !== null) {
-      const cells = rowMatch[1].split(",").map((c) => parseInlineTile(c, aliases));
+      const cells = splitCells(rowMatch[1]).map((c) => parseInlineTile(c, aliases));
       if (cells.some((c) => c === null)) return null;
       tiles.push(cells as TileData[]);
     }
