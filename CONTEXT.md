@@ -305,21 +305,24 @@ User clicks ground tile
 
 ### Server validation
 
-- The server validates distance: `MAX_MOVE_DISTANCE_PER_TICK = BASE_SPEED × (TICK_INTERVAL_MS / 1000) = 1.2 tiles`
+- The server calls `calcMoveSpeed(pace)` from `mmo-shared` to get the authoritative tiles/s value
+- `maxDistance = calcMoveSpeed(pace) * (TICK_INTERVAL_MS / 1000)`
 - Accepted: server updates player position, sets `hasMoved = true`, broadcasts in next `tick`
 - Rejected: server sends `player_stopped` with the authoritative position — client must snap back
 
-### Client-side prediction (current)
+### Client-side interpolation
+
+The client receives speed as a plain `number` (tiles/s) from the server and uses it to drive Babylon interpolation. The client never calls `calcMoveSpeed` and never reasons about `pace` labels — it only sees the resolved numeric value.
 
 The client currently does **no** client-side prediction. The player's displayed position only moves when a `TickMsg` arrives with the updated delta. This means visible lag of up to one tick interval (300 ms). Client-side prediction is a planned improvement — when added it must reconcile against `player_stopped` corrections.
 
-### `MovePacket.pace` (planned)
+### `pace` on `MovePacket`
 
 `pace` is not yet sent on the move packet. When added:
-- `pace` expresses the requested `MovementType` (walk / run)
-- The server applies a speed multiplier to `MAX_MOVE_DISTANCE_PER_TICK` based on pace and equipment
+- `pace` expresses the requested `MovementType` (walk / run / sneak / mounted)
+- The server validates it, calls `calcMoveSpeed(pace)`, and derives `maxDistance` from the result
 - `pace` does **not** live on `PlayerPresence` — it is a per-packet intent value, not persistent state
-- The authoritative speed is always the server's derived value, never the client's requested pace
+- The authoritative speed is always the server's resolved number, never the client's requested label
 
 ---
 
@@ -355,7 +358,7 @@ The navmesh is built from `ChunkData` tile arrays after world load. It is a flat
 computePath(start, destination) → waypoints[]
   ↓
 each frame:
-  advance along waypoints at MOVEMENT.BASE_SPEED tiles/s
+  advance along waypoints at the server-resolved speed (tiles/s)
   send MovePacket when crossing a tile boundary
   on player_stopped:
     clear waypoints
@@ -460,10 +463,9 @@ CAMERA.WHEEL_PRECISION     = 30
 PLAYER.SIZE       = 0.75
 PLAYER.Y_OFFSET   = 0.375
 PLAYER.LERP_SPEED = 0.12
-
-MOVEMENT.BASE_SPEED      = 4
-MOVEMENT.AGILITY_FACTOR  = 0.05
 ```
+
+Movement speed is not a client constant. The server resolves speed via `calcMoveSpeed(pace)` from `mmo-shared` and the client receives the result as a plain `number` (tiles/s).
 
 ---
 
@@ -505,8 +507,9 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 - [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared`
 - [ ] Implement `game-client/world/navmesh.ts` — A* over walkable tile grid, rebuild on chunk load/reload
 - [ ] `snapToTile` utility — snap click ray-cast hit to tile centre before sending move packet
-- [ ] Client-side movement prediction — advance position locally, reconcile on `player_stopped`
+- [ ] Client-side movement prediction — advance position locally at server-resolved speed, reconcile on `player_stopped`
 - [ ] Gate `sendPlayerMove` calls to at most one per `TICK_INTERVAL_MS`
+- [ ] Add `pace` to `sendPlayerMove` — pass the requested `MovementType` so the server can derive `maxDistance` via `calcMoveSpeed`
 - [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern)
 - [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
 - [ ] Wire binary XOR+HMAC-2B channel for outbound action packets
