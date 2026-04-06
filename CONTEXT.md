@@ -190,7 +190,7 @@ There is **no** `indexRegistry` — the server now sends a numeric `id` on every
 
 ### `hydrateLocalPlayer`
 
-Called on `login_success`. Builds the full `PlayerState` from `LoginSuccessMsg` (which includes `skills` and `inventory`) and upserts into `nearbyPlayers`. Also sets `myId`.
+Called on `login_success`. Builds the full `PlayerState` from `LoginSuccessMsg` (which includes `skills`, `inventory`, and `equipment`) and upserts into `nearbyPlayers`. Also sets `myId`.
 
 ### `registerPlayer`
 
@@ -245,9 +245,11 @@ Singleton — one `WebSocket` instance per tab. `connectWS(token?)` is the only 
 
 | Function | Packet sent |
 |---|---|
-| `sendPlayerMove(x, y, z, facing)` | `{ type: "move", x, y, z, facing }` |
+| `sendPlayerMove(x, y, z, pace)` | `{ type: "move", x, y, z, pace }` |
 | `sendPing()` | `{ type: "ping", t: Date.now() }` |
 | `sendSettings(settings)` | `{ type: "save_settings", settings }` |
+
+`pace` is a `PaceMultiplier` number — use `PACE_MULTIPLIER[mode]` from `mmo-shared` to convert a `MovementType` label before calling `sendPlayerMove`. `facing` is not a field on `MovePacket` — the server derives facing from the movement delta.
 
 ---
 
@@ -265,11 +267,11 @@ Axios wrapper. Provides two exports:
 ```
 Mount → check localStorage for sessionToken
   ├─ found  → connectGame(token) → sends ResumePacket
-  └─ absent → render LoginForm  → POST /api/login or /api/register
+  └─ absent → render LoginForm  → POST /api/auth/login or /api/auth/register
                                   → on success: store token, connectGame(token)
 
 login_success received:
-  hydrateLocalPlayer(data)   ← sets myId + full PlayerState incl. skills/inventory
+  hydrateLocalPlayer(data)   ← sets myId + full PlayerState incl. skills/inventory/equipment
   setSession({ sessionToken, sessionExpiresAt })
   → transition to game view
 
@@ -279,6 +281,8 @@ world_state received:
 ```
 
 The raw session key (`Buffer`, 32 bytes) is **never** written to `localStorage`. It lives only in memory for the duration of the tab session.
+
+> **Note:** The Next.js `/api/auth/login` and `/api/auth/register` routes are not yet implemented. The current dev path sends a WS `login` packet directly.
 
 ---
 
@@ -298,7 +302,7 @@ The sequence from WS open to a fully populated game state:
    → transition to game view
 
 3. world_state received
-   → registerPlayer for each PlayerSnapshot in the viewport
+   → registerPlayer for each PlayerPresence in the viewport
       remote players seed skills/inventory/equipment with defaults from mmo-shared
 
 4. Ongoing
@@ -324,8 +328,10 @@ The sequence from WS open to a fully populated game state:
 User clicks ground tile
   → click ray-cast hits tile in Babylon scene
   → snapToTile(hit) rounds to tile centre (planned — see Open Tasks)
-  → sendPlayerMove(x, y, z, facing, pace)
-     sends { type: "move", x, y, z, facing, pace } over WS
+  → buildWaypoints(fromX, fromZ, toX, toZ) from mmo-shared — cardinal-step path
+  → waypoints adapted to Babylon Vector3 in game-client/movement/waypoints.ts
+  → sendPlayerMove(x, y, z, pace) per step
+     sends { type: "move", x, y, z, pace } over WS
      pace is a PaceMultiplier number — use PACE_MULTIPLIER[mode] from mmo-shared to convert
      e.g. PACE_MULTIPLIER["walk"] = 1.0, PACE_MULTIPLIER["run"] = 1.4
 ```
@@ -343,14 +349,20 @@ The client receives speed as a plain `number` (tiles/s) at `PlayerDelta[5]` and 
 
 The client currently does **no** client-side prediction. The player's displayed position only moves when a `TickMsg` arrives with the updated delta. This means visible lag of up to one tick interval (300 ms). Client-side prediction is a planned improvement — when added it must reconcile against `player_stopped` corrections.
 
-### `pace` on `MovePacket`
+### `MovePacket` shape
 
-`pace` is not yet sent on the move packet. When added:
+```ts
+{ type: "move"; x: number; y: number; z: number; pace: number }
+```
+
 - `pace` is a `PaceMultiplier` number — one of `0.4` (sneak), `1.0` (walk), `1.4` (run), `2.0` (mounted)
 - Use `PACE_MULTIPLIER[mode]` from `mmo-shared` to convert a `MovementType` label to its numeric value before sending
+- `facing` is **not** a field on `MovePacket` — the server derives facing from the movement delta
 - The server validates `pace`, calls `calcMoveSpeed(pace)`, and derives `maxDistance` from the result
 - `pace` does **not** live on `PlayerPresence` — it is a per-packet value, not persistent state
 - The authoritative speed is always the server's resolved tiles/s number; the client must not derive speed independently
+
+> **Note:** `pace` is not yet sent on the move packet. When added, use `PACE_MULTIPLIER[mode]` from `mmo-shared` to convert before sending.
 
 ---
 
@@ -423,7 +435,7 @@ Types are split between this repo and `mmo-shared`:
 
 | Source | Types |
 |---|---|
-| `mmo-shared` | `Skills`, `SkillId`, `Inventory`, `Equipment`, `Facing`, all WS message/packet types |
+| `mmo-shared` | `Skills`, `SkillId`, `Inventory`, `Equipment`, all WS message/packet types, `PlayerIdentity`, `PlayerPresence`, `Player` |
 | `src/types/mmo/player.ts` | `PlayerState`, `AnimationState` — client-only render state |
 | `src/types/mmo/game-state.ts` | `GameStoreState` — Zustand store shape |
 | `src/types/mmo/network.ts` | `LoginPayload`, `RegisterPayload` — HTTP auth form shapes |
@@ -533,6 +545,7 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 ## Open Tasks
 
 - [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared`
+- [ ] Implement Next.js API routes for `POST /api/auth/login` and `POST /api/auth/register` using `LoginRequest`, `RegisterRequest`, `AuthSuccessResponse`, `AuthErrorResponse` from `mmo-shared`
 - [ ] Implement `game-client/world/navmesh.ts` — A* over walkable tile grid, rebuild on chunk load/reload
 - [ ] `snapToTile` utility — snap click ray-cast hit to tile centre before sending move packet
 - [ ] Client-side movement prediction — advance position locally at server-resolved speed, reconcile on `player_stopped`
@@ -542,6 +555,7 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 - [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
 - [ ] Wire binary XOR+HMAC-2B channel for outbound action packets
 - [ ] Wire `decrypt` into inbound message handler for binary game-loop frames
+- [ ] Wire session key exchange — server sends key in `login_success`, client stores in memory only (never localStorage)
 - [ ] Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
 - [ ] HUD components: HP bar, XP per skill, inventory panel
 - [ ] NPC rendering — `entities/npcs.ts` is a stub
