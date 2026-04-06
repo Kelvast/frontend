@@ -186,7 +186,19 @@ Available at `/map-builder` in dev. Paint tiles, set heights, assign regions, sa
 
 ### Movement
 
-Players move by clicking a tile. The click is snapped to tile centre and a `move` message is sent. Remote players lerp to their updated position each render frame.
+Players move by clicking a tile. The click is snapped to tile centre and a `move` packet is sent with `{ x, y, z, pace }` — `pace` is a `MovementType` string (`"walk"` by default). The server derives `facing` from the movement direction and validates the distance. Remote players lerp to their updated position each render frame using the `pace` value from the tick delta to drive animation speed.
+
+### Auth Flow
+
+Auth is HTTP-only. The game client never sends credentials over WebSocket.
+
+```
+1. Login form → POST /api/auth/login (Next.js API route)
+2. Next.js API route → POST /register or credential check on mmo-server HTTP
+3. mmo-server returns sessionToken + sessionExpiresAt
+4. Client opens WS and immediately sends { type: "resume", token }
+5. Server responds with login_success — WS session begins
+```
 
 ### Player Sync
 
@@ -194,11 +206,11 @@ All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
 
 | Message | When | Contains |
 |---|---|---|
-| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `skills`, `inventory`, `sessionToken`, `sessionExpiresAt` |
-| `world_state` | After login | Array of nearby player snapshots |
-| `player_join` | Player enters range | `player: { id, name, x, y, z, facing }` |
+| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `sessionToken`, `sessionExpiresAt` |
+| `world_state` | After login | `players: PlayerPresence[]` — array of nearby player snapshots |
+| `player_join` | Player enters range | `player: PlayerPresence` — `{ id, uuid, name, x, y, z, facing }` |
 | `player_leave` | Player exits range | `{ id }` |
-| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing][] }` |
+| `tick` | Every 300ms | `{ t, p: PlayerDelta[] }` — `[id, x, y, z, facing, pace]` tuples |
 | `player_stopped` | Move rejected | `{ id, x, y, z, facing }` — authoritative correction |
 
 ### Skills
