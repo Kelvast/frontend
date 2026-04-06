@@ -1,0 +1,43 @@
+name: Typecheck
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: tsc --noEmit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: mmo-client
+
+    steps:
+      - name: Checkout mmo-client
+        uses: actions/checkout@v4
+        with:
+          path: mmo-client
+
+      - name: Checkout mmo-shared
+        uses: actions/checkout@v4
+        with:
+          repository: SamNewhouse/mmo-shared
+          path: mmo-shared
+          token: ${{ secrets.MMO_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mmo-client/package-lock.json
+
+      - name: Install and build mmo-shared
+        working-directory: mmo-shared
+        run: npm ci && npm run build
+
+      - name: Install client deps
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
