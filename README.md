@@ -59,7 +59,9 @@ npm run format   # prettier format
 src/
 ├── app/
 │   ├── api/
-│   │   ├── auth/login/         # Login API route
+│   │   ├── auth/
+│   │   │   ├── login/          # POST /api/auth/login (not yet implemented — open task)
+│   │   │   └── register/       # POST /api/auth/register (not yet implemented — open task)
 │   │   └── builder/
 │   │       ├── chunk/          # GET + POST single chunk
 │   │       ├── chunks/         # GET all chunks (batch)
@@ -87,7 +89,7 @@ src/
 │   │   ├── index.ts
 │   │   ├── animation.ts
 │   │   ├── speed.ts
-│   │   └── waypoints.ts
+│   │   └── waypoints.ts        # Adapts buildWaypoints from mmo-shared to Vector3 paths
 │   └── world/
 │       ├── index.ts            # GameWorld — loadRegion, loadChunk, hasChunk, reloadChunk
 │       ├── loader.ts           # loadAllRegions (AbortSignal), reloadChunkFromApi
@@ -188,18 +190,20 @@ Available at `/map-builder` in dev. Paint tiles, set heights, assign regions, sa
 
 Players move by clicking a tile. The click is snapped to tile centre and a `move` message is sent. Remote players lerp to their updated position each render frame.
 
+`buildWaypoints` from `mmo-shared` provides the shared cardinal-step path builder. The client adapts the resulting waypoints to Babylon `Vector3` paths; the server uses the same function for authoritative path validation.
+
 ### Player Sync
 
 All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
 
 | Message | When | Contains |
 |---|---|---|
-| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `skills`, `inventory`, `sessionToken`, `sessionExpiresAt` |
-| `world_state` | After login | Array of nearby player snapshots |
-| `player_join` | Player enters range | `player: { id, name, x, y, z, facing }` |
+| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `skills`, `inventory`, `equipment`, `sessionToken`, `sessionExpiresAt` |
+| `world_state` | After login | Array of nearby `PlayerPresence` snapshots |
+| `player_join` | Player enters range | `player: PlayerPresence` — `id`, `uuid`, `name`, `x`, `y`, `z`, `facing` |
 | `player_leave` | Player exits range | `{ id }` |
-| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing][] }` |
-| `player_stopped` | Move rejected | `{ id, x, y, z, facing }` — authoritative correction |
+| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing, pace][] }` — `pace` at `[5]` is resolved tiles/s |
+| `player_stopped` | Move rejected or ends | `{ id, x, y, z, facing }` — authoritative correction |
 
 ### Skills
 
@@ -208,7 +212,7 @@ Skill XP and level logic lives in `mmo-shared`. The client holds raw XP in `Play
 The client-only `maxHpFromSkills(skills)` helper lives in `src/utils/xp.ts`:
 
 ```ts
-xpToLevel(player.skills[0].xp, 0) * 10  // skill 0 = hitpoints
+xpToLevel(player.skills[0].xp, 0) * 10  // skill index 0 = hitpoints
 ```
 
 ### Settings
@@ -225,10 +229,26 @@ Fixed-size item grid. Pick up from / drop onto world tiles.
 
 ---
 
+## Auth
+
+Auth is HTTP-only. The WS server never receives credentials.
+
+```
+1. Client submits POST /api/auth/register or POST /api/auth/login (Next.js API routes)
+2. Next.js validates and proxies to the game server, returns AuthSuccessResponse
+3. Client receives sessionToken and sessionExpiresAt
+4. Client opens WS and sends ResumePacket { token }
+5. Server validates token → responds with LoginSuccessMsg (WS session begins)
+```
+
+> **Note:** The Next.js `/api/auth/login` and `/api/auth/register` routes are not yet implemented — this is an open task. The current dev flow uses the WS `login` packet directly.
+
+---
+
 ## Naming Conventions
 
 | Thing | Convention | Example |
-|---|---|---|
+|---|---|
 | Files | `kebab-case.ts` | `game-store.ts`, `use-focus-zoom.ts` |
 | Components | `PascalCase.tsx` | `GameCanvas.tsx`, `MapBuilder.tsx` |
 | Classes | `PascalCase` | `GameEngine`, `GameRegion` |
