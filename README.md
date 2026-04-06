@@ -192,6 +192,8 @@ Players move by clicking a tile. The click is snapped to tile centre and a `move
 
 All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
 
+**Server → Client**
+
 | Message | When | Contains |
 |---|---|---|
 | `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `sessionToken`, `sessionExpiresAt` |
@@ -199,6 +201,15 @@ All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
 | `player_leave` | Player exits range | `{ id }` |
 | `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing, pace][] }` |
 | `player_stopped` | Move rejected | `{ id, x, y, z, facing }` — authoritative correction |
+| `pong` | Ping response | `{ t }` |
+
+**Client → Server**
+
+| Message | When | Contains |
+|---|---|---|
+| `resume` | On WS open | `{ token }` — primary auth entry point |
+| `move` | On tile click | `{ x, y, z, pace }` — `pace` is a `PaceMultiplier` number |
+| `ping` | Periodic | `{ t }` |
 
 ### Skills
 
