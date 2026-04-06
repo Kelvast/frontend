@@ -257,6 +257,121 @@ The raw session key (`Buffer`, 32 bytes) is **never** written to `localStorage`.
 
 ---
 
+## State Hydration on Login
+
+The sequence from WS open to a fully populated game state:
+
+```
+1. connectWS(token)
+   → sends ResumePacket { type: "resume", token }
+      (or LoginPacket { type: "login", email, pass } in dev)
+
+2. login_success received
+   → hydrateLocalPlayer(msg)
+      sets myId, x/y/z, facing, skills, inventory, equipment in nearbyPlayers
+   → setSession({ sessionToken, sessionExpiresAt })
+   → transition to game view
+
+3. world_state received
+   → registerPlayer for each PlayerSnapshot in the viewport
+      remote players seed skills/inventory/equipment with defaults from mmo-shared
+
+4. Ongoing
+   → player_join: registerPlayer for newly visible players
+   → player_leave: unregisterPlayer by id
+   → tick: applyTick patches x/y/z/facing for any player with hasMoved = true
+   → player_stopped: synthetic applyTick snaps the local player back to server position
+```
+
+**Client responsibility boundary:**
+- `LoginSuccessMsg` is the only source of truth for the local player's initial state
+- `PlayerJoinMsg` / `WorldStateMsg` snapshots are the only source of truth for remote player state
+- `TickMsg` deltas are applied on top — never used to initialise a player
+- `PlayerState.skills` and `PlayerState.inventory` for remote players remain at defaults until the server sends a dedicated state message (not yet implemented)
+
+---
+
+## Movement Pipeline
+
+### Input → packet
+
+```
+User clicks ground tile
+  → click ray-cast hits tile in Babylon scene
+  → snapToTile(hit) rounds to tile centre (planned — see Open Tasks)
+  → sendPlayerMove(x, y, z, facing)
+     sends { type: "move", x, y, z, facing } over WS
+```
+
+### Server validation
+
+- The server validates distance: `MAX_MOVE_DISTANCE_PER_TICK = BASE_SPEED × (TICK_INTERVAL_MS / 1000) = 1.2 tiles`
+- Accepted: server updates player position, sets `hasMoved = true`, broadcasts in next `tick`
+- Rejected: server sends `player_stopped` with the authoritative position — client must snap back
+
+### Client-side prediction (current)
+
+The client currently does **no** client-side prediction. The player's displayed position only moves when a `TickMsg` arrives with the updated delta. This means visible lag of up to one tick interval (300 ms). Client-side prediction is a planned improvement — when added it must reconcile against `player_stopped` corrections.
+
+### `MovePacket.pace` (planned)
+
+`pace` is not yet sent on the move packet. When added:
+- `pace` expresses the requested `MovementType` (walk / run)
+- The server applies a speed multiplier to `MAX_MOVE_DISTANCE_PER_TICK` based on pace and equipment
+- `pace` does **not** live on `PlayerPresence` — it is a per-packet intent value, not persistent state
+- The authoritative speed is always the server's derived value, never the client's requested pace
+
+---
+
+## Navmesh & Pathfinding
+
+### Role of the navmesh on the client
+
+The client navmesh is used for **path planning and smooth movement UX only**. It is not authoritative — the server validates every position update independently.
+
+- When the player clicks a destination, the client computes a path across walkable tiles
+- The client sends incremental `MovePacket`s along that path (one packet per tile step or per tick)
+- If the server rejects a step (`player_stopped`), the client discards remaining path waypoints and snaps to the corrected position
+- The navmesh is rebuilt whenever chunks are loaded or hot-reloaded
+
+### Tile walkability
+
+`TileType` determines walkability. The navmesh only includes tiles that are walkable at the current floor index (`y`). Walls, water, and void tiles are excluded.
+
+Walkability is a client-side concern for pathfinding UX. The server validates moves against position distance only — it does not hold a navmesh. Terrain-aware server validation (checking tile types) is a planned addition.
+
+### Babylon.js integration
+
+The navmesh is built from `ChunkData` tile arrays after world load. It is a flat graph of walkable tile centres — not a full 3D navigation mesh. Babylon.js does not provide a built-in navmesh system for tile-grid games; the implementation is a custom A* over the tile grid.
+
+- Node: tile centre `(x, y, z)` where `TileType` is walkable
+- Edge: orthogonal and diagonal neighbours on the same floor
+- Cost: uniform (1 per step) unless terrain cost modifiers are added later
+- The navmesh lives in `game-client/world/navmesh.ts` (planned — not yet implemented)
+
+### Path execution
+
+```
+computePath(start, destination) → waypoints[]
+  ↓
+each frame:
+  advance along waypoints at MOVEMENT.BASE_SPEED tiles/s
+  send MovePacket when crossing a tile boundary
+  on player_stopped:
+    clear waypoints
+    snap position to server-authoritative coords
+```
+
+The client must not send move packets faster than the server tick rate — gate sends at `TICK_INTERVAL_MS` minimum.
+
+### Navmesh rebuild triggers
+
+- Full rebuild on `loadAllRegions` completion
+- Incremental chunk update on `reloadChunkFromApi` (SSE hot-reload)
+- No rebuild needed on `player_join` / `player_leave` — player positions do not affect tile walkability
+
+---
+
 ## XP & Skills (`utils/xp.ts`)
 
 All XP/level maths live in `mmo-shared`. `src/utils/xp.ts` re-exports what the client needs:
@@ -291,6 +406,13 @@ Types are split between this repo and `mmo-shared`:
 `src/types/ws-protocol.ts` and `src/types/mmo/skills.ts` have been **removed** — all WS and skill types now come from `mmo-shared`.
 
 `src/types/index.ts` is the barrel — it re-exports all client-only types. Always import from `../../types` not directly from the `mmo/` sub-files in game-client code.
+
+### Client type responsibilities
+
+- `PlayerState` is the client-only render shape — it extends `PlayerPresence` from `mmo-shared` with `AnimationState` and display fields
+- `StoredPlayer` is **never used on the client** — it is a server persistence concern
+- `PlayerPresence` intentionally omits `pace` — pace is a per-packet intent value on `MovePacket`, not persistent presence state
+- Derived values (HP, skill levels) are always computed at render time via `mmo-shared` helpers; they are never stored on `PlayerState`
 
 ---
 
@@ -381,12 +503,15 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 ## Open Tasks
 
 - [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared`
+- [ ] Implement `game-client/world/navmesh.ts` — A* over walkable tile grid, rebuild on chunk load/reload
+- [ ] `snapToTile` utility — snap click ray-cast hit to tile centre before sending move packet
+- [ ] Client-side movement prediction — advance position locally, reconcile on `player_stopped`
+- [ ] Gate `sendPlayerMove` calls to at most one per `TICK_INTERVAL_MS`
 - [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern)
 - [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
 - [ ] Wire binary XOR+HMAC-2B channel for outbound action packets
 - [ ] Wire `decrypt` into inbound message handler for binary game-loop frames
 - [ ] Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
-- [ ] `snapToTile` utility — snap click point to tile centre before sending
 - [ ] HUD components: HP bar, XP per skill, inventory panel
 - [ ] NPC rendering — `entities/npcs.ts` is a stub
 - [ ] `ClickPacket` → `ActionPacket` canvas wiring (ground click → `sendAction`)
