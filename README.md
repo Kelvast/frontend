@@ -186,7 +186,7 @@ Available at `/map-builder` in dev. Paint tiles, set heights, assign regions, sa
 
 ### Movement
 
-Players move by clicking a tile. The click is snapped to tile centre and a `move` message is sent. Remote players lerp to their updated position each render frame.
+Players move by clicking a tile. The click is snapped to tile centre and a `move` packet is sent. Remote players lerp to their updated position each render frame using the speed value at `PlayerDelta[5]`.
 
 ### Player Sync
 
@@ -194,11 +194,10 @@ All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
 
 | Message | When | Contains |
 |---|---|---|
-| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `skills`, `inventory`, `sessionToken`, `sessionExpiresAt` |
-| `world_state` | After login | Array of nearby player snapshots |
-| `player_join` | Player enters range | `player: { id, name, x, y, z, facing }` |
+| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `sessionToken`, `sessionExpiresAt` |
+| `player_join` | Player enters range | `PlayerPresence` — `{ id, name, x, y, z, facing }` |
 | `player_leave` | Player exits range | `{ id }` |
-| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing][] }` |
+| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing, pace][] }` |
 | `player_stopped` | Move rejected | `{ id, x, y, z, facing }` — authoritative correction |
 
 ### Skills
