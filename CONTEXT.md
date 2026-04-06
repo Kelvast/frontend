@@ -173,7 +173,7 @@ Called on `player_join` and `world_state` entries. Remote players seed `skills`/
 
 ### `applyTick`
 
-Receives `TickMsg` (`{ t, p: [id, x, y, z, facing][] }`). Builds a `Map<id, delta>` for O(1) lookup and patches matching `PlayerState` entries.
+Receives `TickMsg` (`{ t, p: [id, x, y, z, facing, pace][] }`). Builds a `Map<id, delta>` for O(1) lookup and patches matching `PlayerState` entries. `pace` at index `[5]` is the server-resolved movement speed in tiles/s — use it to drive Babylon interpolation.
 
 ### `updateSettings`
 
@@ -279,7 +279,7 @@ The sequence from WS open to a fully populated game state:
 4. Ongoing
    → player_join: registerPlayer for newly visible players
    → player_leave: unregisterPlayer by id
-   → tick: applyTick patches x/y/z/facing for any player with hasMoved = true
+   → tick: applyTick patches x/y/z/facing/pace for any player with hasMoved = true
    → player_stopped: synthetic applyTick snaps the local player back to server position
 ```
 
@@ -299,8 +299,10 @@ The sequence from WS open to a fully populated game state:
 User clicks ground tile
   → click ray-cast hits tile in Babylon scene
   → snapToTile(hit) rounds to tile centre (planned — see Open Tasks)
-  → sendPlayerMove(x, y, z, facing)
-     sends { type: "move", x, y, z, facing } over WS
+  → sendPlayerMove(x, y, z, facing, pace)
+     sends { type: "move", x, y, z, facing, pace } over WS
+     pace is a PaceMultiplier number — use PACE_MULTIPLIER[mode] from mmo-shared to convert
+     e.g. PACE_MULTIPLIER["walk"] = 1.0, PACE_MULTIPLIER["run"] = 1.4
 ```
 
 ### Server validation
@@ -312,17 +314,18 @@ User clicks ground tile
 
 ### Client-side interpolation
 
-The client receives speed as a plain `number` (tiles/s) from the server and uses it to drive Babylon interpolation. The client never calls `calcMoveSpeed` and never reasons about `pace` labels — it only sees the resolved numeric value.
+The client receives speed as a plain `number` (tiles/s) at `PlayerDelta[5]` and uses it to drive Babylon interpolation. The client never calls `calcMoveSpeed` directly — it only sees the resolved numeric value from the server.
 
 The client currently does **no** client-side prediction. The player's displayed position only moves when a `TickMsg` arrives with the updated delta. This means visible lag of up to one tick interval (300 ms). Client-side prediction is a planned improvement — when added it must reconcile against `player_stopped` corrections.
 
 ### `pace` on `MovePacket`
 
 `pace` is not yet sent on the move packet. When added:
-- `pace` expresses the requested `MovementType` (walk / run / sneak / mounted)
-- The server validates it, calls `calcMoveSpeed(pace)`, and derives `maxDistance` from the result
-- `pace` does **not** live on `PlayerPresence` — it is a per-packet intent value, not persistent state
-- The authoritative speed is always the server's resolved number, never the client's requested label
+- `pace` is a `PaceMultiplier` number — one of `0.4` (sneak), `1.0` (walk), `1.4` (run), `2.0` (mounted)
+- Use `PACE_MULTIPLIER[mode]` from `mmo-shared` to convert a `MovementType` label to its numeric value before sending
+- The server validates `pace`, calls `calcMoveSpeed(pace)`, and derives `maxDistance` from the result
+- `pace` does **not** live on `PlayerPresence` — it is a per-packet value, not persistent state
+- The authoritative speed is always the server's resolved tiles/s number; the client must not derive speed independently
 
 ---
 
@@ -358,7 +361,7 @@ The navmesh is built from `ChunkData` tile arrays after world load. It is a flat
 computePath(start, destination) → waypoints[]
   ↓
 each frame:
-  advance along waypoints at the server-resolved speed (tiles/s)
+  advance along waypoints at the server-resolved speed (tiles/s from PlayerDelta[5])
   send MovePacket when crossing a tile boundary
   on player_stopped:
     clear waypoints
@@ -414,7 +417,7 @@ Types are split between this repo and `mmo-shared`:
 
 - `PlayerState` is the client-only render shape — it extends `PlayerPresence` from `mmo-shared` with `AnimationState` and display fields
 - `StoredPlayer` is **never used on the client** — it is a server persistence concern
-- `PlayerPresence` intentionally omits `pace` — pace is a per-packet intent value on `MovePacket`, not persistent presence state
+- `PlayerPresence` intentionally omits `pace` — pace is a per-packet `PaceMultiplier` number on `MovePacket`, not persistent presence state
 - Derived values (HP, skill levels) are always computed at render time via `mmo-shared` helpers; they are never stored on `PlayerState`
 
 ---
@@ -465,7 +468,7 @@ PLAYER.Y_OFFSET   = 0.375
 PLAYER.LERP_SPEED = 0.12
 ```
 
-Movement speed is not a client constant. The server resolves speed via `calcMoveSpeed(pace)` from `mmo-shared` and the client receives the result as a plain `number` (tiles/s).
+Movement speed is not a client constant. The server resolves speed via `calcMoveSpeed(pace)` from `mmo-shared` and the client receives the result as a plain `number` (tiles/s) at `PlayerDelta[5]`.
 
 ---
 
@@ -509,7 +512,7 @@ Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `
 - [ ] `snapToTile` utility — snap click ray-cast hit to tile centre before sending move packet
 - [ ] Client-side movement prediction — advance position locally at server-resolved speed, reconcile on `player_stopped`
 - [ ] Gate `sendPlayerMove` calls to at most one per `TICK_INTERVAL_MS`
-- [ ] Add `pace` to `sendPlayerMove` — pass the requested `MovementType` so the server can derive `maxDistance` via `calcMoveSpeed`
+- [ ] Add `pace` to `sendPlayerMove` — pass a `PaceMultiplier` number using `PACE_MULTIPLIER[mode]` from `mmo-shared` (e.g. `PACE_MULTIPLIER["walk"]` = `1.0`)
 - [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern)
 - [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
 - [ ] Wire binary XOR+HMAC-2B channel for outbound action packets
