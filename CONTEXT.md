@@ -22,6 +22,31 @@ All changes — including documentation — go through a feature branch and a pu
 
 ---
 
+## Inline Comment Conventions
+
+Inline comments must follow these conventions consistently across all three repos.
+
+### `future:` tag
+
+Use `// future: <description>` to mark anything that is planned but not yet agreed or designed — not a TODO, not a stale note.
+
+```ts
+// future: client-side movement prediction — advance position locally, reconcile on player_stopped
+const position = applyServerDelta(delta);
+```
+
+- Use `future:` only for things that are genuinely deferred — no timeline, no design yet
+- Never use `future:` to describe work that already has an open task or a known design — those go in Open Tasks
+- Never invent future plans that have not been discussed — only mark things explicitly agreed as future work
+
+### Other comment rules
+
+- Inline comments only when logic is genuinely non-obvious
+- No file headers, no author blocks, no section dividers in application code
+- All client logging via `logger.ts` — never raw `console.log`
+
+---
+
 ## Architecture: React vs Babylon
 
 Babylon.js owns the canvas and runs independently of React's render cycle. The integration contract is:
