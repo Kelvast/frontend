@@ -18,3 +18,8 @@
 - `ClickPacket` → `ActionPacket` canvas wiring (ground click → `sendAction`)
 - Quest state machine and UI
 - Combat — melee range check, attack packet, death/respawn flow
+- Mirror per-player intent queue locally — keep client queue in sync with server for animation continuity
+- On `action_finished` success — call `store.addXp(skillId, xp)` and `store.addItem(itemId, qty)`
+- On `resource_depleted` — mark resource as unclickable in scene
+- On `resource_available` — mark resource as clickable in scene
+- Show gather chance in tooltip via `calcGatherChance` from `mmo-shared` — display only, never used for outcome
