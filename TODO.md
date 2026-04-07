@@ -1,0 +1,18 @@
+- Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared`
+- Implement Next.js API routes for `POST /api/auth/login` and `POST /api/auth/register` using `LoginRequest`, `RegisterRequest`, `AuthSuccessResponse`, `AuthErrorResponse` from `mmo-shared`
+- Implement `game-client/world/navmesh.ts` — A* over walkable tile grid, rebuild on chunk load/reload
+- `snapToTile` utility — snap click ray-cast hit to tile centre before sending move packet
+- Client-side movement prediction — advance position locally at server-resolved speed, reconcile on `player_stopped`
+- Gate `sendPlayerMove` calls to at most one per `TICK_INTERVAL_MS`
+- Add `pace` to `sendPlayerMove` — pass a `PaceMultiplier` number using `PACE_MULTIPLIER[mode]` from `mmo-shared` (e.g. `PACE_MULTIPLIER["walk"]` = `1.0`)
+- Chunk streaming — load chunks outward from player position at runtime (spiral load pattern)
+- Chunk unloading — dispose chunks beyond a max radius as the player moves
+- Wire binary XOR+HMAC-2B channel for outbound action packets
+- Wire `decrypt` into inbound message handler for binary game-loop frames
+- Wire session key exchange — server sends key in `login_success`, client stores in memory only (never localStorage)
+- Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
+- HUD components: HP bar, XP per skill, inventory panel
+- NPC rendering — `entities/npcs.ts` is a stub
+- `ClickPacket` → `ActionPacket` canvas wiring (ground click → `sendAction`)
+- Quest state machine and UI
+- Combat — melee range check, attack packet, death/respawn flow

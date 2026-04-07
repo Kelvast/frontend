@@ -190,7 +190,7 @@ Available at `/map-builder` in dev. Paint tiles, set heights, assign regions, sa
 
 Players move by clicking a tile. The click is snapped to tile centre and a `move` message is sent. Remote players lerp to their updated position each render frame.
 
-`buildWaypoints` from `mmo-shared` provides the shared cardinal-step path builder. The client adapts the resulting waypoints to Babylon `Vector3` paths; the server uses the same function for authoritative path validation.
+`buildWaypoints` from `mmo-shared` provides the shared cardinal-step path builder. The client adapts the resulting waypoints to Babylon `Vector3` paths. The server validates movement by distance only — server-side use of `buildWaypoints` for path validation is a planned addition.
 
 ### Player Sync
 
