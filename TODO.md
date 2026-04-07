@@ -15,7 +15,8 @@
 - Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
 - HUD components: HP bar, XP per skill, inventory panel
 - NPC rendering — `entities/npcs.ts` does not exist yet
-- `ClickPacket` → `ActionPacket` canvas wiring (ground click → `sendAction`)
+- Canvas wiring — ground click (non-resource) → send `move` packet with target position
+- Canvas wiring — click on actionable resource → if in range, send `action_start` packet with `action` type and `targetId`; if out of range, queue `move` to resource position followed by `action_start` on arrival
 - Quest state machine and UI
 - Combat — melee range check, attack packet, death/respawn flow
 - Mirror per-player intent queue locally — keep client queue in sync with server for animation continuity
@@ -23,3 +24,6 @@
 - On `resource_depleted` — mark resource as unclickable in scene
 - On `resource_available` — mark resource as clickable in scene
 - Show gather chance in tooltip via `calcGatherChance` from `mmo-shared` — display only, never used for outcome
+- On `action_finished` any reason — stop animation loop, clear local action state
+- Block clicks on resources where `respawnAt` is set — unclickable until `resource_available` received
+- Optimistic animation — start gather animation immediately on `action_start` send, do not wait for server confirmation
