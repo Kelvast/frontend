@@ -1,5 +1,20 @@
 # CONTEXT — mmo-client
 
+> **This file is for AI assistants only.**
+> It contains dense technical context, canonical specs, and decision rules needed to work on this repo without making wrong assumptions.
+> Human-facing documentation (what this package is, how to use it, build instructions) lives in `README.md`.
+>
+> **File purpose split:**
+> - `CONTEXT.md` — AI context: branch rules, canonical type specs, tuple layouts, auth flow, open tasks, gotchas
+> - `README.md` — Human docs: package overview, install/build, usage examples, constants table, skills table, protocol summary
+> - `TODO.md` — Human-facing task list: outstanding work, known gaps, and planned additions visible to contributors
+>
+> When updating documentation:
+> - Canonical specs (exact field names, tuple indices, union members, known caveats) → `CONTEXT.md`
+> - Overview, usage, examples, "what is this" → `README.md`
+
+---
+
 ## Branch & PR Workflow
 
 All changes — including documentation — go through a feature branch and a pull request. **Nothing is ever committed directly to `main`, without exception.**
@@ -362,8 +377,6 @@ The client currently does **no** client-side prediction. The player's displayed 
 - `pace` does **not** live on `PlayerPresence` — it is a per-packet value, not persistent state
 - The authoritative speed is always the server's resolved tiles/s number; the client must not derive speed independently
 
-> **Note:** `pace` is not yet sent on the move packet. When added, use `PACE_MULTIPLIER[mode]` from `mmo-shared` to convert before sending.
-
 ---
 
 ## Navmesh & Pathfinding
@@ -539,26 +552,3 @@ ws.send(frame);  // 10-byte ArrayBuffer
 ```
 
 Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `null` return (HMAC mismatch) drops the frame silently with a `logger.warn`.
-
----
-
-## Open Tasks
-
-- [ ] Update `src/game-client/constants.ts` to import `CHUNK_SIZE` from `mmo-shared`
-- [ ] Implement Next.js API routes for `POST /api/auth/login` and `POST /api/auth/register` using `LoginRequest`, `RegisterRequest`, `AuthSuccessResponse`, `AuthErrorResponse` from `mmo-shared`
-- [ ] Implement `game-client/world/navmesh.ts` — A* over walkable tile grid, rebuild on chunk load/reload
-- [ ] `snapToTile` utility — snap click ray-cast hit to tile centre before sending move packet
-- [ ] Client-side movement prediction — advance position locally at server-resolved speed, reconcile on `player_stopped`
-- [ ] Gate `sendPlayerMove` calls to at most one per `TICK_INTERVAL_MS`
-- [ ] Add `pace` to `sendPlayerMove` — pass a `PaceMultiplier` number using `PACE_MULTIPLIER[mode]` from `mmo-shared` (e.g. `PACE_MULTIPLIER["walk"]` = `1.0`)
-- [ ] Chunk streaming — load chunks outward from player position at runtime (spiral load pattern)
-- [ ] Chunk unloading — dispose chunks beyond a max radius as the player moves
-- [ ] Wire binary XOR+HMAC-2B channel for outbound action packets
-- [ ] Wire `decrypt` into inbound message handler for binary game-loop frames
-- [ ] Wire session key exchange — server sends key in `login_success`, client stores in memory only (never localStorage)
-- [ ] Player mesh pooling — reuse `BABYLON.Mesh` objects on spawn/despawn
-- [ ] HUD components: HP bar, XP per skill, inventory panel
-- [ ] NPC rendering — `entities/npcs.ts` is a stub
-- [ ] `ClickPacket` → `ActionPacket` canvas wiring (ground click → `sendAction`)
-- [ ] Quest state machine and UI
-- [ ] Combat — melee range check, attack packet, death/respawn flow
