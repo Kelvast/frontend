@@ -418,7 +418,7 @@ The navmesh is built from `ChunkData` tile arrays after world load. It is a flat
 - Node: tile centre `(x, y, z)` where `TileType` is walkable
 - Edge: orthogonal and diagonal neighbours on the same floor
 - Cost: uniform (1 per step) unless terrain cost modifiers are added later
-- The navmesh lives in `game-client/world/navmesh.ts` (not yet implemented)
+- The navmesh lives in `game-client/world/navmesh.ts` (planned - not yet implemented)
 
 ### Path execution
 
