@@ -65,7 +65,7 @@ export async function reloadChunkFromApi(
   const controller = new AbortController();
   const tiles = await fetchChunkTiles(regionId, chunkX, chunkZ, controller.signal);
   if (!tiles) {
-    logger.game(`reloadChunkFromApi — failed to fetch chunk ${chunkX},${chunkZ} in "${regionId}"`);
+    logger.game(`reloadChunkFromApi - failed to fetch chunk ${chunkX},${chunkZ} in "${regionId}"`);
     return;
   }
   world.reloadChunk({ chunkX, chunkZ, region: regionId, pvp: false, tiles });

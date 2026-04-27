@@ -2,7 +2,7 @@ import { Scene, StandardMaterial, Color3, Texture } from "@babylonjs/core";
 
 /**
  * Builds a flat diffuse StandardMaterial in the OSRS low-poly style.
- * No specular shine, no PBR, no reflections — just a painted diffuse colour.
+ * No specular shine, no PBR, no reflections - just a painted diffuse colour.
  * StandardMaterial is intentional here: PBRMaterial would fight the aesthetic.
  */
 export function makeTerrainMaterial(name: string, color: Color3, scene: Scene): StandardMaterial {

@@ -49,7 +49,7 @@ const ChunkExporter: FC<Props> = ({ chunkData, regionId, previousRegionId, isNew
       }
     } catch {
       navigator.clipboard.writeText(generateChunkTs(chunkData));
-      setErrorMsg("API unavailable — copied to clipboard");
+      setErrorMsg("API unavailable - copied to clipboard");
       setSaveState("error");
     }
   }

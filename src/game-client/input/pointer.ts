@@ -40,7 +40,7 @@ export class PointerInput {
     if (DEV_MODE) logger.game("POINTERDOWN", { hit: pick.hit, mesh: pick.pickedMesh?.name ?? null, point: pick.pickedPoint });
 
     if (!pick.hit || !pick.pickedPoint) {
-      if (DEV_MODE) logger.game("Click missed — no grid mesh hit");
+      if (DEV_MODE) logger.game("Click missed - no grid mesh hit");
       return;
     }
 

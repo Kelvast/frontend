@@ -29,7 +29,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     const updated = patchSettings(key, value);
-    logger.game(`Settings updated — ${key}:`, value);
+    logger.game(`Settings updated - ${key}:`, value);
     set({ settings: updated });
   },
 
@@ -50,7 +50,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
       lastUpdated: Date.now(),
       animationState: "idle" as const,
     };
-    logger.game("Local player hydrated — id:", msg.id, "uuid:", msg.uuid);
+    logger.game("Local player hydrated - id:", msg.id, "uuid:", msg.uuid);
     logger.game("HP:", maxHpFromSkills(msg.skills));
     set({ localPlayer });
   },
@@ -68,7 +68,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         lastUpdated: Date.now(),
         animationState: "idle" as const,
       };
-      logger.game("Player registered — id:", msg.player.id, "name:", msg.player.name);
+      logger.game("Player registered - id:", msg.player.id, "name:", msg.player.name);
       const exists = state.nearbyPlayers.some((p) => p.id === msg.player.id);
       return {
         nearbyPlayers: exists
@@ -79,7 +79,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   unregisterPlayer: (id) =>
     set((state) => {
-      logger.game("Player unregistered — id:", id);
+      logger.game("Player unregistered - id:", id);
       return { nearbyPlayers: state.nearbyPlayers.filter((p) => p.id !== id) };
     }),
 

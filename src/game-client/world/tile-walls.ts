@@ -30,7 +30,7 @@ export function buildEdgeWalls(
         const nr = row + dr;
         const nc = col + dc;
 
-        // skip chunk boundary edges — no neighbour data available yet
+        // skip chunk boundary edges - no neighbour data available yet
         if (nr < 0 || nr >= WORLD.CHUNK_SIZE || nc < 0 || nc >= WORLD.CHUNK_SIZE) continue;
 
         const neighbourY = tileWorldY(tiles[nr][nc].y);
@@ -47,7 +47,7 @@ export function buildEdgeWalls(
           {
             width: WORLD.TILE_SIZE,
             height: wallHeight,
-            sideOrientation: 2, // BACKSIDE — faces inward toward the lower tile
+            sideOrientation: 2, // BACKSIDE - faces inward toward the lower tile
           },
           scene,
         );

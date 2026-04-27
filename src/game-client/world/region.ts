@@ -49,7 +49,7 @@ export class GameRegion {
     }
     this.chunks.set(key, new Chunk(chunkData, this.scene, this.highlightLayer));
     this.rawData.set(key, chunkData);
-    logger.game(`HMR — chunk ${key} reloaded in "${this.data.name}"`);
+    logger.game(`HMR - chunk ${key} reloaded in "${this.data.name}"`);
   }
 
   reloadAll(fresh: Region): void {
@@ -66,7 +66,7 @@ export class GameRegion {
         chunk.dispose();
         this.chunks.delete(key);
         this.rawData.delete(key);
-        logger.game(`HMR — chunk ${key} removed from "${fresh.name}"`);
+        logger.game(`HMR - chunk ${key} removed from "${fresh.name}"`);
       }
     });
 
