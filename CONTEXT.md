@@ -8,10 +8,12 @@
 > - `CONTEXT.md` — AI context: branch rules, canonical type specs, tuple layouts, auth flow, open tasks, gotchas
 > - `README.md` — Human docs: package overview, install/build, usage examples, constants table, skills table, protocol summary
 > - `TODO.md` — Human-facing task list: outstanding work, known gaps, and planned additions visible to contributors
+> - `PLAN.md` — Game system design plan. What to build next and in what order for the client.
 >
 > When updating documentation:
 > - Canonical specs (exact field names, tuple indices, union members, known caveats) → `CONTEXT.md`
 > - Overview, usage, examples, "what is this" → `README.md`
+> - Game feature design and build order → `PLAN.md`
 
 ---
 
@@ -342,7 +344,7 @@ The sequence from WS open to a fully populated game state:
 ```
 User clicks ground tile
   → click ray-cast hits tile in Babylon scene
-  → snapToTile(hit) rounds to tile centre (planned — see Open Tasks)
+  → snapToTile(hit) rounds to tile centre (planned — see TODO)
   → buildWaypoints(fromX, fromZ, toX, toZ) from mmo-shared — cardinal-step path
   → waypoints adapted to Babylon Vector3 in game-client/movement/waypoints.ts
   → sendPlayerMove(x, y, z, pace) per step
@@ -403,7 +405,7 @@ The navmesh is built from `ChunkData` tile arrays after world load. It is a flat
 - Node: tile centre `(x, y, z)` where `TileType` is walkable
 - Edge: orthogonal and diagonal neighbours on the same floor
 - Cost: uniform (1 per step) unless terrain cost modifiers are added later
-- The navmesh lives in `game-client/world/navmesh.ts` (planned — not yet implemented)
+- The navmesh lives in `game-client/world/navmesh.ts` (not yet implemented)
 
 ### Path execution
 
@@ -552,48 +554,3 @@ ws.send(frame);  // 10-byte ArrayBuffer
 ```
 
 Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `null` return (HMAC mismatch) drops the frame silently with a `logger.warn`.
-
----
-
-## Future Systems
-
-### Action & Gathering System
-
-Designed but not yet implemented. See TODO items 20–29.
-
-#### Canvas Wiring
-
-Two distinct click behaviours (TODO 20, 21):
-
-- **Ground click (no resource)** → send `move` packet with target position (TODO 20)
-- **Actionable resource click, in range** → send `action_start` packet with `action` type and `targetId` (TODO 21)
-- **Actionable resource click, out of range** → queue `move` to resource position, then send `action_start` on arrival (TODO 21)
-
-The client enforces range checks before sending any action. Resources marked as depleted (`respawnAt` set) are not clickable (TODO 28).
-
-#### Action Lifecycle
-Send action_start
-→ play gather animation loop — optimistic, do not wait for server (TODO 23)
-
-Receive action_ongoing
-→ animation continues (heartbeat, optional)
-
-Receive action_finished (any reason)
-→ stop animation loop, clear local action state (TODO 24)
-
-Receive action_finished (reason: "success", reward present)
-→ store.addXp(skillId, xp) and store.addItem(itemId, qty) (TODO 25)
-
-Receive resource_depleted
-→ mark resource unclickable in scene (TODO 26)
-
-Receive resource_available
-→ mark resource clickable in scene (TODO 27)
-
-Mirror the per-player intent queue locally to keep animations in sync with server state (TODO 22).
-
-The client never decides when an action ends. It only decides when to start the animation. `action_finished` from the server is the sole termination signal regardless of reason.
-
-#### Gather Chance Tooltip
-
-`calcGatherChance(skillLevel, equipment, resourceType)` from `mmo-shared` may be called on the client to display the success probability in a tooltip (TODO 29). It is display-only — the client result is never used for any outcome decision.
