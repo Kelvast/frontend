@@ -8,9 +8,9 @@ const RETRY_BASE_MS = 3000;
 /**
  * Starts an SSE connection to the dev watch endpoint.
  * Listens for chunk_changed events and hot-reloads the affected chunk in-scene.
- * Returns a teardown function — call it in destroyGame to close the connection cleanly.
+ * Returns a teardown function - call it in destroyGame to close the connection cleanly.
  *
- * Only used in development — guard with process.env.NODE_ENV === "development" at call site.
+ * Only used in development - guard with process.env.NODE_ENV === "development" at call site.
  */
 export function createDevWatcher(getWorld: () => GameWorld | null): () => void {
   let es: EventSource | null = null;
@@ -33,7 +33,7 @@ export function createDevWatcher(getWorld: () => GameWorld | null): () => void {
         chunkX: number;
         chunkZ: number;
       };
-      logger.game(`Watcher — chunk changed (${chunkX}, ${chunkZ}) in "${regionId}"`);
+      logger.game(`Watcher - chunk changed (${chunkX}, ${chunkZ}) in "${regionId}"`);
       await reloadChunkFromApi(world, regionId, chunkX, chunkZ);
     });
 
@@ -41,13 +41,13 @@ export function createDevWatcher(getWorld: () => GameWorld | null): () => void {
       es?.close();
       es = null;
       if (retryCount >= MAX_RETRIES) {
-        logger.game("Watcher — max retries reached, giving up");
+        logger.game("Watcher - max retries reached, giving up");
         return;
       }
       const delay = RETRY_BASE_MS * 2 ** retryCount;
       retryCount++;
       logger.game(
-        `Watcher disconnected — retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})`,
+        `Watcher disconnected - retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})`,
       );
       setTimeout(start, delay);
     });

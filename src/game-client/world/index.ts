@@ -30,7 +30,7 @@ export class GameWorld {
 
   loadRegion(data: Region): void {
     if (this.regions.has(data.id)) {
-      logger.game(`Region "${data.id}" already loaded — skipping`);
+      logger.game(`Region "${data.id}" already loaded - skipping`);
       return;
     }
     this.regions.set(data.id, new GameRegion(data, this.scene, this.highlightLayer));
@@ -48,7 +48,7 @@ export class GameWorld {
   reloadChunk(chunkData: ChunkData): void {
     const region = this.regions.get(chunkData.region);
     if (!region) {
-      logger.game(`reloadChunk — region "${chunkData.region}" not loaded, skipping`);
+      logger.game(`reloadChunk - region "${chunkData.region}" not loaded, skipping`);
       return;
     }
     const key = `${chunkData.chunkX},${chunkData.chunkZ}`;

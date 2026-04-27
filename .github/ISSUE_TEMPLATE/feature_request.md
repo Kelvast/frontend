@@ -11,7 +11,7 @@ labels: enhancement
 ## Does it require a protocol change?
 
 - [ ] No
-- [ ] Yes — describe the new/changed message type(s) below
+- [ ] Yes - describe the new/changed message type(s) below
 
 ## Cross-repo impact
 

@@ -20,7 +20,7 @@ export const connectWS = (token?: string) => {
 
     const dev = getDevCredentials();
     if (dev) {
-      logger.ws("Dev mode — auto-login as", dev.email);
+      logger.ws("Dev mode - auto-login as", dev.email);
       ws!.send(JSON.stringify({ type: "login", email: dev.email, pass: dev.password }));
     } else if (token) {
       logger.ws("Resuming session with token");
@@ -29,7 +29,7 @@ export const connectWS = (token?: string) => {
   };
 
   ws.onmessage = (event: MessageEvent) => {
-    // Avoid parsing the raw string twice — parse once, type-narrow via .type.
+    // Avoid parsing the raw string twice - parse once, type-narrow via .type.
     const data = JSON.parse(event.data as string);
 
     if (data.type !== "tick") {
@@ -51,11 +51,11 @@ export const connectWS = (token?: string) => {
         break;
 
       case "auth_fail":
-        // In dev mode, an auth failure on login means the account doesn't exist yet—
+        // In dev mode, an auth failure on login means the account doesn't exist yet-
         // auto-register it so the dev loop stays frictionless.
         if (DEV_MODE) {
           const dev = getDevCredentials()!;
-          logger.ws("Dev mode — account not found, auto-registering");
+          logger.ws("Dev mode - account not found, auto-registering");
           ws!.send(
             JSON.stringify({
               type: "register",
@@ -78,12 +78,12 @@ export const connectWS = (token?: string) => {
         break;
 
       case "player_join":
-        logger.ws("Player joined — id:", data.player.id, "name:", data.player.name);
+        logger.ws("Player joined - id:", data.player.id, "name:", data.player.name);
         store.registerPlayer(data);
         break;
 
       case "player_leave":
-        logger.ws("Player left — id:", data.id);
+        logger.ws("Player left - id:", data.id);
         store.unregisterPlayer(data.id);
         break;
 

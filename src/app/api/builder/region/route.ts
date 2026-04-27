@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     if (!/^[a-z0-9-]+$/.test(regionId)) {
       return NextResponse.json(
-        { error: "Invalid region id — use lowercase letters, numbers and hyphens only" },
+        { error: "Invalid region id - use lowercase letters, numbers and hyphens only" },
         { status: 400 },
       );
     }

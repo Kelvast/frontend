@@ -23,7 +23,7 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
   if (signal.aborted) return false;
 
   if (_engine) {
-    logger.game("initGame called but engine already running — skipping");
+    logger.game("initGame called but engine already running - skipping");
     return false;
   }
 
@@ -66,7 +66,7 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
 }
 
 export function connectGame(_token?: string): void {
-  logger.game("connectGame called — server connection not yet implemented");
+  logger.game("connectGame called - server connection not yet implemented");
 }
 
 export function destroyGame(): void {

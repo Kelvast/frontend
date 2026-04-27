@@ -20,4 +20,4 @@ labels: bug
 
 ## Relevant context
 
-<!-- WS message type, tick data, browser console output, server logs — anything useful -->
+<!-- WS message type, tick data, browser console output, server logs - anything useful -->

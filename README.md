@@ -14,7 +14,7 @@ Browser-based 3D MMO client. Players move around a tile-based world, interact wi
 | Real-time | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
 | HTTP | Axios wrapper (`http.ts`) |
 | Shared types/logic | `mmo-shared` (protocol, skills, XP, items) |
-| Language | TypeScript — strict throughout |
+| Language | TypeScript - strict throughout |
 
 ---
 
@@ -35,7 +35,7 @@ Copy `.env.example` to `.env.local` and fill in values:
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_MMO_SERVER_URL` | WebSocket server — e.g. `ws://localhost:8080` |
+| `NEXT_PUBLIC_MMO_SERVER_URL` | WebSocket server - e.g. `ws://localhost:8080` |
 | `NEXT_PUBLIC_DEV_MODE` | Set `true` to enable verbose logger output and dev auto-login |
 | `NEXT_PUBLIC_DEV_EMAIL` | Dev auto-login email (dev mode only) |
 | `NEXT_PUBLIC_DEV_PASSWORD` | Dev auto-login password (dev mode only) |
@@ -60,8 +60,8 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/
-│   │   │   ├── login/          # POST /api/auth/login (not yet implemented — open task)
-│   │   │   └── register/       # POST /api/auth/register (not yet implemented — open task)
+│   │   │   ├── login/          # POST /api/auth/login (not yet implemented - open task)
+│   │   │   └── register/       # POST /api/auth/register (not yet implemented - open task)
 │   │   └── builder/
 │   │       ├── chunk/          # GET + POST single chunk
 │   │       ├── chunks/         # GET all chunks (batch)
@@ -75,10 +75,10 @@ src/
 │
 ├── config/                     # Environment variable bindings (NEXT_PUBLIC_*)
 │
-├── game-client/                # All Babylon.js logic — no React inside here
+├── game-client/                # All Babylon.js logic - no React inside here
 │   ├── index.ts                # initGame / connectGame / destroyGame (async)
-│   ├── engine.ts               # GameEngine — Babylon Engine + Scene
-│   ├── camera.ts               # GameCamera — arc-rotate, player follow
+│   ├── engine.ts               # GameEngine - Babylon Engine + Scene
+│   ├── camera.ts               # GameCamera - arc-rotate, player follow
 │   ├── constants.ts            # WORLD, CAMERA, PLAYER, CHUNK_LOADING, MOVEMENT
 │   ├── entities/
 │   │   └── players.ts          # PlayerManager
@@ -91,10 +91,10 @@ src/
 │   │   ├── speed.ts
 │   │   └── waypoints.ts        # Adapts buildWaypoints from mmo-shared to Vector3 paths
 │   └── world/
-│       ├── index.ts            # GameWorld — loadRegion, loadChunk, hasChunk, reloadChunk
+│       ├── index.ts            # GameWorld - loadRegion, loadChunk, hasChunk, reloadChunk
 │       ├── loader.ts           # loadAllRegions (AbortSignal), reloadChunkFromApi
-│       ├── region.ts           # GameRegion — per-region chunk lifecycle
-│       ├── chunk.ts            # Chunk — 16×16 tile mesh grid
+│       ├── region.ts           # GameRegion - per-region chunk lifecycle
+│       ├── chunk.ts            # Chunk - 16×16 tile mesh grid
 │       ├── tile-config.ts
 │       ├── tile-height.ts
 │       └── regions/            # Chunk data files: <regionId>/<chunkX>_<chunkZ>.ts
@@ -107,7 +107,7 @@ src/
 │   └── 5-pages/
 │
 ├── types/
-│   ├── index.ts                # Barrel — re-exports all client-only types
+│   ├── index.ts                # Barrel - re-exports all client-only types
 │   └── mmo/
 │       ├── builder.ts          # BuilderRegion, BuilderRegionsResponse, BuilderSaveRequest
 │       ├── world.ts            # Region, ChunkData, Tile, TileType, TileHeight
@@ -120,7 +120,7 @@ src/
 │       └── structure.ts        # Structure, WallFace, Floor, etc.
 │
 └── utils/
-    ├── game-store.ts           # Zustand store — single store, no slices
+    ├── game-store.ts           # Zustand store - single store, no slices
     ├── ws-client.ts            # WebSocket singleton
     ├── xp.ts                   # Re-exports xpToLevel etc. from mmo-shared; maxHpFromSkills
     ├── settings.ts             # loadSettings / saveSettings / patchSettings (localStorage)
@@ -132,7 +132,7 @@ src/
     ├── builder-grid.ts
     ├── chunk-export.ts         # Generate chunk .ts file content
     ├── chunk-parse.ts          # Parse chunk .ts file back to tile data
-    ├── region-index-gen.ts     # (legacy — kept for reference)
+    ├── region-index-gen.ts     # (legacy - kept for reference)
     ├── tile-colors.ts
     ├── response.ts
     ├── site.ts
@@ -147,9 +147,9 @@ src/
 
 ```
 World
-└── Region      (named area — "spawn", "wilderness")
+└── Region      (named area - "spawn", "wilderness")
   └── Chunk     (16×16 tiles)
-    └── Tile    (single cell — type + height)
+    └── Tile    (single cell - type + height)
 ```
 
 #### Tile
@@ -170,13 +170,13 @@ Chunk files are named `<chunkX>_<chunkZ>.ts` using underscore as separator (avoi
 
 #### Region
 
-A named folder of chunk files. The folder name is the region ID. No `index.ts` — the API scans the folder directly.
+A named folder of chunk files. The folder name is the region ID. No `index.ts` - the API scans the folder directly.
 
 ### Chunk Loading
 
 On game init, `loadAllRegions` in `loader.ts` fetches the region list from `GET /api/builder/regions`, then fetches each chunk's tile data in parallel via `GET /api/builder/chunk`. An `AbortController` signal is passed through every `fetch` call so React StrictMode's double-mount does not cause a double-fetch; `AbortError` is swallowed silently.
 
-In future, chunks will stream outward from the player's spawn position (spiral pattern — `chunk-spiral.ts` is ready).
+In future, chunks will stream outward from the player's spawn position (spiral pattern - `chunk-spiral.ts` is ready).
 
 ### Chunk Hot-Reload (Dev)
 
@@ -190,7 +190,7 @@ Available at `/map-builder` in dev. Paint tiles, set heights, assign regions, sa
 
 Players move by clicking a tile. The click is snapped to tile centre and a `move` message is sent. Remote players lerp to their updated position each render frame.
 
-`buildWaypoints` from `mmo-shared` provides the shared cardinal-step path builder. The client adapts the resulting waypoints to Babylon `Vector3` paths. The server validates movement by distance only — server-side use of `buildWaypoints` for path validation is a planned addition.
+`buildWaypoints` from `mmo-shared` provides the shared cardinal-step path builder. The client adapts the resulting waypoints to Babylon `Vector3` paths. The server validates movement by distance only - server-side use of `buildWaypoints` for path validation is a planned addition.
 
 ### Player Sync
 
@@ -200,10 +200,10 @@ All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
 |---|---|---|
 | `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `skills`, `inventory`, `equipment`, `sessionToken`, `sessionExpiresAt` |
 | `world_state` | After login | Array of nearby `PlayerPresence` snapshots |
-| `player_join` | Player enters range | `player: PlayerPresence` — `id`, `uuid`, `name`, `x`, `y`, `z`, `facing` |
+| `player_join` | Player enters range | `player: PlayerPresence` - `id`, `uuid`, `name`, `x`, `y`, `z`, `facing` |
 | `player_leave` | Player exits range | `{ id }` |
-| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing, pace][] }` — `pace` at `[5]` is resolved tiles/s |
-| `player_stopped` | Move rejected or ends | `{ id, x, y, z, facing }` — authoritative correction |
+| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing, pace][] }` - `pace` at `[5]` is resolved tiles/s |
+| `player_stopped` | Move rejected or ends | `{ id, x, y, z, facing }` - authoritative correction |
 
 ### Skills
 
@@ -241,7 +241,7 @@ Auth is HTTP-only. The WS server never receives credentials.
 5. Server validates token → responds with LoginSuccessMsg (WS session begins)
 ```
 
-> **Note:** The Next.js `/api/auth/login` and `/api/auth/register` routes are not yet implemented — this is an open task. The current dev flow uses the WS `login` packet directly.
+> **Note:** The Next.js `/api/auth/login` and `/api/auth/register` routes are not yet implemented - this is an open task. The current dev flow uses the WS `login` packet directly.
 
 ---
 
@@ -265,9 +265,9 @@ Auth is HTTP-only. The WS server never receives credentials.
 All logging goes through `src/utils/logger.ts`. Raw `console.log` is **banned**.
 
 ```ts
-logger.log(...)    // general — dev only
-logger.warn(...)   // warnings — dev only
-logger.error(...)  // errors — always on
-logger.ws(...)     // WebSocket events — dev only
-logger.game(...)   // Babylon/game events — dev only
+logger.log(...)    // general - dev only
+logger.warn(...)   // warnings - dev only
+logger.error(...)  // errors - always on
+logger.ws(...)     // WebSocket events - dev only
+logger.game(...)   // Babylon/game events - dev only
 ```
