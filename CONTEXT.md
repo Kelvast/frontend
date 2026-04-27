@@ -1,17 +1,13 @@
 # CONTEXT - mmo-client
 
-> **This file is for AI assistants only.**
-> It contains dense technical context, canonical specs, and decision rules needed to work on this repo without making wrong assumptions.
-> Human-facing documentation (what this package is, how to use it, build instructions) lives in `README.md`.
+> AI assistant context only. Human docs → `README.md`. Task tracking → `TODO.md`. Build plan → `PLAN.md`.
 >
-> **File purpose split:**
-> - `CONTEXT.md` - AI context: branch rules, canonical type specs, tuple layouts, auth flow, open tasks, gotchas
-> - `README.md` - Human docs: package overview, install/build, usage examples, constants table, skills table, protocol summary
-> - `TODO.md` - Human-facing task list: outstanding work, known gaps, and planned additions visible to contributors
+> This file is the rulebook for working on this repo. It tells an AI assistant what to do, what not to do, and what to watch out for. It is not a project description.
 >
-> When updating documentation:
-> - Canonical specs (exact field names, tuple indices, union members, known caveats) → `CONTEXT.md`
-> - Overview, usage, examples, "what is this" → `README.md`
+> - `CONTEXT.md` - rules, constraints, gotchas
+> - `README.md` - overview, install/build, architecture, usage examples, constants, conventions
+> - `TODO.md` - outstanding work, known gaps
+> - `PLAN.md` - planned development and additions
 
 ---
 
@@ -59,6 +55,19 @@ const position = applyServerDelta(delta);
 - Inline comments only when logic is genuinely non-obvious
 - No file headers, no author blocks, no section dividers in application code
 - All client logging via `logger.ts` - never raw `console.log`
+
+---
+
+## Documentation Rules
+
+- Never use em dashes. Use a hyphen (-) or rewrite the sentence.
+
+- Always read the current branch files before showing any updated documentation
+- No blank line at the start or end of code blocks
+- `CONTEXT.md` contains only rules, constraints, and gotchas that change AI behaviour - not project descriptions, type explanations, or interface definitions
+- Anything that describes *what* something is belongs in code comments or `README.md`
+- Known gaps and outstanding work belong in `TODO.md` - not `CONTEXT.md`
+- Gotchas belong in inline comments at the callsite, not in `CONTEXT.md` - only add a gotcha here if it cannot be expressed in the code itself
 
 ---
 
@@ -110,7 +119,7 @@ Chunk files live under `src/game-client/world/regions/<regionId>/<chunkX>_<chunk
 All routes are dev-only (return 403 in production).
 
 | Route | Method | Description |
-|---|---|---|
+| :-- | :-- | :-- |
 | `/api/builder/regions` | GET | Lists all region folders and their chunk coords |
 | `/api/builder/chunks` | GET | Reads and parses every chunk file - returns all tile data in one response |
 | `/api/builder/chunk` | GET | Reads a single chunk file by `regionId`, `chunkX`, `chunkZ` |
@@ -150,11 +159,13 @@ Neither function uses the batch `/api/builder/chunks` endpoint - they build the 
 A dev-only tool at `/map-builder` for painting and editing the world grid.
 
 ### Grid
+
 - Renders all chunks seamlessly (no gaps) using `<canvas>` elements - one canvas per chunk, drawn with `TILE_COLORS`
 - Empty padding slots around existing chunks show as `+` placeholders for creating new chunks
 - Hover shows a brightness overlay; selected chunk shows a blue tint + outline ring
 
-### Zoom & Pan
+### Zoom \& Pan
+
 - Scroll wheel to zoom (native listener, `{ passive: false }` - not React `onWheel`)
 - Middle-click drag to pan
 - Click a chunk to focus - smooth CSS `transform: scale + translate` animates to center the chunk with context around it
@@ -163,13 +174,16 @@ A dev-only tool at `/map-builder` for painting and editing the world grid.
 - CSS transition is disabled during pan for immediate response
 
 ### `useFocusZoom` (`utils/use-focus-zoom.ts`)
+
 Manages zoom + translate state for the map builder viewport. Key behaviours:
+
 - `attachWheel(el)` - registers native wheel + mouse listeners on the viewport element
 - `focusChunk(px, pz)` - centers the given grid-relative pixel coords at the current focus zoom
 - `lastFocusZoomRef` - persists last zoom across chunk selections without triggering re-renders
 - `isPanning` - exposed as state so the CSS transition can be disabled during drag
 
 ### `useZoom` (`utils/use-zoom.ts`)
+
 Simpler standalone hook for elements that need pinch/wheel zoom without the full focus-chunk logic. Used by the map builder's tile palette panel.
 
 ---
@@ -243,7 +257,7 @@ Singleton - one `WebSocket` instance per tab. `connectWS(token?)` is the only en
 ### Inbound message routing
 
 | `data.type` | Action |
-|---|---|
+| :-- | :-- |
 | `login_success` | `hydrateLocalPlayer`, `setSession` |
 | `world_state` | `registerPlayer` for each player in snapshot - bulk viewport init on login |
 | `player_join` | `registerPlayer` |
@@ -259,7 +273,7 @@ Singleton - one `WebSocket` instance per tab. `connectWS(token?)` is the only en
 ### Outbound
 
 | Function | Packet sent |
-|---|---|
+| :-- | :-- |
 | `sendPlayerMove(x, y, z, pace)` | `{ type: "move", x, y, z, pace }` |
 | `sendPing()` | `{ type: "ping", t: Date.now() }` |
 | `sendSettings(settings)` | `{ type: "save_settings", settings }` |
@@ -328,6 +342,7 @@ The sequence from WS open to a fully populated game state:
 ```
 
 **Client responsibility boundary:**
+
 - `LoginSuccessMsg` is the only source of truth for the local player's initial state
 - `PlayerJoinMsg` / `WorldStateMsg` snapshots are the only source of truth for remote player state
 - `TickMsg` deltas are applied on top - never used to initialise a player
@@ -342,7 +357,7 @@ The sequence from WS open to a fully populated game state:
 ```
 User clicks ground tile
   → click ray-cast hits tile in Babylon scene
-  → snapToTile(hit) rounds to tile centre (planned - see Open Tasks)
+  → snapToTile(hit) rounds to tile centre (planned - see TODO)
   → buildWaypoints(fromX, fromZ, toX, toZ) from mmo-shared - cardinal-step path
   → waypoints adapted to Babylon Vector3 in game-client/movement/waypoints.ts
   → sendPlayerMove(x, y, z, pace) per step
@@ -379,7 +394,7 @@ The client currently does **no** client-side prediction. The player's displayed 
 
 ---
 
-## Navmesh & Pathfinding
+## Navmesh \& Pathfinding
 
 ### Role of the navmesh on the client
 
@@ -411,7 +426,7 @@ The navmesh is built from `ChunkData` tile arrays after world load. It is a flat
 computePath(start, destination) → waypoints[]
   ↓
 each frame:
-  advance along waypoints at the server-resolved speed (tiles/s from PlayerDelta[5])
+  advance along waypoints at the server-resolved speed (tiles/s from PlayerDelta)
   send MovePacket when crossing a tile boundary
   on player_stopped:
     clear waypoints
@@ -428,7 +443,7 @@ The client must not send move packets faster than the server tick rate - gate se
 
 ---
 
-## XP & Skills (`utils/xp.ts`)
+## XP \& Skills (`utils/xp.ts`)
 
 All XP/level maths live in `mmo-shared`. `src/utils/xp.ts` re-exports what the client needs:
 
@@ -447,7 +462,7 @@ export { xpToLevel, levelToXp, xpToNextLevel, getSkillLevel, addXp } from "mmo-s
 Types are split between this repo and `mmo-shared`:
 
 | Source | Types |
-|---|---|
+| :-- | :-- |
 | `mmo-shared` | `Skills`, `SkillId`, `Inventory`, `Equipment`, all WS message/packet types, `PlayerIdentity`, `PlayerPresence`, `Player` |
 | `src/types/mmo/player.ts` | `PlayerState`, `AnimationState` - client-only render state |
 | `src/types/mmo/game-state.ts` | `GameStoreState` - Zustand store shape |
@@ -483,7 +498,7 @@ Local player has its own `localMesh` reference (blue box). Remote players are or
 
 ---
 
-## World & Chunks (`game-client/world/`)
+## World \& Chunks (`game-client/world/`)
 
 `GameWorld` owns a `Map<string, GameRegion>` registry. Key methods:
 
@@ -525,6 +540,7 @@ Movement speed is not a client constant. The server resolves speed via `calcMove
 ## Coordinate System
 
 All game code uses world tile coordinates `(x, y, z)`:
+
 - `x` - east/west
 - `y` - floor index (integer - multi-floor support via `spatialKey`)
 - `z` - north/south
@@ -552,48 +568,3 @@ ws.send(frame);  // 10-byte ArrayBuffer
 ```
 
 Inbound binary frames are decrypted with `decrypt(wire, sessionKey, nonce)`. A `null` return (HMAC mismatch) drops the frame silently with a `logger.warn`.
-
----
-
-## Future Systems
-
-### Action & Gathering System
-
-Designed but not yet implemented. See TODO items 20–29.
-
-#### Canvas Wiring
-
-Two distinct click behaviours (TODO 20, 21):
-
-- **Ground click (no resource)** → send `move` packet with target position (TODO 20)
-- **Actionable resource click, in range** → send `action_start` packet with `action` type and `targetId` (TODO 21)
-- **Actionable resource click, out of range** → queue `move` to resource position, then send `action_start` on arrival (TODO 21)
-
-The client enforces range checks before sending any action. Resources marked as depleted (`respawnAt` set) are not clickable (TODO 28).
-
-#### Action Lifecycle
-Send action_start
-→ play gather animation loop - optimistic, do not wait for server (TODO 23)
-
-Receive action_ongoing
-→ animation continues (heartbeat, optional)
-
-Receive action_finished (any reason)
-→ stop animation loop, clear local action state (TODO 24)
-
-Receive action_finished (reason: "success", reward present)
-→ store.addXp(skillId, xp) and store.addItem(itemId, qty) (TODO 25)
-
-Receive resource_depleted
-→ mark resource unclickable in scene (TODO 26)
-
-Receive resource_available
-→ mark resource clickable in scene (TODO 27)
-
-Mirror the per-player intent queue locally to keep animations in sync with server state (TODO 22).
-
-The client never decides when an action ends. It only decides when to start the animation. `action_finished` from the server is the sole termination signal regardless of reason.
-
-#### Gather Chance Tooltip
-
-`calcGatherChance(skillLevel, equipment, resourceType)` from `mmo-shared` may be called on the client to display the success probability in a tooltip (TODO 29). It is display-only - the client result is never used for any outcome decision.
