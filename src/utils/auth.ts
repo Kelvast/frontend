@@ -1,41 +1,31 @@
-import type { EmailPassword, RegisterRequest, AuthResponse } from "mmo-shared";
-import { request, HttpError } from "./http";
+import type { AuthResponse } from "mmo-shared";
+import { browserRequest } from "./http";
 import { generateClientToken } from "./client-token";
+import { logger } from "./logger";
 
-/**
- * Sends a login request to the Next.js auth route.
- *
- * Generates a clientToken immediately before sending so it is as fresh as
- * possible. The route handler validates the token before forwarding
- * credentials to the auth service.
- *
- * @param body - Email and password credentials.
- * @returns AuthResponse — narrow on `ok` to get success or error shape.
+/*
+ * Sends an auth request to a Next.js route handler.
+ * Injects a fresh clientToken into every request — the route handler
+ * validates it before forwarding credentials to the auth service.
  */
-export async function loginRequest(body: EmailPassword): Promise<AuthResponse> {
+export async function authRequest(
+  path: string,
+  body: Record<string, string>
+): Promise<AuthResponse> {
   const clientToken = await generateClientToken();
-  return request<AuthResponse>({
+  logger.auth("→", path, { ...body, password: body.password ? "[redacted]" : undefined });
+
+  const res = await browserRequest<AuthResponse>({
     method: "POST",
-    url: "/auth/login",
+    url: path,
     data: { ...body, clientToken },
   });
-}
 
-/**
- * Sends a register request to the Next.js auth route.
- *
- * Generates a clientToken immediately before sending so it is as fresh as
- * possible. The route handler validates the token before forwarding
- * the registration payload to the auth service.
- *
- * @param body - Name, email, and password for the new account.
- * @returns AuthResponse — narrow on `ok` to get success or error shape.
- */
-export async function registerRequest(body: Omit<RegisterRequest, "clientToken">): Promise<AuthResponse> {
-  const clientToken = await generateClientToken();
-  return request<AuthResponse>({
-    method: "POST",
-    url: "/auth/register",
-    data: { ...body, clientToken },
-  });
+  if (res.ok) {
+    logger.auth("✓", path, { uuid: res.uuid, name: res.name });
+  } else {
+    logger.auth("✗", path, { message: res.message, field: res.field });
+  }
+
+  return res;
 }

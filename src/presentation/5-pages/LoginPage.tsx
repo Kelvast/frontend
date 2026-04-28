@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LoginForm from "../3-organisms/LoginForm";
 import BaseLayout from "../4-layouts/BaseLayout";
-import { loginRequest } from "../../utils/auth";
 import { useGameStore } from "../../utils/game-store";
 import { ROUTE } from "../../config";
+import { authRequest } from "../../utils/auth";
 
 interface Props {}
 
@@ -16,7 +16,7 @@ const LoginPage: FC<Props> = () => {
   const setLocalPlayer = useGameStore((s) => s.setLocalPlayer);
 
   const handleAuth = async (email: string, password: string) => {
-    const res = await loginRequest({ email, password });
+    const res = await authRequest("/api/auth/login", { email, password });
 
     if (!res.ok) {
       throw new Error(res.message);

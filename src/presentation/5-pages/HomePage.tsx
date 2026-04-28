@@ -1,7 +1,7 @@
-import { FC, memo, PropsWithChildren } from "react";
+import { FC, memo } from "react";
 import Link from "next/link";
 import BaseLayout from "../4-layouts/BaseLayout";
-import { DEV_MODE } from "../../utils/dev";
+import { ROUTE } from "../../config";
 
 interface Props {}
 
@@ -16,7 +16,7 @@ const HomePage: FC<Props> = () => {
           Next.js + Zustand + Atomic Design port complete. Login to enter the multiplayer world.
         </p>
         <Link
-          href={DEV_MODE ? "/game" : "/login"}
+          href={ROUTE.LOGIN}
           className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 rounded-2xl text-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300"
           prefetch={false}
         >
@@ -27,4 +27,4 @@ const HomePage: FC<Props> = () => {
   );
 };
 
-export default memo<PropsWithChildren<Props>>(HomePage);
+export default memo(HomePage);

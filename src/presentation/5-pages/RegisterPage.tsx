@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import RegisterForm from "../3-organisms/RegisterForm";
 import BaseLayout from "../4-layouts/BaseLayout";
-import { registerRequest } from "../../utils/auth";
 import { useGameStore } from "../../utils/game-store";
 import { ROUTE } from "../../config";
+import { authRequest } from "../../utils/auth";
 
 interface Props {}
 
@@ -16,8 +16,8 @@ const RegisterPage: FC<Props> = () => {
   const setLocalPlayer = useGameStore((s) => s.setLocalPlayer);
 
   const handleRegister = async (name: string, email: string, password: string) => {
-    const res = await registerRequest({ name, email, password });
-
+    const res = await authRequest("/api/auth/register", { name, email, password });
+    
     if (!res.ok) {
       throw new Error(res.message);
     }
