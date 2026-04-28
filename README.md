@@ -1,6 +1,8 @@
 # mmo-client
 
-Browser-based 3D MMO client. Players move around a tile-based world, interact with other players in real time, and progress through skills, combat, and quests. Built with Next.js, Babylon.js, and Zustand.
+Browser-based 3D MMO client. Built with Next.js, Babylon.js, and Zustand.
+
+For cross-repo architecture, protocol, and system documentation see mmo-docs (github.com/SamNewhouse/mmo-docs).
 
 ---
 
@@ -11,263 +13,124 @@ Browser-based 3D MMO client. Players move around a tile-based world, interact wi
 | Framework | Next.js (App Router) |
 | 3D Engine | Babylon.js 9 |
 | State | Zustand |
-| Real-time | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
-| HTTP | Axios wrapper (`http.ts`) |
-| Shared types/logic | `mmo-shared` (protocol, skills, XP, items) |
+| Real-time | WebSocket (ws-client.ts) + SSE (/api/builder/watch) |
+| HTTP | Axios wrapper (http.ts) |
+| Shared types/logic | mmo-shared |
 | Language | TypeScript - strict throughout |
-
----
-
-## Branch
-
-Active development is on feature branches off `main`. All PRs target `main`.
 
 ---
 
 ## Getting Started
 
-```bash
 npm install
 npm run dev
-```
 
-Copy `.env.example` to `.env.local` and fill in values:
+Copy .env.example to .env.local:
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_MMO_SERVER_URL` | WebSocket server - e.g. `ws://localhost:8080` |
-| `NEXT_PUBLIC_DEV_MODE` | Set `true` to enable verbose logger output and dev auto-login |
-| `NEXT_PUBLIC_DEV_EMAIL` | Dev auto-login email (dev mode only) |
-| `NEXT_PUBLIC_DEV_PASSWORD` | Dev auto-login password (dev mode only) |
+| NEXT_PUBLIC_MMO_SERVER_URL | WebSocket server - e.g. ws://localhost:8080 |
+| NEXT_PUBLIC_DEV_MODE | Set true to enable verbose logging and dev auto-login |
+| NEXT_PUBLIC_DEV_EMAIL | Dev auto-login email |
+| NEXT_PUBLIC_DEV_PASSWORD | Dev auto-login password |
 
 ---
 
 ## Scripts
 
-```bash
-npm run dev      # development server
-npm run build    # production build
-npm run start    # production server
-npm run format   # prettier format
-```
+npm run dev      - development server
+npm run build    - production build
+npm run start    - production server
+npm run format   - prettier format
 
 ---
 
 ## Folder Structure
 
-```
 src/
-├── app/
-│   ├── api/
-│   │   ├── auth/
-│   │   │   ├── login/          # POST /api/auth/login (not yet implemented - open task)
-│   │   │   └── register/       # POST /api/auth/register (not yet implemented - open task)
-│   │   └── builder/
-│   │       ├── chunk/          # GET + POST single chunk
-│   │       ├── chunks/         # GET all chunks (batch)
-│   │       ├── region/         # POST create region
-│   │       ├── regions/        # GET all regions + coords
-│   │       └── watch/          # GET SSE chunk-change stream
-│   ├── game/                   # Game page
-│   ├── login/                  # Login page
-│   ├── map-builder/            # Map builder page (dev only)
-│   └── layout.tsx
-│
-├── config/                     # Environment variable bindings (NEXT_PUBLIC_*)
-│
-├── game-client/                # All Babylon.js logic - no React inside here
-│   ├── index.ts                # initGame / connectGame / destroyGame (async)
-│   ├── engine.ts               # GameEngine - Babylon Engine + Scene
-│   ├── camera.ts               # GameCamera - arc-rotate, player follow
-│   ├── constants.ts            # WORLD, CAMERA, PLAYER, CHUNK_LOADING, MOVEMENT
-│   ├── entities/
-│   │   └── players.ts          # PlayerManager
-│   ├── input/
-│   │   ├── keys.ts
-│   │   └── pointer.ts
-│   ├── movement/
-│   │   ├── index.ts
-│   │   ├── animation.ts
-│   │   ├── speed.ts
-│   │   └── waypoints.ts        # Adapts buildWaypoints from mmo-shared to Vector3 paths
-│   └── world/
-│       ├── index.ts            # GameWorld - loadRegion, loadChunk, hasChunk, reloadChunk
-│       ├── loader.ts           # loadAllRegions (AbortSignal), reloadChunkFromApi
-│       ├── region.ts           # GameRegion - per-region chunk lifecycle
-│       ├── chunk.ts            # Chunk - 16×16 tile mesh grid
-│       ├── tile-config.ts
-│       ├── tile-height.ts
-│       └── regions/            # Chunk data files: <regionId>/<chunkX>_<chunkZ>.ts
-│
-├── presentation/
-│   ├── 1-atoms/
-│   ├── 2-molecules/
-│   ├── 3-organisms/            # GameCanvas, LoginForm, MapBuilder
-│   ├── 4-layouts/
-│   └── 5-pages/
-│
-├── types/
-│   ├── index.ts                # Barrel - re-exports all client-only types
-│   └── mmo/
-│       ├── builder.ts          # BuilderRegion, BuilderRegionsResponse, BuilderSaveRequest
-│       ├── world.ts            # Region, ChunkData, Tile, TileType, TileHeight
-│       ├── player.ts           # PlayerState, AnimationState (client render state)
-│       ├── game-state.ts       # GameStoreState (Zustand store shape)
-│       ├── entities.ts         # NPC, Interactable
-│       ├── network.ts          # LoginPayload, RegisterPayload (HTTP auth forms)
-│       ├── position.ts         # Position, ZERO_POSITION
-│       ├── settings.ts         # UserSettings, CameraSettings, DEFAULT_SETTINGS
-│       └── structure.ts        # Structure, WallFace, Floor, etc.
-│
-└── utils/
-    ├── game-store.ts           # Zustand store - single store, no slices
-    ├── ws-client.ts            # WebSocket singleton
-    ├── xp.ts                   # Re-exports xpToLevel etc. from mmo-shared; maxHpFromSkills
-    ├── settings.ts             # loadSettings / saveSettings / patchSettings (localStorage)
-    ├── http.ts                 # Axios wrapper (httpClient + request<T>)
-    ├── logger.ts               # Never use raw console.log
-    ├── use-focus-zoom.ts       # Map builder viewport zoom/pan/focus hook
-    ├── use-zoom.ts             # Standalone pinch/wheel zoom hook
-    ├── chunk-spiral.ts         # Spiral coord generator for chunk streaming
-    ├── builder-grid.ts
-    ├── chunk-export.ts         # Generate chunk .ts file content
-    ├── chunk-parse.ts          # Parse chunk .ts file back to tile data
-    ├── region-index-gen.ts     # (legacy - kept for reference)
-    ├── tile-colors.ts
-    ├── response.ts
-    ├── site.ts
-    └── dev.ts
-```
-
----
-
-## Game Systems
-
-### World Architecture
-
-```
-World
-└── Region      (named area - "spawn", "wilderness")
-  └── Chunk     (16×16 tiles)
-    └── Tile    (single cell - type + height)
-```
-
-#### Tile
-
-```ts
-Tile {
-  type: TileType   // GRASS | WATER | STONE | SAND | PATH
-  y:    TileHeight // GROUND(0) | SLOPE_LOW(0.25) | SLOPE_MID(0.5) | SLOPE_HIGH(0.75)
-                   // FIRST_FLOOR(1) | SECOND_FLOOR(2) | THIRD_FLOOR(3)
-}
-```
-
-#### Chunk
-
-A 16×16 block of tiles. Coordinates: `chunkX = Math.floor(x / 16)`, `chunkZ = Math.floor(z / 16)`.
-
-Chunk files are named `<chunkX>_<chunkZ>.ts` using underscore as separator (avoids ambiguity with negative numbers).
-
-#### Region
-
-A named folder of chunk files. The folder name is the region ID. No `index.ts` - the API scans the folder directly.
-
-### Chunk Loading
-
-On game init, `loadAllRegions` in `loader.ts` fetches the region list from `GET /api/builder/regions`, then fetches each chunk's tile data in parallel via `GET /api/builder/chunk`. An `AbortController` signal is passed through every `fetch` call so React StrictMode's double-mount does not cause a double-fetch; `AbortError` is swallowed silently.
-
-In future, chunks will stream outward from the player's spawn position (spiral pattern - `chunk-spiral.ts` is ready).
-
-### Chunk Hot-Reload (Dev)
-
-In dev, the game client holds an SSE connection to `/api/builder/watch`. When the map builder saves a chunk, the server pushes a `chunk_changed` event. The client re-fetches that chunk via `reloadChunkFromApi` and rebuilds its tile meshes without a page reload.
-
-### Map Builder
-
-Available at `/map-builder` in dev. Paint tiles, set heights, assign regions, save chunks. The world grid renders seamlessly with no gaps. Click any chunk to focus-zoom to it with surrounding context. Middle-click to pan. Scroll to zoom.
-
-### Movement
-
-Players move by clicking a tile. The click is snapped to tile centre and a `move` message is sent. Remote players lerp to their updated position each render frame.
-
-`buildWaypoints` from `mmo-shared` provides the shared cardinal-step path builder. The client adapts the resulting waypoints to Babylon `Vector3` paths. The server validates movement by distance only - server-side use of `buildWaypoints` for path validation is a planned addition.
-
-### Player Sync
-
-All WS message types are defined in `mmo-shared/src/types/protocol.ts`.
-
-| Message | When | Contains |
-|---|---|---|
-| `login_success` | On auth | `id`, `uuid`, `name`, `x/y/z`, `facing`, `skills`, `inventory`, `equipment`, `sessionToken`, `sessionExpiresAt` |
-| `world_state` | After login | Array of nearby `PlayerPresence` snapshots |
-| `player_join` | Player enters range | `player: PlayerPresence` - `id`, `uuid`, `name`, `x`, `y`, `z`, `facing` |
-| `player_leave` | Player exits range | `{ id }` |
-| `tick` | Every 300ms | `{ t, p: [id, x, y, z, facing, pace][] }` - `pace` at `[5]` is resolved tiles/s |
-| `player_stopped` | Move rejected or ends | `{ id, x, y, z, facing }` - authoritative correction |
-
-### Skills
-
-Skill XP and level logic lives in `mmo-shared`. The client holds raw XP in `PlayerState.skills` (a `Skills` record keyed by `SkillId`) and derives levels via `xpToLevel` / `getSkillLevel` imported from `mmo-shared`. Never store derived level values.
-
-The client-only `maxHpFromSkills(skills)` helper lives in `src/utils/xp.ts`:
-
-```ts
-xpToLevel(player.skills[0].xp, 0) * 10  // skill index 0 = hitpoints
-```
-
-### Settings
-
-`UserSettings` (defined in `src/types/mmo/settings.ts`) covers camera, controls, and any future user preferences. Settings are persisted to `localStorage` via `utils/settings.ts` and kept in sync with the Zustand store via `updateSettings`. On load, stored settings are merged with `DEFAULT_SETTINGS` so new keys are never missing.
-
-### Combat
-
-Tile-based. Attack if on adjacent tile. Fixed tick cycle. Death → respawn at region spawn point.
-
-### Inventory
-
-Fixed-size item grid. Pick up from / drop onto world tiles.
-
----
-
-## Auth
-
-Auth is HTTP-only. The WS server never receives credentials.
-
-```
-1. Client submits POST /api/auth/register or POST /api/auth/login (Next.js API routes)
-2. Next.js validates and proxies to the game server, returns AuthSuccessResponse
-3. Client receives sessionToken and sessionExpiresAt
-4. Client opens WS and sends ResumePacket { token }
-5. Server validates token → responds with LoginSuccessMsg (WS session begins)
-```
-
-> **Note:** The Next.js `/api/auth/login` and `/api/auth/register` routes are not yet implemented - this is an open task. The current dev flow uses the WS `login` packet directly.
-
----
-
-## Naming Conventions
-
-| Thing | Convention | Example |
-|---|---|
-| Files | `kebab-case.ts` | `game-store.ts`, `use-focus-zoom.ts` |
-| Components | `PascalCase.tsx` | `GameCanvas.tsx`, `MapBuilder.tsx` |
-| Classes | `PascalCase` | `GameEngine`, `GameRegion` |
-| Functions | `camelCase` | `initGame`, `loadChunk`, `focusChunk` |
-| Types | `PascalCase` | `Tile`, `ChunkData`, `BuilderRegion` |
-| Constants | `UPPER_SNAKE_CASE` | `CHUNK_SIZE`, `FOCUS_ZOOM` |
-| WS message types | `snake_case` strings | `login_success`, `player_join`, `tick` |
-| Zustand actions | verb-prefixed `camelCase` | `setMyId`, `registerPlayer`, `hydrateLocalPlayer` |
+  app/
+    api/
+      auth/
+        login/         POST /api/auth/login (not yet implemented)
+        register/      POST /api/auth/register (not yet implemented)
+      builder/
+        chunk/         GET + POST single chunk
+        chunks/        GET all chunks (batch)
+        region/        POST create region
+        regions/       GET all regions + coords
+        watch/         GET SSE chunk-change stream
+    game/              Game page
+    login/             Login page
+    map-builder/       Map builder page (dev only)
+    layout.tsx
+  config/              Environment variable bindings
+  game-client/         All Babylon.js logic - no React inside here
+    index.ts           initGame / connectGame / destroyGame
+    engine.ts          GameEngine
+    camera.ts          GameCamera
+    constants.ts       WORLD, CAMERA, PLAYER, CHUNK_LOADING
+    entities/
+      players.ts       PlayerManager
+    input/
+      keys.ts
+      pointer.ts
+    movement/
+      index.ts
+      animation.ts
+      speed.ts
+      waypoints.ts
+    world/
+      index.ts         GameWorld
+      loader.ts        loadAllRegions, reloadChunkFromApi
+      region.ts        GameRegion
+      chunk.ts         Chunk - 16x16 tile mesh grid
+      tile-config.ts
+      tile-height.ts
+      regions/         Chunk data files: regionId/chunkX_chunkZ.ts
+  presentation/
+    1-atoms/
+    2-molecules/
+    3-organisms/       GameCanvas, LoginForm, MapBuilder
+    4-layouts/
+    5-pages/
+  types/
+    index.ts           Barrel - re-exports all client-only types
+    mmo/
+      builder.ts
+      world.ts
+      player.ts        PlayerState, AnimationState
+      game-state.ts    GameStoreState
+      entities.ts
+      network.ts
+      position.ts
+      settings.ts      UserSettings, DEFAULT_SETTINGS
+      structure.ts
+  utils/
+    game-store.ts      Zustand store
+    ws-client.ts       WebSocket singleton
+    xp.ts              Re-exports from mmo-shared; maxHpFromSkills
+    settings.ts        loadSettings / saveSettings / patchSettings
+    http.ts            Axios wrapper
+    logger.ts
+    use-focus-zoom.ts
+    use-zoom.ts
+    chunk-spiral.ts
+    builder-grid.ts
+    chunk-export.ts
+    chunk-parse.ts
+    tile-colors.ts
+    response.ts
+    site.ts
+    dev.ts
 
 ---
 
 ## Logging
 
-All logging goes through `src/utils/logger.ts`. Raw `console.log` is **banned**.
+All logging goes through src/utils/logger.ts. Raw console.log is banned.
 
-```ts
-logger.log(...)    // general - dev only
-logger.warn(...)   // warnings - dev only
-logger.error(...)  // errors - always on
-logger.ws(...)     // WebSocket events - dev only
-logger.game(...)   // Babylon/game events - dev only
-```
+logger.log    - general (dev only)
+logger.warn   - warnings (dev only)
+logger.error  - errors (always on)
+logger.ws     - WebSocket events (dev only)
+logger.game   - Babylon/game events (dev only)

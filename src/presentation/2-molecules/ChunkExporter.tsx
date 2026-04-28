@@ -18,7 +18,7 @@ interface Props {
 
 const ChunkExporter: FC<Props> = ({ chunkData, regionId, previousRegionId, isNew, onSaved }) => {
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSave(): Promise<void> {
     setSaveState("saving");
@@ -44,12 +44,12 @@ const ChunkExporter: FC<Props> = ({ chunkData, regionId, previousRegionId, isNew
         onSaved();
       } else {
         const { error } = await res.json();
-        setErrorMsg(error ?? "Unknown error");
+        setErrorMessage(error ?? "Unknown error");
         setSaveState("error");
       }
     } catch {
       navigator.clipboard.writeText(generateChunkTs(chunkData));
-      setErrorMsg("API unavailable - copied to clipboard");
+      setErrorMessage("API unavailable - copied to clipboard");
       setSaveState("error");
     }
   }
@@ -61,7 +61,7 @@ const ChunkExporter: FC<Props> = ({ chunkData, regionId, previousRegionId, isNew
         {regionId}/{chunkData.chunkX}-{chunkData.chunkZ}.ts
       </p>
       <AddUpdateButton isNew={isNew} saveState={saveState} onSave={handleSave} />
-      <SaveStatus state={saveState} error={errorMsg} />
+      <SaveStatus state={saveState} error={errorMessage} />
     </div>
   );
 };
