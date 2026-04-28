@@ -4,10 +4,11 @@ import AuthInput from "../1-atoms/AuthInput";
 import AuthButton from "../2-molecules/AuthButton";
 
 interface Props {
-  onSubmit: (email: string, password: string) => Promise<void>;
+  onSubmit: (name: string, email: string, password: string) => Promise<void>;
 }
 
-const LoginForm: FC<Props> = ({ onSubmit }) => {
+const RegisterForm: FC<Props> = ({ onSubmit }) => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,9 +19,9 @@ const LoginForm: FC<Props> = ({ onSubmit }) => {
     setLoading(true);
     setError(null);
     try {
-      await onSubmit(email, password);
+      await onSubmit(name, email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -28,12 +29,13 @@ const LoginForm: FC<Props> = ({ onSubmit }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <AuthInput label="Name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
       <AuthInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       <AuthInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <AuthButton label="Sign in" loading={loading} />
+      <AuthButton label="Create account" loading={loading} />
     </form>
   );
 };
 
-export default memo(LoginForm);
+export default memo(RegisterForm);
