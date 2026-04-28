@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
-import type { LoginRequest, AuthSuccessResponse } from "mmo-shared";
+import type { RegisterRequest, AuthSuccessResponse } from "mmo-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { validateClientToken } from "../../../../utils/client-token";
 
 export async function POST(req: NextRequest) {
-  let body: LoginRequest;
+  let body: RegisterRequest;
   try {
     body = await req.json();
   } catch {
@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
   try {
     const data = await request<AuthSuccessResponse>({
       method: "POST",
-      url: "/auth/login",
-      data: { email: body.email, password: body.password },
+      url: "/auth/register",
+      data: { name: body.name, email: body.email, password: body.password },
     });
     return sendOk(data);
   } catch (err) {
