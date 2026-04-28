@@ -1,4 +1,4 @@
-import type { LoginSuccessMsg, PlayerJoinMsg, TickMsg } from "mmo-shared";
+import type { LoginSuccessMessage, PlayerJoinMessage, TickMessage } from "mmo-shared";
 import type { PlayerState, NearbyPlayer } from "./player";
 import type { UserSettings } from "./settings";
 
@@ -16,8 +16,8 @@ export interface GameStoreState {
   setLatency: (latency: number) => void;
   setSession: (session: { sessionToken: string; sessionExpiresAt: number }) => void;
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;
-  hydrateLocalPlayer: (msg: LoginSuccessMsg) => void;
-  registerPlayer: (msg: PlayerJoinMsg) => void;
+  hydrateLocalPlayer: (msg: LoginSuccessMessage) => void;
+  registerPlayer: (msg: PlayerJoinMessage) => void;
   unregisterPlayer: (id: number) => void;
-  applyTick: (msg: TickMsg) => void;
+  applyTick: (msg: TickMessage) => void;
 }
