@@ -2,7 +2,7 @@
 
 import { useGameStore } from "./game-store";
 import { logger } from "./logger";
-import { DEV_MODE, getDevCredentials } from "./dev";
+import { getDevCredentials } from "./dev";
 import type { UserSettings } from "../types/mmo/settings";
 
 let ws: WebSocket | null = null;
@@ -18,13 +18,11 @@ export const connectWS = (token?: string) => {
     logger.ws("Connected");
     useGameStore.getState().setConnected(true);
 
-    const dev = getDevCredentials();
-    if (dev) {
-      logger.ws("Dev mode - auto-login as", dev.email);
-      ws!.send(JSON.stringify({ type: "login", email: dev.email, pass: dev.password }));
-    } else if (token) {
+    if (token) {
       logger.ws("Resuming session with token");
       ws!.send(JSON.stringify({ type: "resume", token }));
+    } else {
+      logger.warn("connectWS called without a token - no resume packet sent");
     }
   };
 
@@ -41,34 +39,16 @@ export const connectWS = (token?: string) => {
 
     switch (data.type) {
       case "login_success":
-        // Covers login, resume, and register (server auto-logs in on register).
-        // hydrateLocalPlayer overlays the authoritative spawn position onto the
-        // base player state already set by setLocalPlayer at HTTP login.
-        // setSession stores the gameSessionToken for future WS resume.
+        // LoginSuccessMessage only carries PlayerPresence + worldName.
+        // gameSessionToken is not re-sent here - it was set by setSession
+        // immediately after the HTTP login response.
+        // hydrateLocalPlayer overlays the authoritative spawn position onto
+        // the base player state already set by setLocalPlayer at HTTP login.
         store.hydrateLocalPlayer(data);
-        store.setSession({
-          gameSessionToken: data.gameSessionToken,
-          gameSessionExpiresAt: data.gameSessionExpiresAt,
-        });
         break;
 
       case "auth_fail":
-        // In dev mode, auth failure on login means the account doesn't exist
-        // yet - auto-register so the dev loop stays frictionless.
-        if (DEV_MODE) {
-          const dev = getDevCredentials()!;
-          logger.ws("Dev mode - account not found, auto-registering");
-          ws!.send(
-            JSON.stringify({
-              type: "register",
-              name: "DevPlayer",
-              email: dev.email,
-              pass: dev.password,
-            }),
-          );
-        } else {
-          logger.error("Auth failed:", data.message);
-        }
+        logger.error("Auth failed:", data.message);
         break;
 
       case "world_state":
@@ -90,6 +70,8 @@ export const connectWS = (token?: string) => {
 
       case "player_stopped":
         // Authoritative position correction after movement ends.
+        // PlayerStoppedMessage has no pace field - fall back to walk so
+        // applyTick receives a valid ResolvedPace.
         // Wrapped as a single-entry deltas array to reuse applyTick's
         // Map-based patch logic without a separate code path.
         store.applyTick({

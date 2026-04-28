@@ -6,12 +6,14 @@ import BaseLayout from "../4-layouts/BaseLayout";
 import { loginRequest } from "../../utils/auth";
 import { useGameStore } from "../../utils/game-store";
 import { connectWS } from "../../utils/ws-client";
+import { ROUTE } from "../../config";
 
 interface Props {}
 
 const LoginPage: FC<Props> = () => {
   const router = useRouter();
   const setSession = useGameStore((s) => s.setSession);
+  const setLocalPlayer = useGameStore((s) => s.setLocalPlayer);
 
   const handleAuth = async (email: string, password: string) => {
     const res = await loginRequest({ email, password });
@@ -20,12 +22,10 @@ const LoginPage: FC<Props> = () => {
       throw new Error(res.message);
     }
 
-    setSession({
-      sessionToken: res.sessionToken,
-      sessionExpiresAt: res.sessionExpiresAt,
-    });
-    connectWS(res.sessionToken);
-    router.push("/game");
+    setLocalPlayer(res);
+    setSession(res);
+    connectWS(res.gameSessionToken);
+    router.push(ROUTE.GAME);
   };
 
   return (

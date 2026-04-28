@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import { API_URL } from "../config/variables";
+import { API_URL } from "../config";
 
 export interface HttpError extends Error {
   status?: number;

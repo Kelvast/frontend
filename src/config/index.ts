@@ -21,3 +21,10 @@ export const NEXT_PUBLIC_DEV_EMAIL: string = process.env.NEXT_PUBLIC_DEV_EMAIL!;
 /** Dev account password. Only used when NEXT_PUBLIC_DEV_MODE is true. */
 export const NEXT_PUBLIC_DEV_PASSWORD: string = process.env.NEXT_PUBLIC_DEV_PASSWORD!;
 
+export const ROUTE = {
+  HOME: "/",
+  LOGIN: "/login",
+  REGISTER: "/register",
+  DASHBOARD: "/dashboard",
+  GAME: "/game",
+} as const;
