@@ -1,13 +1,17 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import { NEXT_PUBLIC_API_URL } from "../config/variables";
+import { API_URL } from "../config/variables";
+
+export interface HttpError extends Error {
+  status?: number;
+}
 
 /**
  * Create a reusable Axios HTTP client instance.
- * - Sets the base URL from your environment config.
+ * - Sets the base URL from the server-side API_URL environment variable.
  * - Configures request timeout and standard JSON headers.
  */
 export const httpClient: AxiosInstance = axios.create({
-  baseURL: NEXT_PUBLIC_API_URL,
+  baseURL: API_URL,
   timeout: 12000,
   headers: { "Content-Type": "application/json" },
 });
@@ -18,25 +22,23 @@ export const httpClient: AxiosInstance = axios.create({
  *
  * @param config - Axios request config (method, url, data, params, etc).
  * @returns The response data, typed as generic T if provided.
- * @throws An object with `message` and `status` if the request fails.
+ * @throws An HttpError with `message` and `status` if the request fails.
  */
-export async function request<T = any>(config: AxiosRequestConfig): Promise<T> {
+export async function request<T>(config: AxiosRequestConfig): Promise<T> {
   try {
-    // Execute the HTTP request using the client
     const response = await httpClient.request<T>(config);
     return response.data;
   } catch (error) {
-    // Default error message and status
     let message = "HTTP error occurred";
-    let status;
-    // If the error is from Axios, parse for more details
+    let status: number | undefined;
+
     if (axios.isAxiosError(error)) {
       status = error.response?.status;
-      message = error.response?.data?.message || error.message;
+      message = (error.response?.data as { error?: string })?.error ?? error.message;
     } else if (error instanceof Error) {
       message = error.message;
     }
-    // Throw standardized error object for consumption by your app
-    throw Object.assign(new Error(message), { status });
+
+    throw Object.assign(new Error(message), { status }) as HttpError;
   }
 }

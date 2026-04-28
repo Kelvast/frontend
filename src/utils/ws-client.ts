@@ -29,7 +29,6 @@ export const connectWS = (token?: string) => {
   };
 
   ws.onmessage = (event: MessageEvent) => {
-    // Avoid parsing the raw string twice - parse once, type-narrow via .type.
     const data = JSON.parse(event.data as string);
 
     if (data.type !== "tick") {
@@ -43,16 +42,19 @@ export const connectWS = (token?: string) => {
     switch (data.type) {
       case "login_success":
         // Covers login, resume, and register (server auto-logs in on register).
+        // hydrateLocalPlayer overlays the authoritative spawn position onto the
+        // base player state already set by setLocalPlayer at HTTP login.
+        // setSession stores the gameSessionToken for future WS resume.
         store.hydrateLocalPlayer(data);
         store.setSession({
-          sessionToken: data.sessionToken,
-          sessionExpiresAt: data.sessionExpiresAt,
+          gameSessionToken: data.gameSessionToken,
+          gameSessionExpiresAt: data.gameSessionExpiresAt,
         });
         break;
 
       case "auth_fail":
-        // In dev mode, an auth failure on login means the account doesn't exist yet-
-        // auto-register it so the dev loop stays frictionless.
+        // In dev mode, auth failure on login means the account doesn't exist
+        // yet - auto-register so the dev loop stays frictionless.
         if (DEV_MODE) {
           const dev = getDevCredentials()!;
           logger.ws("Dev mode - account not found, auto-registering");
@@ -71,7 +73,6 @@ export const connectWS = (token?: string) => {
 
       case "world_state":
         // Initial snapshot of all players in range sent right after login.
-        // Register each one so they appear in the scene immediately.
         for (const snapshot of data.players) {
           store.registerPlayer({ type: "player_join", player: snapshot });
         }
@@ -89,11 +90,12 @@ export const connectWS = (token?: string) => {
 
       case "player_stopped":
         // Authoritative position correction after movement ends.
-        // Apply as a tick-like delta so interpolation snaps cleanly.
+        // Wrapped as a single-entry deltas array to reuse applyTick's
+        // Map-based patch logic without a separate code path.
         store.applyTick({
           type: "tick",
-          t: Date.now(),
-          p: [[data.id, data.x, data.y, data.z, data.facing]],
+          timestamp: Date.now(),
+          deltas: [{ id: data.id, x: data.x, y: data.y, z: data.z, facing: data.facing, pace: data.pace }],
         });
         break;
 
@@ -129,9 +131,9 @@ export const connectWS = (token?: string) => {
   };
 };
 
-export const sendPlayerMove = (x: number, y: number, z: number, facing: number): void => {
+export const sendPlayerMove = (x: number, y: number, z: number, pace: number): void => {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "move", x, y, z, facing }));
+    ws.send(JSON.stringify({ type: "move", x, y, z, pace }));
   } else {
     logger.warn("sendPlayerMove called but WS not open");
   }

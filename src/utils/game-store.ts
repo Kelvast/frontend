@@ -11,8 +11,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
   worldTime: 0,
   isConnected: false,
   latency: 0,
-  sessionToken: null,
-  sessionExpiresAt: null,
+  gameSessionToken: null,
+  gameSessionExpiresAt: null,
   settings: loadSettings(),
 
   setConnected: (connected) => {
@@ -22,9 +22,38 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   setLatency: (latency) => set({ latency }),
 
-  setSession: ({ sessionToken, sessionExpiresAt }) => {
-    logger.game("Session stored, expires:", new Date(sessionExpiresAt).toISOString());
-    set({ sessionToken, sessionExpiresAt });
+  setSession: ({ gameSessionToken, gameSessionExpiresAt }) => {
+    logger.game("Game session stored, expires:", new Date(gameSessionExpiresAt).toISOString());
+    set({ gameSessionToken, gameSessionExpiresAt });
+  },
+
+  /*
+   * Called immediately after a successful HTTP login or register response.
+   * AuthSuccessResponse is the only source of truth for skills, inventory,
+   * and equipment - these fields are never sent over the WS connection.
+   * Must be called before connectWS so hydrateLocalPlayer has a base to
+   * spread position onto.
+   */
+  setLocalPlayer: ({ id, uuid, name, x, y, z, facing, skills, inventory, equipment }) => {
+    const localPlayer = {
+      id,
+      uuid,
+      name,
+      x,
+      y,
+      z,
+      facing,
+      skills,
+      inventory,
+      equipment,
+      isMoving: false,
+      pace: "walk" as const,
+      lastUpdated: Date.now(),
+      animationState: "idle" as const,
+    };
+    logger.game("Local player set from HTTP - id:", id, "uuid:", uuid);
+    logger.game("HP:", maxHpFromSkills(skills));
+    set({ localPlayer });
   },
 
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
@@ -33,26 +62,34 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set({ settings: updated });
   },
 
+  /*
+   * Called on login_success. LoginSuccessMessage only carries PlayerPresence
+   * (id, uuid, name, x, y, z, facing) plus worldName. Skills, inventory, and
+   * equipment survive from setLocalPlayer - only position and id are
+   * overridden here since the WS server is authoritative for spawn position.
+   */
   hydrateLocalPlayer: (msg) => {
-    const localPlayer = {
-      id: msg.id,
-      uuid: msg.uuid,
-      name: msg.name,
-      x: msg.x,
-      y: msg.y,
-      z: msg.z,
-      facing: msg.facing,
-      skills: msg.skills,
-      inventory: msg.inventory,
-      equipment: msg.equipment,
-      isMoving: false,
-      pace: "walk" as const,
-      lastUpdated: Date.now(),
-      animationState: "idle" as const,
-    };
-    logger.game("Local player hydrated - id:", msg.id, "uuid:", msg.uuid);
-    logger.game("HP:", maxHpFromSkills(msg.skills));
-    set({ localPlayer });
+    set((state) => {
+      if (!state.localPlayer) {
+        logger.warn("hydrateLocalPlayer called before setLocalPlayer - no base state to hydrate onto");
+        return {};
+      }
+      const localPlayer = {
+        ...state.localPlayer,
+        id: msg.id,
+        x: msg.x,
+        y: msg.y,
+        z: msg.z,
+        facing: msg.facing,
+        isMoving: false,
+        pace: "walk" as const,
+        lastUpdated: Date.now(),
+        animationState: "idle" as const,
+      };
+      logger.game("Local player hydrated from login_success - id:", msg.id, "uuid:", msg.uuid);
+      logger.game("HP:", maxHpFromSkills(localPlayer.skills));
+      return { localPlayer };
+    });
   },
 
   registerPlayer: (msg) =>
@@ -83,10 +120,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
       return { nearbyPlayers: state.nearbyPlayers.filter((p) => p.id !== id) };
     }),
 
-  applyTick: ({ p }) =>
+  applyTick: ({ deltas }) =>
     set((state) => {
       const updates = new Map(
-        p.map(([id, x, y, z, facing]) => [id, { x, y, z, facing, isMoving: true }]),
+        deltas.map(({ id, x, y, z, facing, pace }) => [id, { x, y, z, facing, pace, isMoving: true }]),
       );
       return {
         nearbyPlayers: state.nearbyPlayers.map((player) => {

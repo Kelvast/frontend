@@ -1,9 +1,11 @@
-export const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
+import { NEXT_PUBLIC_DEV_MODE, NEXT_PUBLIC_DEV_EMAIL, NEXT_PUBLIC_DEV_PASSWORD } from "../config/variables";
+
+export const DEV_MODE = NEXT_PUBLIC_DEV_MODE;
 
 export function getDevCredentials() {
   if (!DEV_MODE) return null;
   return {
-    email: process.env.NEXT_PUBLIC_DEV_EMAIL ?? "dev@mmo.local",
-    password: process.env.NEXT_PUBLIC_DEV_PASSWORD ?? "devpass123",
+    email: NEXT_PUBLIC_DEV_EMAIL,
+    password: NEXT_PUBLIC_DEV_PASSWORD,
   };
 }
