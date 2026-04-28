@@ -1,22 +1,31 @@
+"use client";
 import { FC, memo, PropsWithChildren } from "react";
+import { useRouter } from "next/navigation";
 import LoginForm from "../3-organisms/LoginForm";
 import BaseLayout from "../4-layouts/BaseLayout";
+import { loginRequest } from "../../utils/auth";
+import { useGameStore } from "../../utils/game-store";
+import { connectWS } from "../../utils/ws-client";
 
 interface Props {}
 
 const LoginPage: FC<Props> = () => {
-  const handleAuth = async (username: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    const { token } = data;
-    if (token) {
-      localStorage.setItem("mmo-token", token);
-      document.cookie = `mmo-token=${token}; path=/; max-age=86400`;
+  const router = useRouter();
+  const setSession = useGameStore((s) => s.setSession);
+
+  const handleAuth = async (email: string, password: string) => {
+    const res = await loginRequest({ email, password });
+
+    if (!res.ok) {
+      throw new Error(res.message);
     }
+
+    setSession({
+      sessionToken: res.sessionToken,
+      sessionExpiresAt: res.sessionExpiresAt,
+    });
+    connectWS(res.sessionToken);
+    router.push("/game");
   };
 
   return (

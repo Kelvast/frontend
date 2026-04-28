@@ -1,34 +1,38 @@
 "use client";
-import { FC, memo, PropsWithChildren, ReactNode, useState } from "react";
+import { FC, memo, PropsWithChildren, useState } from "react";
 import LoginInput from "../../presentation/1-atoms/LoginInput";
 import LoginButton from "../../presentation/2-molecules/LoginButton";
-import { useRouter } from "next/navigation";
 
 interface Props {
-  onSubmit: (username: string, password: string) => Promise<void>;
+  onSubmit: (email: string, password: string) => Promise<void>;
 }
 
 const LoginForm: FC<Props> = ({ onSubmit }) => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await onSubmit(username, password);
-    router.push("/game");
-    setLoading(false);
+    setError(null);
+    try {
+      await onSubmit(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <LoginInput
-        label="Username"
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
         required
       />
       <LoginInput
@@ -38,6 +42,7 @@ const LoginForm: FC<Props> = ({ onSubmit }) => {
         onChange={(e) => setPassword(e.target.value)}
         required
       />
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <LoginButton loading={loading} onClick={() => {}} />
     </form>
   );
