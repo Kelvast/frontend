@@ -6,7 +6,6 @@ import RegisterForm from "../3-organisms/RegisterForm";
 import BaseLayout from "../4-layouts/BaseLayout";
 import { registerRequest } from "../../utils/auth";
 import { useGameStore } from "../../utils/game-store";
-import { connectWS } from "../../utils/ws-client";
 import { ROUTE } from "../../config";
 
 interface Props {}
@@ -25,7 +24,6 @@ const RegisterPage: FC<Props> = () => {
 
     setLocalPlayer(res);
     setSession(res);
-    connectWS(res.gameSessionToken);
     router.push(ROUTE.DASHBOARD);
   };
 
