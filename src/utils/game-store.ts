@@ -3,16 +3,17 @@ import type { GameStoreState } from "../types";
 import type { UserSettings } from "../types/mmo/settings";
 import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
-import { maxHpFromSkills } from "./xp";
+import { defaultSkills, defaultInventory, defaultEquipment } from "mmo-shared";
 
 export const useGameStore = create<GameStoreState>((set) => ({
+  identity: null,
+  gameSessionToken: null,
+  gameSessionExpiresAt: null,
   localPlayer: null,
   nearbyPlayers: [],
   worldTime: 0,
   isConnected: false,
   latency: 0,
-  gameSessionToken: null,
-  gameSessionExpiresAt: null,
   settings: loadSettings(),
 
   setConnected: (connected) => {
@@ -22,77 +23,85 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   setLatency: (latency) => set({ latency }),
 
-  setSession: ({ gameSessionToken, gameSessionExpiresAt }) => {
+  /*
+   * Stores uuid + name from the auth response. Called at login and register.
+   * This is the only thing the HTTP auth layer gives us — no game state.
+   */
+  storeIdentity: ({ uuid, name }) => {
+    logger.auth("Identity stored — uuid:", uuid, "name:", name);
+    set({ identity: { uuid, name } });
+  },
+
+  /*
+   * Stores the game session token issued by POST /api/game/session.
+   * Held in Zustand only — never written to localStorage or a cookie.
+   * Passed to connectWS() when the player clicks Play.
+   */
+  storeGameSession: ({ gameSessionToken, gameSessionExpiresAt }) => {
     logger.game("Game session stored, expires:", new Date(gameSessionExpiresAt).toISOString());
     set({ gameSessionToken, gameSessionExpiresAt });
   },
 
   /*
-   * Called immediately after a successful HTTP login or register response.
-   * AuthSuccessResponse is the only source of truth for skills, inventory,
-   * and equipment - these fields are never sent over the WS connection.
-   * Must be called before connectWS so hydrateLocalPlayer has a base to
-   * spread position onto.
+   * Handles login_success. LoginSuccessMessage carries PlayerPresence only
+   * (id, uuid, name, x, y, z, facing) — skills, inventory, and equipment are
+   * not on the WS message. We build a full PlayerState by merging the
+   * authoritative position from the message with identity from the store.
+   * Default skills/inventory/equipment are used until a future player_state
+   * message (or protocol change) brings the real values.
    */
-  setLocalPlayer: ({ id, uuid, name, x, y, z, facing, skills, inventory, equipment }) => {
-    const localPlayer = {
-      id,
-      uuid,
-      name,
-      x,
-      y,
-      z,
-      facing,
-      skills,
-      inventory,
-      equipment,
-      isMoving: false,
-      pace: "walk" as const,
-      lastUpdated: Date.now(),
-      animationState: "idle" as const,
-    };
-    logger.game("Local player set from HTTP - id:", id, "uuid:", uuid);
-    logger.game("HP:", maxHpFromSkills(skills));
-    set({ localPlayer });
-  },
-
-  updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
-    const updated = patchSettings(key, value);
-    logger.game(`Settings updated - ${key}:`, value);
-    set({ settings: updated });
-  },
-
-  /*
-   * Called on login_success. LoginSuccessMessage only carries PlayerPresence
-   * (id, uuid, name, x, y, z, facing) plus worldName. Skills, inventory, and
-   * equipment survive from setLocalPlayer - only position and id are
-   * overridden here since the WS server is authoritative for spawn position.
-   */
-  hydrateLocalPlayer: (msg) => {
+  onLoginSuccess: (msg) => {
     set((state) => {
-      if (!state.localPlayer) {
-        logger.warn("hydrateLocalPlayer called before setLocalPlayer - no base state to hydrate onto");
-        return {};
+      if (!state.identity) {
+        logger.warn("onLoginSuccess called before storeIdentity — identity missing");
       }
       const localPlayer = {
-        ...state.localPlayer,
         id: msg.id,
+        uuid: state.identity?.uuid ?? msg.uuid,
+        name: state.identity?.name ?? msg.name,
         x: msg.x,
         y: msg.y,
         z: msg.z,
         facing: msg.facing,
+        skills: defaultSkills(),
+        inventory: defaultInventory(),
+        equipment: defaultEquipment(),
         isMoving: false,
         pace: "walk" as const,
         lastUpdated: Date.now(),
         animationState: "idle" as const,
       };
-      logger.game("Local player hydrated from login_success - id:", msg.id, "uuid:", msg.uuid);
-      logger.game("HP:", maxHpFromSkills(localPlayer.skills));
+      logger.game("Local player ready — id:", msg.id, "uuid:", localPlayer.uuid);
       return { localPlayer };
     });
   },
 
-  registerPlayer: (msg) =>
+  /*
+   * Handles world_state. Replaces nearbyPlayers with the initial snapshot
+   * of all players visible to this client on entry.
+   */
+  onWorldState: ({ players }) => {
+    set({
+      nearbyPlayers: players.map((p) => ({
+        id: p.id,
+        name: p.name,
+        x: p.x,
+        y: p.y,
+        z: p.z,
+        facing: p.facing,
+        isMoving: false,
+        lastUpdated: Date.now(),
+        animationState: "idle" as const,
+      })),
+    });
+    logger.game("World state received — players in range:", players.length);
+  },
+
+  /*
+   * Handles player_join. Upserts the player into nearbyPlayers — if the id
+   * already exists (e.g. stale entry) it is replaced, otherwise appended.
+   */
+  onPlayerJoin: (msg) =>
     set((state) => {
       const player = {
         id: msg.player.id,
@@ -105,7 +114,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         lastUpdated: Date.now(),
         animationState: "idle" as const,
       };
-      logger.game("Player registered - id:", msg.player.id, "name:", msg.player.name);
+      logger.game("Player joined — id:", msg.player.id, "name:", msg.player.name);
       const exists = state.nearbyPlayers.some((p) => p.id === msg.player.id);
       return {
         nearbyPlayers: exists
@@ -114,13 +123,20 @@ export const useGameStore = create<GameStoreState>((set) => ({
       };
     }),
 
-  unregisterPlayer: (id) =>
+  /*
+   * Handles player_leave. Removes the player from nearbyPlayers by session id.
+   */
+  onPlayerLeave: ({ id }) =>
     set((state) => {
-      logger.game("Player unregistered - id:", id);
+      logger.game("Player left — id:", id);
       return { nearbyPlayers: state.nearbyPlayers.filter((p) => p.id !== id) };
     }),
 
-  applyTick: ({ deltas }) =>
+  /*
+   * Handles tick. Applies movement deltas to nearbyPlayers using a Map for
+   * O(1) lookup per player. Players absent from deltas are unchanged.
+   */
+  onTick: ({ deltas }) =>
     set((state) => {
       const updates = new Map(
         deltas.map(({ id, x, y, z, facing, pace }) => [id, { x, y, z, facing, pace, isMoving: true }]),
@@ -133,4 +149,21 @@ export const useGameStore = create<GameStoreState>((set) => ({
         }),
       };
     }),
+
+  /*
+   * Handles player_stopped. Snaps the player to the server-authoritative
+   * final position to correct any interpolation drift from the tick stream.
+   */
+  onPlayerStopped: ({ id, x, y, z, facing }) =>
+    set((state) => ({
+      nearbyPlayers: state.nearbyPlayers.map((p) =>
+        p.id === id ? { ...p, x, y, z, facing, isMoving: false, lastUpdated: Date.now() } : p,
+      ),
+    })),
+
+  updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
+    const updated = patchSettings(key, value);
+    logger.game(`Settings updated - ${key}:`, value);
+    set({ settings: updated });
+  },
 }));

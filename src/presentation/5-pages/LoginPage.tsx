@@ -12,8 +12,7 @@ interface Props {}
 
 const LoginPage: FC<Props> = () => {
   const router = useRouter();
-  const setSession = useGameStore((s) => s.setSession);
-  const setLocalPlayer = useGameStore((s) => s.setLocalPlayer);
+  const storeIdentity = useGameStore((s) => s.storeIdentity);
 
   const handleAuth = async (email: string, password: string) => {
     const res = await authRequest("/api/auth/login", { email, password });
@@ -22,8 +21,7 @@ const LoginPage: FC<Props> = () => {
       throw new Error(res.message);
     }
 
-    setLocalPlayer(res);
-    setSession(res);
+    storeIdentity({ uuid: res.uuid, name: res.name });
     router.push(ROUTE.DASHBOARD);
   };
 

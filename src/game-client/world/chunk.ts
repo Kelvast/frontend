@@ -62,7 +62,9 @@ export class Chunk {
       merged.isPickable = false;
       this.meshes = [merged];
     } else {
-      tileMeshes.forEach((m) => { m.isPickable = false; });
+      tileMeshes.forEach((m) => {
+        m.isPickable = false;
+      });
       this.meshes = tileMeshes;
     }
 
@@ -101,7 +103,9 @@ export class Chunk {
         const label = this._makeCoordLabel(
           chunkX * WORLD.CHUNK_SIZE + col,
           chunkZ * WORLD.CHUNK_SIZE + row,
-          worldX, worldY, worldZ,
+          worldX,
+          worldY,
+          worldZ,
           `label-${chunkX}-${chunkZ}-${col}-${row}`,
         );
         this.devMeshes.push(label);
@@ -124,14 +128,21 @@ export class Chunk {
   }
 
   private _makeCoordLabel(
-    tileX: number, tileZ: number,
-    worldX: number, worldY: number, worldZ: number,
+    tileX: number,
+    tileZ: number,
+    worldX: number,
+    worldY: number,
+    worldZ: number,
     name: string,
   ): Mesh {
     const resolution = 128;
     const lineHeight = 28;
 
-    const tex = new DynamicTexture(`tex-${name}`, { width: resolution, height: resolution }, this.scene);
+    const tex = new DynamicTexture(
+      `tex-${name}`,
+      { width: resolution, height: resolution },
+      this.scene,
+    );
     tex.hasAlpha = true;
 
     const ctx = tex.getContext();
@@ -145,7 +156,11 @@ export class Chunk {
     ctx.fillText(lz, (resolution - ctx.measureText(lz).width) / 2, resolution / 2 + lineHeight / 2);
     tex.update();
 
-    const plane = MeshBuilder.CreateGround(name, { width: WORLD.TILE_SIZE * 0.9, height: WORLD.TILE_SIZE * 0.9 }, this.scene);
+    const plane = MeshBuilder.CreateGround(
+      name,
+      { width: WORLD.TILE_SIZE * 0.9, height: WORLD.TILE_SIZE * 0.9 },
+      this.scene,
+    );
     plane.position = new Vector3(worldX, worldY + 0.003, worldZ);
     plane.isPickable = false;
 

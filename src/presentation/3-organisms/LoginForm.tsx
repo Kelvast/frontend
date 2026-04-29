@@ -28,8 +28,20 @@ const LoginForm: FC<Props> = ({ onSubmit }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <AuthInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <AuthInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+      <AuthInput
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <AuthInput
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <AuthButton label="Sign in" loading={loading} />
     </form>

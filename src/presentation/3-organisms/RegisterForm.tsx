@@ -29,9 +29,27 @@ const RegisterForm: FC<Props> = ({ onSubmit }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <AuthInput label="Name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-      <AuthInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <AuthInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+      <AuthInput
+        label="Name"
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <AuthInput
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <AuthInput
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <AuthButton label="Create account" loading={loading} />
     </form>

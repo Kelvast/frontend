@@ -12,18 +12,16 @@ interface Props {}
 
 const RegisterPage: FC<Props> = () => {
   const router = useRouter();
-  const setSession = useGameStore((s) => s.setSession);
-  const setLocalPlayer = useGameStore((s) => s.setLocalPlayer);
+  const storeIdentity = useGameStore((s) => s.storeIdentity);
 
   const handleRegister = async (name: string, email: string, password: string) => {
     const res = await authRequest("/api/auth/register", { name, email, password });
-    
+
     if (!res.ok) {
       throw new Error(res.message);
     }
 
-    setLocalPlayer(res);
-    setSession(res);
+    storeIdentity({ uuid: res.uuid, name: res.name });
     router.push(ROUTE.DASHBOARD);
   };
 

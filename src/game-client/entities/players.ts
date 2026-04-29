@@ -90,7 +90,10 @@ export class PlayerManager {
       this.onArrival?.(arrTileX, arrTileZ);
     });
 
-    logger.game("Moving", { to: { tileX, tileZ, worldX: destWorldX, worldZ: destWorldZ }, steps: waypoints.length });
+    logger.game("Moving", {
+      to: { tileX, tileZ, worldX: destWorldX, worldZ: destWorldZ },
+      steps: waypoints.length,
+    });
   }
 
   getLocalPlayer(): AbstractMesh | null {

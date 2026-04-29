@@ -2,7 +2,6 @@
 
 import { useGameStore } from "./game-store";
 import { logger } from "./logger";
-import { getDevCredentials } from "./dev";
 import type { UserSettings } from "../types/mmo/settings";
 
 let ws: WebSocket | null = null;
@@ -39,12 +38,7 @@ export const connectWS = (token?: string) => {
 
     switch (data.type) {
       case "login_success":
-        // LoginSuccessMessage only carries PlayerPresence + worldName.
-        // gameSessionToken is not re-sent here - it was set by setSession
-        // immediately after the HTTP login response.
-        // hydrateLocalPlayer overlays the authoritative spawn position onto
-        // the base player state already set by setLocalPlayer at HTTP login.
-        store.hydrateLocalPlayer(data);
+        store.onLoginSuccess(data);
         break;
 
       case "auth_fail":
@@ -52,33 +46,21 @@ export const connectWS = (token?: string) => {
         break;
 
       case "world_state":
-        // Initial snapshot of all players in range sent right after login.
-        for (const snapshot of data.players) {
-          store.registerPlayer({ type: "player_join", player: snapshot });
-        }
+        store.onWorldState(data);
         break;
 
       case "player_join":
         logger.ws("Player joined - id:", data.player.id, "name:", data.player.name);
-        store.registerPlayer(data);
+        store.onPlayerJoin(data);
         break;
 
       case "player_leave":
         logger.ws("Player left - id:", data.id);
-        store.unregisterPlayer(data.id);
+        store.onPlayerLeave(data);
         break;
 
       case "player_stopped":
-        // Authoritative position correction after movement ends.
-        // PlayerStoppedMessage has no pace field - fall back to walk so
-        // applyTick receives a valid ResolvedPace.
-        // Wrapped as a single-entry deltas array to reuse applyTick's
-        // Map-based patch logic without a separate code path.
-        store.applyTick({
-          type: "tick",
-          timestamp: Date.now(),
-          deltas: [{ id: data.id, x: data.x, y: data.y, z: data.z, facing: data.facing, pace: data.pace }],
-        });
+        store.onPlayerStopped(data);
         break;
 
       case "pong":
@@ -86,7 +68,7 @@ export const connectWS = (token?: string) => {
         break;
 
       case "tick":
-        store.applyTick(data);
+        store.onTick(data);
         break;
 
       case "logout_success":

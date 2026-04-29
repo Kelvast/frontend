@@ -10,7 +10,7 @@ import { logger } from "./logger";
  */
 export async function authRequest(
   path: string,
-  body: Record<string, string>
+  body: Record<string, string>,
 ): Promise<AuthResponse> {
   const clientToken = await generateClientToken();
   logger.auth("→", path, { ...body, password: body.password ? "[redacted]" : undefined });
