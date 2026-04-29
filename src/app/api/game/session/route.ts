@@ -4,6 +4,7 @@ import type { GameSession } from "mmo-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { COOKIE } from "../../../../config";
+import { logger } from "../../../../utils/logger";
 
 /*
  * POST /api/game/session
@@ -42,10 +43,15 @@ export async function POST(_req: NextRequest) {
     const status = (err as HttpError).status ?? 502;
     const message = err instanceof Error ? err.message : "Game session unavailable";
 
-    if (status === 401) {
-      return sendError("Session expired, please log in again", 401);
-    }
+    logger.error(`[game/session] upstream error ${status}: ${message}`);
 
-    return sendError(message, status);
+    if (status === 401) return sendError("Session expired, please log in again", 401);
+
+    /*
+     * Any non-401 upstream error (400, 500, 502, network failure) is an
+     * infrastructure problem, not a client error. Always return 502 so the
+     * browser doesn't misinterpret an internal server bug as a bad request.
+     */
+    return sendError("Game session unavailable", 502);
   }
 }

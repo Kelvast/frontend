@@ -39,13 +39,17 @@ function handleAxiosError(error: unknown): never {
 export const httpClient: AxiosInstance = axios.create({
   baseURL: API_URL,
   timeout: 12000,
-  headers: { "Content-Type": "application/json" },
 });
 
 export async function request<T>(config: AxiosRequestConfig): Promise<T> {
+  const headers = {
+    ...(config.data !== undefined ? { "Content-Type": "application/json" } : {}),
+    ...config.headers,
+  };
+
   logger.http("→", config.method?.toUpperCase(), config.url);
   try {
-    const response = await httpClient.request<T>(config);
+    const response = await httpClient.request<T>({ ...config, headers });
     logger.http("✓", config.method?.toUpperCase(), config.url, response.status);
     return response.data;
   } catch (error) {
