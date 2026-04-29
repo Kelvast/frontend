@@ -28,3 +28,7 @@ export const ROUTE = {
   DASHBOARD: "/dashboard",
   GAME: "/game",
 } as const;
+
+export const COOKIE = {
+  AUTH_TOKEN: "mmo_auth_token",
+} as const;

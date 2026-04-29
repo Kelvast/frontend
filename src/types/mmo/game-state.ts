@@ -53,6 +53,7 @@ export interface GameStoreState {
    * inventory are not on the WS message.
    */
   onLoginSuccess: (msg: LoginSuccessMessage) => void;
+  onLogout: () => Promise<void>;
   /** Handles world_state. Populates nearbyPlayers from the initial snapshot. */
   onWorldState: (msg: WorldStateMessage) => void;
   /** Handles player_join. Adds or updates a single player in nearbyPlayers. */

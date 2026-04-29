@@ -4,6 +4,7 @@ import type { RegisterRequest, AuthSuccessResponse } from "mmo-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { validateClientToken } from "../../../../utils/client-token";
+import { COOKIE } from "../../../../config";
 
 export async function POST(req: NextRequest) {
   let body: RegisterRequest;
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set("authToken", data.authToken, {
+    cookieStore.set(COOKIE.AUTH_TOKEN, data.authToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

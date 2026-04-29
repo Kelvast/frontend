@@ -76,6 +76,19 @@ export const useGameStore = create<GameStoreState>((set) => ({
     });
   },
 
+  onLogout: async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    set({
+      identity: null,
+      gameSessionToken: null,
+      gameSessionExpiresAt: null,
+      localPlayer: null,
+      nearbyPlayers: [],
+      isConnected: false,
+    });
+    logger.auth("Logged out — identity and session cleared");
+  },
+
   /*
    * Handles world_state. Replaces nearbyPlayers with the initial snapshot
    * of all players visible to this client on entry.
