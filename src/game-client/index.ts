@@ -7,6 +7,11 @@ import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
 import { loadAllRegions } from "./world/loader";
 import { createDevWatcher } from "./dev-watcher";
+import { connectWS } from "../utils/ws-client";
+import { browserRequest, HttpError } from "../utils/http";
+import { useGameStore } from "../utils/game-store";
+import { DEV_MODE } from "../utils/dev";
+import type { GameSessionResponse } from "mmo-shared";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -65,8 +70,58 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
   return true;
 }
 
-export function connectGame(_token?: string): void {
-  logger.game("connectGame called - server connection not yet implemented");
+/*
+ * Resolves the game session token then opens the WS connection.
+ *
+ * In dev mode: skips token fetch, connects immediately (server handles
+ * dev auth via the login packet).
+ *
+ * In production:
+ *   - Token already in store (player came from dashboard or is still in
+ *     the same session): connect immediately.
+ *   - No token (direct URL, bookmark, page reload): fetch a fresh one
+ *     from POST /api/game/session using the authToken cookie. A 401
+ *     means the cookie is gone - the player must log in again.
+ */
+export async function connectGame(): Promise<void> {
+  if (DEV_MODE) {
+    logger.game("Dev mode - connecting without session token");
+    connectWS();
+    return;
+  }
+
+  const store = useGameStore.getState();
+  const existing = store.gameSessionToken;
+
+  if (existing) {
+    logger.game("Session token found in store - connecting");
+    connectWS(existing);
+    return;
+  }
+
+  logger.game("No session token - requesting new game session");
+
+  try {
+    const res = await browserRequest<GameSessionResponse>({
+      method: "POST",
+      url: "/api/game/session",
+    });
+
+    if (!res.ok) {
+      logger.error("Game session request failed:", res.message);
+      return;
+    }
+
+    store.storeGameSession(res);
+    connectWS(res.gameSessionToken);
+  } catch (err) {
+    if ((err as HttpError).status === 401) {
+      logger.warn("Session request returned 401 - redirecting to login");
+      window.location.href = "/login";
+      return;
+    }
+    logger.error("Failed to obtain game session:", err instanceof Error ? err.message : err);
+  }
 }
 
 export function destroyGame(): void {

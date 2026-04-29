@@ -1,20 +1,22 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import type { GameSessionResponse } from "mmo-shared";
+import type { GameSession } from "mmo-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { COOKIE } from "../../../../config";
 
 /*
- * Issues a short-lived game session token for the authenticated player.
+ * POST /api/game/session
  *
- * Called by DashboardPage when the player clicks Play. Reads the authToken
- * HttpOnly cookie set at login - the player must already be authenticated.
- * Forwards the token to the upstream auth service which validates it and
- * returns a GameSession (gameSessionToken + gameSessionExpiresAt).
+ * Validates the player's authToken cookie with the upstream API and returns a
+ * short-lived gameSessionToken for opening a WebSocket connection.
  *
- * The response is held in Zustand only - never persisted to localStorage
- * or a cookie. Passed to connectWS() to open the WS connection.
+ * The authToken cookie is HttpOnly and never readable by the browser. This
+ * route acts as the secure bridge - the browser posts here, we forward the
+ * cookie value server-side, and return only the game session payload.
+ *
+ * On success: { ok: true, gameSessionToken, gameSessionExpiresAt }
+ * On failure: { ok: false, message }
  */
 export async function POST(_req: NextRequest) {
   const cookieStore = await cookies();
@@ -25,15 +27,25 @@ export async function POST(_req: NextRequest) {
   }
 
   try {
-    const data = await request<GameSessionResponse>({
+    const data = await request<GameSession>({
       method: "POST",
       url: "/game/session",
       headers: { Authorization: `Bearer ${authToken}` },
     });
-    return sendOk(data);
+
+    return sendOk({
+      ok: true,
+      gameSessionToken: data.gameSessionToken,
+      gameSessionExpiresAt: data.gameSessionExpiresAt,
+    });
   } catch (err) {
     const status = (err as HttpError).status ?? 502;
-    const message = err instanceof Error ? err.message : "Auth service unavailable";
+    const message = err instanceof Error ? err.message : "Game session unavailable";
+
+    if (status === 401) {
+      return sendError("Session expired, please log in again", 401);
+    }
+
     return sendError(message, status);
   }
 }
