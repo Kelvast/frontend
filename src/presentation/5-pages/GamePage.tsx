@@ -45,7 +45,7 @@ const GamePage: FC<Props> = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [gameSessionToken, storeGameSession, router]);
 
   if (tokenState === "pending") return null;
 
