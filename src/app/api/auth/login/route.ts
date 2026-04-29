@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import type { LoginRequest, AuthSuccessResponse } from "mmo-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
@@ -22,7 +23,17 @@ export async function POST(req: NextRequest) {
       url: "/auth/login",
       data: { email: body.email, password: body.password },
     });
-    return sendOk(data);
+
+    const cookieStore = await cookies();
+    cookieStore.set("authToken", data.authToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: Math.floor((data.authExpiresAt - Date.now()) / 1000),
+    });
+
+    return sendOk({ ok: true, uuid: data.uuid, name: data.name });
   } catch (err) {
     const status = (err as HttpError).status ?? 502;
     const message = err instanceof Error ? err.message : "Auth service unavailable";
