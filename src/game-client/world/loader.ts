@@ -36,7 +36,7 @@ async function fetchAllRegions(signal: AbortSignal): Promise<Region[]> {
             pvp: false,
             tiles: tiles ?? [],
             objects: [],
-            npcSpawns: []
+            npcSpawns: [],
           };
           return [`${c.chunkX},${c.chunkZ}`, chunk] as const;
         }),
@@ -70,5 +70,13 @@ export async function reloadChunkFromApi(
     logger.game(`reloadChunkFromApi - failed to fetch chunk ${chunkX},${chunkZ} in "${regionId}"`);
     return;
   }
-  world.reloadChunk({ chunkX, chunkZ, region: regionId, pvp: false, tiles, objects: [], npcSpawns: [] });
+  world.reloadChunk({
+    chunkX,
+    chunkZ,
+    region: regionId,
+    pvp: false,
+    tiles,
+    objects: [],
+    npcSpawns: [],
+  });
 }

@@ -24,9 +24,7 @@ const LoginPage: FC<Props> = () => {
   return (
     <BaseLayout width="narrow" centered>
       <div className="w-full">
-        <h1 className="text-2xl font-bold text-center text-[var(--color-text)] mb-6">
-          Sign in
-        </h1>
+        <h1 className="text-2xl font-bold text-center text-[var(--color-text)] mb-6">Sign in</h1>
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-[var(--shadow-md)]">
           <LoginForm onSubmit={handleAuth} />
           <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">

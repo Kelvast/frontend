@@ -3,10 +3,10 @@ import { FC, memo, PropsWithChildren, ReactNode } from "react";
 type Width = "narrow" | "default" | "wide" | "full";
 
 const WIDTH_CLASSES: Record<Width, string> = {
-  narrow:  "max-w-sm",
+  narrow: "max-w-sm",
   default: "max-w-5xl",
-  wide:    "max-w-7xl",
-  full:    "max-w-full",
+  wide: "max-w-7xl",
+  full: "max-w-full",
 };
 
 interface Props {
@@ -32,9 +32,7 @@ const BaseLayout: FC<Props> = ({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className={`w-full ${WIDTH_CLASSES[width]} mx-auto px-4`}>
-        {children}
-      </div>
+      <div className={`w-full ${WIDTH_CLASSES[width]} mx-auto px-4`}>{children}</div>
     </div>
   );
 };

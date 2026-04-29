@@ -152,7 +152,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
   onTick: ({ deltas }) =>
     set((state) => {
       const updates = new Map(
-        deltas.map(({ id, x, y, z, facing, pace }) => [id, { x, y, z, facing, pace, isMoving: true }]),
+        deltas.map(({ id, x, y, z, facing, pace }) => [
+          id,
+          { x, y, z, facing, pace, isMoving: true },
+        ]),
       );
       return {
         nearbyPlayers: state.nearbyPlayers.map((player) => {
