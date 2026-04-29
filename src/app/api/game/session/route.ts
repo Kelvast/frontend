@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import type { GameSessionResponse } from "mmo-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
+import { COOKIE } from "../../../../config";
 
 /*
  * Issues a short-lived game session token for the authenticated player.
@@ -17,7 +18,7 @@ import { sendOk, sendError } from "../../../../utils/response";
  */
 export async function POST(_req: NextRequest) {
   const cookieStore = await cookies();
-  const authToken = cookieStore.get("authToken")?.value;
+  const authToken = cookieStore.get(COOKIE.AUTH_TOKEN)?.value;
 
   if (!authToken) {
     return sendError("Not authenticated", 401);
