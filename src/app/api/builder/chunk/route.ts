@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     if (!filePath) return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
 
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, generateChunkTs({ chunkX, chunkZ, region: regionId, pvp, tiles }));
+    fs.writeFileSync(filePath, generateChunkTs({ chunkX, chunkZ, region: regionId, pvp, tiles, objects: [], npcSpawns: [] }));
 
     if (previousRegionId && previousRegionId !== regionId) {
       const oldPath = safeChunkPath(previousRegionId, chunkX, chunkZ);

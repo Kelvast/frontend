@@ -27,9 +27,9 @@ export const useGameStore = create<GameStoreState>((set) => ({
    * Stores uuid + name from the auth response. Called at login and register.
    * This is the only thing the HTTP auth layer gives us — no game state.
    */
-  storeIdentity: ({ uuid, name }) => {
-    logger.auth("Identity stored — uuid:", uuid, "name:", name);
-    set({ identity: { uuid, name } });
+  storeIdentity: ({ uuid, playerName }) => {
+    logger.auth("Identity stored — uuid:", uuid, "playerName:", playerName);
+    set({ identity: { uuid, playerName } });
   },
 
   /*
@@ -58,7 +58,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
       const localPlayer = {
         id: msg.id,
         uuid: state.identity?.uuid ?? msg.uuid,
-        name: state.identity?.name ?? msg.name,
+        playerName: state.identity?.playerName ?? msg.playerName,
         x: msg.x,
         y: msg.y,
         z: msg.z,
@@ -84,7 +84,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set({
       nearbyPlayers: players.map((p) => ({
         id: p.id,
-        name: p.name,
+        playerName: p.playerName,
         x: p.x,
         y: p.y,
         z: p.z,
@@ -105,7 +105,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((state) => {
       const player = {
         id: msg.player.id,
-        name: msg.player.name,
+        playerName: msg.player.playerName,
         x: msg.player.x,
         y: msg.player.y,
         z: msg.player.z,
@@ -114,7 +114,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         lastUpdated: Date.now(),
         animationState: "idle" as const,
       };
-      logger.game("Player joined — id:", msg.player.id, "name:", msg.player.name);
+      logger.game("Player joined — id:", msg.player.id, "playerName:", msg.player.playerName);
       const exists = state.nearbyPlayers.some((p) => p.id === msg.player.id);
       return {
         nearbyPlayers: exists

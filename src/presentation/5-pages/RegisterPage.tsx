@@ -7,6 +7,7 @@ import BaseLayout from "../4-layouts/BaseLayout";
 import { useGameStore } from "../../utils/game-store";
 import { ROUTE } from "../../config";
 import { authRequest } from "../../utils/auth";
+import { RegisterRequest } from "mmo-shared";
 
 interface Props {}
 
@@ -14,26 +15,27 @@ const RegisterPage: FC<Props> = () => {
   const router = useRouter();
   const storeIdentity = useGameStore((s) => s.storeIdentity);
 
-  const handleRegister = async (name: string, email: string, password: string) => {
-    const res = await authRequest("/api/auth/register", { name, email, password });
-
-    if (!res.ok) {
-      throw new Error(res.message);
-    }
-
-    storeIdentity({ uuid: res.uuid, name: res.name });
+  const handleRegister = async (playerName: string, email: string, password: string) => {
+    const res = await authRequest("/api/auth/register", { playerName, email, password });
+    if (!res.ok) throw new Error(res.message);
+    storeIdentity({ uuid: res.uuid, playerName: res.playerName });
     router.push(ROUTE.DASHBOARD);
   };
 
   return (
-    <BaseLayout className="bg-gradient-to-br from-blue-50 to-indigo-100 justify-center items-center p-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">Create account</h1>
-        <div className="bg-white p-8 rounded-2xl shadow-xl">
+    <BaseLayout width="narrow" centered>
+      <div className="w-full">
+        <h1 className="text-2xl font-bold text-center text-[var(--color-text)] mb-6">
+          Create account
+        </h1>
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-8 shadow-[var(--shadow-md)]">
           <RegisterForm onSubmit={handleRegister} />
-          <p className="mt-4 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
             Already have an account?{" "}
-            <Link href={ROUTE.LOGIN} className="text-indigo-600 hover:underline font-medium">
+            <Link
+              href={ROUTE.LOGIN}
+              className="text-[var(--color-accent)] hover:underline font-medium"
+            >
               Sign in
             </Link>
           </p>

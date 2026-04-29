@@ -75,7 +75,7 @@ const ChunkEditorPanel: FC<Props> = ({
     });
   }
 
-  const chunkData: ChunkData = { chunkX, chunkZ, region: regionId, pvp: false, tiles };
+  const chunkData: ChunkData = { chunkX, chunkZ, region: regionId, pvp: false, tiles, objects: [], npcSpawns: [] };
 
   return (
     <div className="flex flex-col gap-4 p-4">

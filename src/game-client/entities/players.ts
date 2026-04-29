@@ -9,10 +9,11 @@ import {
 } from "@babylonjs/core";
 import { PLAYER } from "../constants";
 import { WORLD } from "mmo-shared";
-import { buildWaypoints, buildMoveAnimation } from "../movement";
 import { tileWorldY } from "../world/tile-height";
 import { GameWorld } from "../world";
 import { logger } from "../../utils/logger";
+import { buildMoveAnimation } from "../movement/animation";
+import { buildWaypoints } from "../movement/waypoints";
 
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;

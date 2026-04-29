@@ -15,7 +15,7 @@ const DashboardPage: FC<Props> = () => {
     <BaseLayout className="bg-gray-950 text-white justify-center items-center p-8">
       <div className="w-full max-w-lg text-center">
         {identity && (
-          <p className="text-gray-400 mb-6">Welcome back, {identity.name}</p>
+          <p className="text-gray-400 mb-6">Welcome back, {identity.playerName}</p>
         )}
         <button
           onClick={() => router.push(ROUTE.GAME)}

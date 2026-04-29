@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       maxAge: Math.floor((data.authExpiresAt - Date.now()) / 1000),
     });
 
-    return sendOk({ ok: true, uuid: data.uuid, name: data.name });
+    return sendOk({ ok: true, uuid: data.uuid, playerName: data.playerName });
   } catch (err) {
     const status = (err as HttpError).status ?? 502;
     const message = err instanceof Error ? err.message : "Auth service unavailable";

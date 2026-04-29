@@ -3,6 +3,26 @@
 :root {
   --font-heading: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg:          #0e0f11;
+  --color-surface:     #161820;
+  --color-surface-2:   #1e2028;
+  --color-border:      rgba(255, 255, 255, 0.08);
+
+  --color-text:        #e8e9ec;
+  --color-text-muted:  #8b8d97;
+  --color-text-faint:  #4a4c57;
+
+  --color-accent:      #f0a500;
+  --color-accent-hover:#ffb822;
+
+  --color-danger:      #e5484d;
+  --color-danger-hover:#f2666b;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
 body,
@@ -11,22 +31,16 @@ textarea,
 button,
 select {
   font-family: var(--font-body);
+  color: var(--color-text);
+  background-color: var(--color-bg);
 }
 
-h1,
-h2,
-h3,
-h4,
-.font-heading {
+h1, h2, h3, h4, .font-heading {
   font-family: var(--font-heading);
 }
 
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-border);
   }
 }

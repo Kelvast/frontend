@@ -22,7 +22,7 @@ export async function authRequest(
   });
 
   if (res.ok) {
-    logger.auth("✓", path, { uuid: res.uuid, name: res.name });
+    logger.auth("✓", path, { uuid: res.uuid, name: res.playerName });
   } else {
     logger.auth("✗", path, { message: res.message, field: res.field });
   }
