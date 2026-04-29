@@ -15,7 +15,7 @@ export interface GameStoreState {
   // ── Identity & sessions ──────────────────────────────────────────────────
   /** Stable uuid + name from AuthSuccessResponse. Set at login, survives navigation. */
   identity: PlayerIdentity | null;
-  /** Short-lived token issued by POST /api/game/session. Zustand only — never persisted. */
+  /** Short-lived token issued by POST /api/game/session. Zustand only - never persisted. */
   gameSessionToken: string | null;
   /** Unix ms expiry for gameSessionToken. Check against Date.now() before calling connectWS. */
   gameSessionExpiresAt: number | null;
@@ -49,7 +49,7 @@ export interface GameStoreState {
    * Handles login_success. Merges the server-authoritative PlayerPresence
    * (id, x, y, z, facing) with the identity already in the store (uuid, name)
    * and default game state (skills, inventory, equipment) to produce a full
-   * PlayerState. LoginSuccessMessage only carries PlayerPresence — skills and
+   * PlayerState. LoginSuccessMessage only carries PlayerPresence - skills and
    * inventory are not on the WS message.
    */
   onLoginSuccess: (msg: LoginSuccessMessage) => void;

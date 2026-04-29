@@ -5,7 +5,7 @@ import { logger } from "./logger";
 
 /*
  * Sends an auth request to a Next.js route handler.
- * Injects a fresh clientToken into every request — the route handler
+ * Injects a fresh clientToken into every request - the route handler
  * validates it before forwarding credentials to the auth service.
  */
 export async function authRequest(

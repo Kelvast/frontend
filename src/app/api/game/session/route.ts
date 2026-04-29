@@ -9,11 +9,11 @@ import { COOKIE } from "../../../../config";
  * Issues a short-lived game session token for the authenticated player.
  *
  * Called by DashboardPage when the player clicks Play. Reads the authToken
- * HttpOnly cookie set at login — the player must already be authenticated.
+ * HttpOnly cookie set at login - the player must already be authenticated.
  * Forwards the token to the upstream auth service which validates it and
  * returns a GameSession (gameSessionToken + gameSessionExpiresAt).
  *
- * The response is held in Zustand only — never persisted to localStorage
+ * The response is held in Zustand only - never persisted to localStorage
  * or a cookie. Passed to connectWS() to open the WS connection.
  */
 export async function POST(_req: NextRequest) {

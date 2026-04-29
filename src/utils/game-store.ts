@@ -25,16 +25,16 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   /*
    * Stores uuid + name from the auth response. Called at login and register.
-   * This is the only thing the HTTP auth layer gives us — no game state.
+   * This is the only thing the HTTP auth layer gives us - no game state.
    */
   storeIdentity: ({ uuid, playerName }) => {
-    logger.auth("Identity stored — uuid:", uuid, "playerName:", playerName);
+    logger.auth("Identity stored - uuid:", uuid, "playerName:", playerName);
     set({ identity: { uuid, playerName } });
   },
 
   /*
    * Stores the game session token issued by POST /api/game/session.
-   * Held in Zustand only — never written to localStorage or a cookie.
+   * Held in Zustand only - never written to localStorage or a cookie.
    * Passed to connectWS() when the player clicks Play.
    */
   storeGameSession: ({ gameSessionToken, gameSessionExpiresAt }) => {
@@ -44,7 +44,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   /*
    * Handles login_success. LoginSuccessMessage carries PlayerPresence only
-   * (id, uuid, name, x, y, z, facing) — skills, inventory, and equipment are
+   * (id, uuid, name, x, y, z, facing) - skills, inventory, and equipment are
    * not on the WS message. We build a full PlayerState by merging the
    * authoritative position from the message with identity from the store.
    * Default skills/inventory/equipment are used until a future player_state
@@ -53,7 +53,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
   onLoginSuccess: (msg) => {
     set((state) => {
       if (!state.identity) {
-        logger.warn("onLoginSuccess called before storeIdentity — identity missing");
+        logger.warn("onLoginSuccess called before storeIdentity - identity missing");
       }
       const localPlayer = {
         id: msg.id,
@@ -71,7 +71,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         lastUpdated: Date.now(),
         animationState: "idle" as const,
       };
-      logger.game("Local player ready — id:", msg.id, "uuid:", localPlayer.uuid);
+      logger.game("Local player ready - id:", msg.id, "uuid:", localPlayer.uuid);
       return { localPlayer };
     });
   },
@@ -86,7 +86,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
       nearbyPlayers: [],
       isConnected: false,
     });
-    logger.auth("Logged out — identity and session cleared");
+    logger.auth("Logged out - identity and session cleared");
   },
 
   /*
@@ -107,11 +107,11 @@ export const useGameStore = create<GameStoreState>((set) => ({
         animationState: "idle" as const,
       })),
     });
-    logger.game("World state received — players in range:", players.length);
+    logger.game("World state received - players in range:", players.length);
   },
 
   /*
-   * Handles player_join. Upserts the player into nearbyPlayers — if the id
+   * Handles player_join. Upserts the player into nearbyPlayers - if the id
    * already exists (e.g. stale entry) it is replaced, otherwise appended.
    */
   onPlayerJoin: (msg) =>
@@ -127,7 +127,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         lastUpdated: Date.now(),
         animationState: "idle" as const,
       };
-      logger.game("Player joined — id:", msg.player.id, "playerName:", msg.player.playerName);
+      logger.game("Player joined - id:", msg.player.id, "playerName:", msg.player.playerName);
       const exists = state.nearbyPlayers.some((p) => p.id === msg.player.id);
       return {
         nearbyPlayers: exists
@@ -141,7 +141,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
    */
   onPlayerLeave: ({ id }) =>
     set((state) => {
-      logger.game("Player left — id:", id);
+      logger.game("Player left - id:", id);
       return { nearbyPlayers: state.nearbyPlayers.filter((p) => p.id !== id) };
     }),
 

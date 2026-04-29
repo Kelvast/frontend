@@ -9,7 +9,7 @@ export interface HttpError extends Error {
 /*
  * Extracts a normalised error from any Axios failure and re-throws it as
  * an HttpError with a `status` property. Typed as `never` so TypeScript
- * knows the call site always throws — no return value is possible.
+ * knows the call site always throws - no return value is possible.
  */
 function handleAxiosError(error: unknown): never {
   let message = "HTTP error occurred";
@@ -18,10 +18,10 @@ function handleAxiosError(error: unknown): never {
   if (axios.isAxiosError(error)) {
     status = error.response?.status;
     message = (error.response?.data as { error?: string })?.error ?? error.message;
-    logger.error(`HTTP ${status ?? "?"} —`, message);
+    logger.error(`HTTP ${status ?? "?"} -`, message);
   } else if (error instanceof Error) {
     message = error.message;
-    logger.error("HTTP error —", message);
+    logger.error("HTTP error -", message);
   }
 
   throw Object.assign(new Error(message), { status }) as HttpError;
@@ -30,7 +30,7 @@ function handleAxiosError(error: unknown): never {
 /*
  * Server-side Axios client.
  *
- * baseURL is API_URL (process.env.API_URL) — a server-only env var that is
+ * baseURL is API_URL (process.env.API_URL) - a server-only env var that is
  * never prefixed with NEXT_PUBLIC_ and is therefore never bundled into the
  * browser. Only import `request` from route handlers and other server-only
  * modules. Importing this in browser code will result in API_URL being
@@ -56,7 +56,7 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
 /*
  * Browser-side Axios client.
  *
- * No baseURL — paths resolve relative to the current page origin, so
+ * No baseURL - paths resolve relative to the current page origin, so
  * `/api/auth/login` always hits the Next.js route handler regardless of
  * environment. Use `browserRequest` from client-side utils that need to
  * call Next.js API routes. Never use this in route handlers or any

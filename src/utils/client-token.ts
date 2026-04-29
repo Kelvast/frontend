@@ -10,7 +10,7 @@ const TOKEN_PARTS = 3;
  *
  * Format: {nonce}.{timestamp}.{hash}
  *
- * Browser-only — relies on window.crypto.subtle and navigator.userAgent.
+ * Browser-only - relies on window.crypto.subtle and navigator.userAgent.
  * Call immediately before submitting an auth form, never at render time.
  */
 export async function generateClientToken(): Promise<string> {
@@ -35,7 +35,7 @@ export async function generateClientToken(): Promise<string> {
  *   - Contains a valid numeric timestamp
  *   - Has not exceeded the TOKEN_TTL_MS expiry window
  *
- * Does not reproduce the hash — structure and expiry are sufficient to reject
+ * Does not reproduce the hash - structure and expiry are sufficient to reject
  * automated scripts that omit or malform the token.
  *
  * @param token - The clientToken string from the request body.

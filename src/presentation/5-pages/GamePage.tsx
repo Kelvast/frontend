@@ -26,7 +26,7 @@ const GamePage: FC<Props> = () => {
     }
 
     /*
-     * Token already in store — player returned to /game without a page
+     * Token already in store - player returned to /game without a page
      * reload. Skip the session request and connect immediately.
      */
     if (gameSessionToken) {
@@ -36,7 +36,7 @@ const GamePage: FC<Props> = () => {
     }
 
     /*
-     * No token in store — request a fresh game session. browserRequest
+     * No token in store - request a fresh game session. browserRequest
      * throws an HttpError on non-2xx; a 401 means the authToken cookie is
      * absent or expired so we redirect to login. Any other failure shows
      * the inline error state.
