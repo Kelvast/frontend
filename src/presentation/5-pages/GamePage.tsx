@@ -3,6 +3,7 @@ import { FC, memo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import GameCanvas from "../3-organisms/GameCanvas";
 import BaseLayout from "../4-layouts/BaseLayout";
+import Spinner from "../1-atoms/Spinner";
 import { useGameStore } from "../../utils/game-store";
 import { browserRequest, HttpError } from "../../utils/http";
 import { ROUTE } from "../../config";
@@ -47,7 +48,13 @@ const GamePage: FC<Props> = () => {
     };
   }, [gameSessionToken, storeGameSession, router]);
 
-  if (tokenState === "pending") return null;
+  if (tokenState === "pending") {
+    return (
+      <BaseLayout centered className="bg-black">
+        <Spinner size="md" />
+      </BaseLayout>
+    );
+  }
 
   if (tokenState === "error") {
     return (

@@ -50,7 +50,7 @@ export const connectWS = (token?: string) => {
         break;
 
       case "player_join":
-        logger.ws("Player joined - id:", data.player.id, "name:", data.player.name);
+        logger.ws("Player joined - id:", data.player.id, "name:", data.player.playerName);
         store.onPlayerJoin(data);
         break;
 

@@ -17,7 +17,7 @@ function handleAxiosError(error: unknown): never {
 
   if (axios.isAxiosError(error)) {
     status = error.response?.status;
-    message = (error.response?.data as { error?: string })?.error ?? error.message;
+    message = (error.response?.data as { message?: string })?.message ?? error.message;
     logger.error(`HTTP ${status ?? "?"} -`, message);
   } else if (error instanceof Error) {
     message = error.message;

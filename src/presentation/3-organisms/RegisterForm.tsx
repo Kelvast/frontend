@@ -58,9 +58,9 @@ const RegisterForm: FC<Props> = ({ onSubmit }) => {
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
       <Input
-        label="Name"
+        label="Player Name"
         type="text"
-        autoComplete="playerName"
+        autoComplete="username"
         value={playerName}
         onChange={(e) => setName(e.target.value)}
         error={fieldErrors.playerName}

@@ -7,7 +7,6 @@ import BaseLayout from "../4-layouts/BaseLayout";
 import { useGameStore } from "../../utils/game-store";
 import { ROUTE } from "../../config";
 import { authRequest } from "../../utils/auth";
-import { RegisterRequest } from "mmo-shared";
 
 interface Props {}
 
