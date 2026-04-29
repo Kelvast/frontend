@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import type { LoginRequest, AuthSuccessResponse } from "mmo-shared";
+import type { RegisterRequest, AuthSuccessResponse } from "mmo-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { validateClientToken } from "../../../../utils/client-token";
 import { COOKIE } from "../../../../config";
 
 export async function POST(req: NextRequest) {
-  let body: LoginRequest;
+  let body: RegisterRequest;
   try {
     body = await req.json();
   } catch {
@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
   try {
     const data = await request<AuthSuccessResponse>({
       method: "POST",
-      url: "/auth/login",
-      data: { email: body.email, password: body.password },
+      url: "/auth/register",
+      data: { playerName: body.playerName, email: body.email, password: body.password },
     });
 
     const cookieStore = await cookies();

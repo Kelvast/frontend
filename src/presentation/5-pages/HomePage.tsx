@@ -1,30 +1,27 @@
-import { FC, memo, PropsWithChildren } from "react";
+import { FC, memo } from "react";
 import Link from "next/link";
 import BaseLayout from "../4-layouts/BaseLayout";
-import { DEV_MODE } from "../../utils/dev";
+import Button from "../1-atoms/Button";
+import { ROUTE } from "../../config";
 
 interface Props {}
 
 const HomePage: FC<Props> = () => {
   return (
-    <BaseLayout className="bg-gradient-to-r from-gray-50 to-blue-50">
-      <div className="py-20 px-4 text-center">
-        <h1 className="text-6xl md:text-7xl font-black bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-8">
-          Babylon.js MMO
+    <BaseLayout centered>
+      <div className="text-center">
+        <h1 className="font-heading text-5xl md:text-6xl font-black text-[var(--color-text)] mb-4 tracking-tight">
+          MMO
         </h1>
-        <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-          Next.js + Zustand + Atomic Design port complete. Login to enter the multiplayer world.
+        <p className="text-[var(--color-text-muted)] text-base mb-10 leading-relaxed max-w-sm mx-auto">
+          A multiplayer world built on Babylon.js, Next.js, and WebSockets. Sign in to enter.
         </p>
-        <Link
-          href={DEV_MODE ? "/game" : "/login"}
-          className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 rounded-2xl text-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300"
-          prefetch={false}
-        >
-          Play Now →
+        <Link href={ROUTE.LOGIN} prefetch={false}>
+          <Button size="lg">Play Now</Button>
         </Link>
       </div>
     </BaseLayout>
   );
 };
 
-export default memo<PropsWithChildren<Props>>(HomePage);
+export default memo(HomePage);

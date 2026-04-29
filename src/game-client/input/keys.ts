@@ -1,6 +1,5 @@
 import { Scene } from "@babylonjs/core";
 import { GameCamera } from "../camera";
-import { CAMERA } from "../constants";
 import { logger } from "../../utils/logger";
 
 export class KeysInput {

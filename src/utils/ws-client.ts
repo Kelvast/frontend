@@ -2,7 +2,6 @@
 
 import { useGameStore } from "./game-store";
 import { logger } from "./logger";
-import { DEV_MODE, getDevCredentials } from "./dev";
 import type { UserSettings } from "../types/mmo/settings";
 
 let ws: WebSocket | null = null;
@@ -18,18 +17,15 @@ export const connectWS = (token?: string) => {
     logger.ws("Connected");
     useGameStore.getState().setConnected(true);
 
-    const dev = getDevCredentials();
-    if (dev) {
-      logger.ws("Dev mode - auto-login as", dev.email);
-      ws!.send(JSON.stringify({ type: "login", email: dev.email, pass: dev.password }));
-    } else if (token) {
+    if (token) {
       logger.ws("Resuming session with token");
       ws!.send(JSON.stringify({ type: "resume", token }));
+    } else {
+      logger.warn("connectWS called without a token - no resume packet sent");
     }
   };
 
   ws.onmessage = (event: MessageEvent) => {
-    // Avoid parsing the raw string twice - parse once, type-narrow via .type.
     const data = JSON.parse(event.data as string);
 
     if (data.type !== "tick") {
@@ -42,59 +38,29 @@ export const connectWS = (token?: string) => {
 
     switch (data.type) {
       case "login_success":
-        // Covers login, resume, and register (server auto-logs in on register).
-        store.hydrateLocalPlayer(data);
-        store.setSession({
-          sessionToken: data.sessionToken,
-          sessionExpiresAt: data.sessionExpiresAt,
-        });
+        store.onLoginSuccess(data);
         break;
 
       case "auth_fail":
-        // In dev mode, an auth failure on login means the account doesn't exist yet-
-        // auto-register it so the dev loop stays frictionless.
-        if (DEV_MODE) {
-          const dev = getDevCredentials()!;
-          logger.ws("Dev mode - account not found, auto-registering");
-          ws!.send(
-            JSON.stringify({
-              type: "register",
-              name: "DevPlayer",
-              email: dev.email,
-              pass: dev.password,
-            }),
-          );
-        } else {
-          logger.error("Auth failed:", data.message);
-        }
+        logger.error("Auth failed:", data.message);
         break;
 
       case "world_state":
-        // Initial snapshot of all players in range sent right after login.
-        // Register each one so they appear in the scene immediately.
-        for (const snapshot of data.players) {
-          store.registerPlayer({ type: "player_join", player: snapshot });
-        }
+        store.onWorldState(data);
         break;
 
       case "player_join":
-        logger.ws("Player joined - id:", data.player.id, "name:", data.player.name);
-        store.registerPlayer(data);
+        logger.ws("Player joined - id:", data.player.id, "name:", data.player.playerName);
+        store.onPlayerJoin(data);
         break;
 
       case "player_leave":
         logger.ws("Player left - id:", data.id);
-        store.unregisterPlayer(data.id);
+        store.onPlayerLeave(data);
         break;
 
       case "player_stopped":
-        // Authoritative position correction after movement ends.
-        // Apply as a tick-like delta so interpolation snaps cleanly.
-        store.applyTick({
-          type: "tick",
-          t: Date.now(),
-          p: [[data.id, data.x, data.y, data.z, data.facing]],
-        });
+        store.onPlayerStopped(data);
         break;
 
       case "pong":
@@ -102,7 +68,7 @@ export const connectWS = (token?: string) => {
         break;
 
       case "tick":
-        store.applyTick(data);
+        store.onTick(data);
         break;
 
       case "logout_success":
@@ -129,9 +95,9 @@ export const connectWS = (token?: string) => {
   };
 };
 
-export const sendPlayerMove = (x: number, y: number, z: number, facing: number): void => {
+export const sendPlayerMove = (x: number, y: number, z: number, pace: number): void => {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "move", x, y, z, facing }));
+    ws.send(JSON.stringify({ type: "move", x, y, z, pace }));
   } else {
     logger.warn("sendPlayerMove called but WS not open");
   }

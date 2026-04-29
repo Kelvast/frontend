@@ -1,8 +1,4 @@
-import {
-  PointerEventTypes,
-  PointerInfo,
-  Scene,
-} from "@babylonjs/core";
+import { PointerEventTypes, PointerInfo, Scene } from "@babylonjs/core";
 import { PlayerManager } from "../entities/players";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
@@ -31,13 +27,16 @@ export class PointerInput {
     const button = (pi.event as PointerEvent).button;
     if (button !== 0) return;
 
-    const pick = this.scene.pick(
-      this.scene.pointerX,
-      this.scene.pointerY,
-      (mesh) => mesh.name.startsWith("grid-"),
+    const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) =>
+      mesh.name.startsWith("grid-"),
     );
 
-    if (DEV_MODE) logger.game("POINTERDOWN", { hit: pick.hit, mesh: pick.pickedMesh?.name ?? null, point: pick.pickedPoint });
+    if (DEV_MODE)
+      logger.game("POINTERDOWN", {
+        hit: pick.hit,
+        mesh: pick.pickedMesh?.name ?? null,
+        point: pick.pickedPoint,
+      });
 
     if (!pick.hit || !pick.pickedPoint) {
       if (DEV_MODE) logger.game("Click missed - no grid mesh hit");

@@ -36,23 +36,36 @@ export function buildTileMesh(
   const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * s + half;
 
   const yNW = cornerY(tiles, row, col, -1, -1);
-  const yNE = cornerY(tiles, row, col, -1,  1);
-  const ySW = cornerY(tiles, row, col,  1, -1);
-  const ySE = cornerY(tiles, row, col,  1,  1);
+  const yNE = cornerY(tiles, row, col, -1, 1);
+  const ySW = cornerY(tiles, row, col, 1, -1);
+  const ySE = cornerY(tiles, row, col, 1, 1);
 
   // vertices are ±half around origin so position lands on tile centre
-  const positions: number[] = [-half, yNW, -half,  half, yNE, -half,  half, ySE, half,  -half, ySW, half];
-  const indices:   number[] = [0, 1, 2,  0, 2, 3];
-  const uvs:       number[] = [0, 1,  1, 1,  1, 0,  0, 0];
-  const normals:   number[] = [];
+  const positions: number[] = [
+    -half,
+    yNW,
+    -half,
+    half,
+    yNE,
+    -half,
+    half,
+    ySE,
+    half,
+    -half,
+    ySW,
+    half,
+  ];
+  const indices: number[] = [0, 1, 2, 0, 2, 3];
+  const uvs: number[] = [0, 1, 1, 1, 1, 0, 0, 0];
+  const normals: number[] = [];
 
   VertexData.ComputeNormals(positions, indices, normals);
 
   const vertexData = new VertexData();
   vertexData.positions = positions;
-  vertexData.indices   = indices;
-  vertexData.normals   = normals;
-  vertexData.uvs       = uvs;
+  vertexData.indices = indices;
+  vertexData.normals = normals;
+  vertexData.uvs = uvs;
 
   const mesh = new Mesh(`tile-${chunkX}-${chunkZ}-${col}-${row}`, scene);
   vertexData.applyToMesh(mesh);

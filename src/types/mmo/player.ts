@@ -1,5 +1,4 @@
-import type { Direction, Player } from "mmo-shared";
-import type { MovementType } from "../../game-client/movement";
+import type { Direction, MovementType, Player } from "mmo-shared";
 
 export type AnimationState = MovementType | "idle" | "attacking";
 
@@ -23,7 +22,7 @@ export interface PlayerState extends Player {
  */
 export interface NearbyPlayer {
   id: number;
-  name: string;
+  playerName: string;
   x: number;
   y: number;
   z: number;

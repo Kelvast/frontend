@@ -2,24 +2,24 @@ import { TileHeight, TileType, TileData } from "mmo-shared";
 
 export const TILE_COLORS: Record<TileType, string> = {
   grass: "#4a7c3f",
-  dirt:  "#9b7040",
+  dirt: "#9b7040",
   stone: "#7a7a72",
   water: "#2a5fa8",
-  sand:  "#c8b068",
-  wood:  "#7a5230",
-  road:  "#6b5e48",
+  sand: "#c8b068",
+  wood: "#7a5230",
+  road: "#6b5e48",
 };
 
 export const HEIGHT_TINT: Record<TileHeight, number> = {
-  [TileHeight.GROUND]:         1.0,
-  [TileHeight.SLOPE_LOW]:      0.96,
-  [TileHeight.SLOPE_LOW_MID]:  0.93,
-  [TileHeight.SLOPE_MID]:      0.97,
+  [TileHeight.GROUND]: 1.0,
+  [TileHeight.SLOPE_LOW]: 0.96,
+  [TileHeight.SLOPE_LOW_MID]: 0.93,
+  [TileHeight.SLOPE_MID]: 0.97,
   [TileHeight.SLOPE_MID_HIGH]: 1.03,
-  [TileHeight.SLOPE_HIGH]:     1.07,
-  [TileHeight.FIRST_FLOOR]:    1.12,
-  [TileHeight.SECOND_FLOOR]:   1.16,
-  [TileHeight.THIRD_FLOOR]:    1.2,
+  [TileHeight.SLOPE_HIGH]: 1.07,
+  [TileHeight.FIRST_FLOOR]: 1.12,
+  [TileHeight.SECOND_FLOOR]: 1.16,
+  [TileHeight.THIRD_FLOOR]: 1.2,
 };
 
 export function applyHeightTintHex(hex: string, y: TileHeight): string {

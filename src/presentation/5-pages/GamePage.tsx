@@ -1,54 +1,82 @@
 "use client";
-import { FC, memo, PropsWithChildren, useEffect, useState } from "react";
+import { FC, memo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import GameCanvas from "../3-organisms/GameCanvas";
 import BaseLayout from "../4-layouts/BaseLayout";
-import { DEV_MODE } from "../../utils/dev";
+import Spinner from "../1-atoms/Spinner";
+import { useGameStore } from "../../utils/game-store";
+import { browserRequest, HttpError } from "../../utils/http";
+import { ROUTE } from "../../config";
+import type { GameSessionResponse } from "mmo-shared";
+
+type TokenState = "pending" | "ready" | "error";
 
 interface Props {}
 
 const GamePage: FC<Props> = () => {
-  const [token, setToken] = useState<string>("");
-  const [ready, setReady] = useState(false);
   const router = useRouter();
+  const gameSessionToken = useGameStore((s) => s.gameSessionToken);
+  const storeGameSession = useGameStore((s) => s.storeGameSession);
+  const [tokenState, setTokenState] = useState<TokenState>(gameSessionToken ? "ready" : "pending");
 
   useEffect(() => {
-    if (DEV_MODE) {
-      setReady(true);
+    if (gameSessionToken) {
+      setTokenState("ready");
       return;
     }
 
-    const storedToken =
-      localStorage.getItem("mmo-token") ||
-      document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("mmo-token="))
-        ?.split("=")[1];
+    let cancelled = false;
 
-    if (!storedToken) {
-      router.push("/login");
-      return;
-    }
+    browserRequest<GameSessionResponse>({ method: "POST", url: "/api/game/session" })
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok) throw new Error(res.message ?? "Could not start game session");
+        storeGameSession(res);
+        setTokenState("ready");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if ((err as HttpError).status === 401) {
+          router.replace(ROUTE.LOGIN);
+          return;
+        }
+        setTokenState("error");
+      });
 
-    setToken(storedToken);
-    setReady(true);
-  }, [router]);
+    return () => {
+      cancelled = true;
+    };
+  }, [gameSessionToken, storeGameSession, router]);
 
-  if (!ready) {
+  if (tokenState === "pending") {
     return (
-      <BaseLayout className="bg-black">
-        <div className="flex items-center justify-center min-h-screen text-white text-xl">
-          Loading game...
-        </div>
+      <BaseLayout centered className="bg-black">
+        <Spinner size="md" />
+      </BaseLayout>
+    );
+  }
+
+  if (tokenState === "error") {
+    return (
+      <BaseLayout centered className="bg-black">
+        <p className="text-[var(--color-text-muted)] text-sm">
+          Failed to start session.{" "}
+          <button
+            className="underline text-[var(--color-text)]"
+            onClick={() => router.push(ROUTE.DASHBOARD)}
+          >
+            Go back
+          </button>
+        </p>
       </BaseLayout>
     );
   }
 
   return (
     <BaseLayout className="bg-black">
-      <GameCanvas token={token} />
+      <GameCanvas />
     </BaseLayout>
   );
 };
 
-export default memo<PropsWithChildren<Props>>(GamePage);
+export default memo(GamePage);

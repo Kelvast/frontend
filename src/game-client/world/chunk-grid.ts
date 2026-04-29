@@ -10,11 +10,7 @@ export function buildChunkGrid(chunkX: number, chunkZ: number, scene: Scene): Me
     scene,
   );
 
-  grid.position = new Vector3(
-    chunkX * size + size / 2,
-    0.01,
-    chunkZ * size + size / 2,
-  );
+  grid.position = new Vector3(chunkX * size + size / 2, 0.01, chunkZ * size + size / 2);
 
   grid.isVisible = false;
   grid.isPickable = true;

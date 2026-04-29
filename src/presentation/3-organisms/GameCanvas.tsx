@@ -1,13 +1,8 @@
 "use client";
-
 import { useEffect, useRef } from "react";
 import { initGame, connectGame, destroyGame } from "../../game-client";
 
-interface GameCanvasProps {
-  token: string;
-}
-
-const GameCanvas = ({ token }: GameCanvasProps) => {
+const GameCanvas = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -17,14 +12,14 @@ const GameCanvas = ({ token }: GameCanvasProps) => {
     const controller = new AbortController();
 
     initGame(canvas, controller.signal).then((started) => {
-      if (started) connectGame(token);
+      if (started) connectGame();
     });
 
     return () => {
       controller.abort();
       destroyGame();
     };
-  }, [token]);
+  }, []);
 
   return (
     <canvas

@@ -6,4 +6,6 @@ export const logger = {
   error: (...args: unknown[]) => console.error("[MMO]", ...args),
   ws: (...args: unknown[]) => isDev && console.log("[WS]", ...args),
   game: (...args: unknown[]) => isDev && console.log("[GAME]", ...args),
+  auth: (...args: unknown[]) => isDev && console.log("[AUTH]", ...args),
+  http: (...args: unknown[]) => isDev && console.log("[HTTP]", ...args),
 } as const;

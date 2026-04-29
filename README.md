@@ -63,7 +63,7 @@ src/
     login/             Login page
     map-builder/       Map builder page (dev only)
     layout.tsx
-  config/              Environment variable bindings
+  config/              Environment and config variable bindings
   game-client/         All Babylon.js logic - no React inside here
     index.ts           initGame / connectGame / destroyGame
     engine.ts          GameEngine
