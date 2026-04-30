@@ -7,7 +7,7 @@ import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
 import { loadAllRegions } from "./world/loader";
 import { createDevWatcher } from "./dev-watcher";
-import { connectWS } from "../utils/ws-client";
+import { connectWS } from "../ws";
 import { browserRequest, HttpError } from "../utils/http";
 import { useGameStore } from "../utils/game-store";
 import { DEV_MODE } from "../utils/dev";
