@@ -7,11 +7,17 @@ import { PointerInput } from "./input/pointer";
 import { logger } from "../utils/logger";
 import { loadAllRegions } from "./world/loader";
 import { createDevWatcher } from "./dev-watcher";
-import { connectWS } from "../utils/ws-client";
+import { connectWS } from "../ws";
 import { browserRequest, HttpError } from "../utils/http";
+import { generateClientToken } from "../utils/client-token";
 import { useGameStore } from "../utils/game-store";
-import { DEV_MODE } from "../utils/dev";
-import type { GameSessionResponse } from "mmo-shared";
+import { DEV_MODE, getDevCredentials } from "../utils/dev";
+import type {
+  AuthSuccessResponse,
+  LoginRequest,
+  GameSessionResponse,
+  AuthResponse,
+} from "mmo-shared";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -73,8 +79,10 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
 /*
  * Resolves the game session token then opens the WS connection.
  *
- * In dev mode: skips token fetch, connects immediately (server handles
- * dev auth via the login packet).
+ * In dev mode: auto-logs in using NEXT_PUBLIC_DEV_EMAIL and
+ * NEXT_PUBLIC_DEV_PASSWORD, fetches a game session token, and connects.
+ * Falls back to connecting without a token if either step fails so the
+ * engine stays usable even when the auth service is down.
  *
  * In production:
  *   - Token already in store (player came from dashboard or is still in
@@ -85,8 +93,7 @@ export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): 
  */
 export async function connectGame(): Promise<void> {
   if (DEV_MODE) {
-    logger.game("Dev mode - connecting without session token");
-    connectWS();
+    await devConnect();
     return;
   }
 
@@ -121,6 +128,66 @@ export async function connectGame(): Promise<void> {
       return;
     }
     logger.error("Failed to obtain game session:", err instanceof Error ? err.message : err);
+  }
+}
+
+/*
+ * Dev-only auto-login flow.
+ *
+ * Runs the full HTTP auth + session handshake using env credentials so
+ * navigating directly to /game skips the login and dashboard screens entirely.
+ * Falls back to connectWS() without a token at each failure point so Babylon
+ * still loads and the WS connection attempt is visible in the console.
+ */
+async function devConnect(): Promise<void> {
+  const creds = getDevCredentials();
+
+  if (!creds?.email || !creds?.password) {
+    logger.warn("Dev mode: credentials not set - connecting without token");
+    connectWS();
+    return;
+  }
+
+  logger.game("Dev mode - auto-login as", creds.email);
+
+  try {
+    const clientToken = await generateClientToken();
+
+    const loginRes = await browserRequest<AuthResponse>({
+      method: "POST",
+      url: "/api/auth/login",
+      data: { email: creds.email, password: creds.password, clientToken } satisfies LoginRequest,
+    });
+
+    if (!loginRes.ok) {
+      logger.warn("Dev auto-login failed:", loginRes.message, "- connecting without token");
+      connectWS();
+      return;
+    }
+
+    logger.game("Dev auto-login success - fetching game session");
+
+    const sessionRes = await browserRequest<GameSessionResponse>({
+      method: "POST",
+      url: "/api/game/session",
+    });
+
+    if (!sessionRes.ok) {
+      logger.warn("Dev game session failed:", sessionRes.message, "- connecting without token");
+      connectWS();
+      return;
+    }
+
+    useGameStore.getState().storeGameSession(sessionRes);
+    logger.game("Dev connecting with token");
+    connectWS(sessionRes.gameSessionToken);
+  } catch (err) {
+    logger.error(
+      "Dev auto-connect threw:",
+      err instanceof Error ? err.message : err,
+      "- connecting without token",
+    );
+    connectWS();
   }
 }
 

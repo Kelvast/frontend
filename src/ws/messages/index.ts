@@ -1,0 +1,15 @@
+import "./login-success";
+import "./auth-fail";
+import "./logout-success";
+import "./player-data";
+import "./world-state";
+import "./player-join";
+import "./player-leave";
+import "./tick";
+import "./player-stopped";
+import "./action-ongoing";
+import "./action-finished";
+import "./resource-depleted";
+import "./resource-available";
+import "./error";
+import "./pong";
