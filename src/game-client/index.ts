@@ -12,7 +12,12 @@ import { browserRequest, HttpError } from "../utils/http";
 import { generateClientToken } from "../utils/client-token";
 import { useGameStore } from "../utils/game-store";
 import { DEV_MODE, getDevCredentials } from "../utils/dev";
-import type { AuthSuccessResponse, LoginRequest, GameSessionResponse } from "mmo-shared";
+import type {
+  AuthSuccessResponse,
+  LoginRequest,
+  GameSessionResponse,
+  AuthResponse,
+} from "mmo-shared";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -148,7 +153,7 @@ async function devConnect(): Promise<void> {
   try {
     const clientToken = await generateClientToken();
 
-    const loginRes = await browserRequest<AuthSuccessResponse>({
+    const loginRes = await browserRequest<AuthResponse>({
       method: "POST",
       url: "/api/auth/login",
       data: { email: creds.email, password: creds.password, clientToken } satisfies LoginRequest,
@@ -177,7 +182,11 @@ async function devConnect(): Promise<void> {
     logger.game("Dev connecting with token");
     connectWS(sessionRes.gameSessionToken);
   } catch (err) {
-    logger.error("Dev auto-connect threw:", err instanceof Error ? err.message : err, "- connecting without token");
+    logger.error(
+      "Dev auto-connect threw:",
+      err instanceof Error ? err.message : err,
+      "- connecting without token",
+    );
     connectWS();
   }
 }
