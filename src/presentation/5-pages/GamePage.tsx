@@ -6,6 +6,7 @@ import BaseLayout from "../4-layouts/BaseLayout";
 import Spinner from "../1-atoms/Spinner";
 import { useGameStore } from "../../utils/game-store";
 import { browserRequest, HttpError } from "../../utils/http";
+import { DEV_MODE } from "../../utils/dev";
 import { ROUTE } from "../../config";
 import type { GameSessionResponse } from "mmo-shared";
 
@@ -17,10 +18,15 @@ const GamePage: FC<Props> = () => {
   const router = useRouter();
   const gameSessionToken = useGameStore((s) => s.gameSessionToken);
   const storeGameSession = useGameStore((s) => s.storeGameSession);
-  const [tokenState, setTokenState] = useState<TokenState>(gameSessionToken ? "ready" : "pending");
+
+  // In dev mode: skip the token gate entirely - connectGame() handles
+  // the full auth + session flow after GameCanvas mounts.
+  const [tokenState, setTokenState] = useState<TokenState>(
+    DEV_MODE || gameSessionToken ? "ready" : "pending",
+  );
 
   useEffect(() => {
-    if (gameSessionToken) {
+    if (DEV_MODE || gameSessionToken) {
       setTokenState("ready");
       return;
     }
