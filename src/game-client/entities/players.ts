@@ -15,6 +15,14 @@ import { logger } from "../../utils/logger";
 import { buildMoveAnimation } from "../movement/animation";
 import { buildWaypoints } from "../movement/waypoints";
 
+/*
+ * PlayerManager spawns and drives the local player mesh.
+ * Remote player management lives in remote-player.ts.
+ *
+ * TODO: replace box mesh with animated character model
+ * TODO: nameplate rendering above mesh
+ * TODO: equip slot visuals (weapon, hat, cape)
+ */
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;
   private onArrival: ((tileX: number, tileZ: number) => void) | null = null;
@@ -91,10 +99,7 @@ export class PlayerManager {
       this.onArrival?.(arrTileX, arrTileZ);
     });
 
-    logger.game("Moving", {
-      to: { tileX, tileZ, worldX: destWorldX, worldZ: destWorldZ },
-      steps: waypoints.length,
-    });
+    logger.game("Moving", { to: { tileX, tileZ }, steps: waypoints.length });
   }
 
   getLocalPlayer(): AbstractMesh | null {
