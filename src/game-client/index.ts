@@ -15,13 +15,17 @@ let destroyPromise: Promise<void> | null = null;
 /*
  * startGame is the single entry point for the game.
  *
- * Flow:
- *   1. authenticating — dev login or prod cookie check
- *   2. session        — POST /api/game/session (hard gate)
- *   3. parallel:
- *        a. connecting — WS opens, token sent
- *        b. engine + world boot (sequential with each other)
- *   4. player_data WS message → "connected" (handled in ws/messages/player-data.ts)
+ * Loader stage flow:
+ *   authenticating  — dev login or prod cookie check
+ *   session         — POST /api/game/session
+ *   connecting      — WS opens, token sent (runs in parallel with engine boot)
+ *   engine          — Babylon engine + scene created
+ *   world           — regions + chunks fetched and spawned
+ *   player_data     — camera, player, and systems ready
+ *   connected       — render loop running, scene is visible
+ *
+ * WS connect and engine boot are parallel. "connected" fires only after
+ * both have completed so the loader dismisses onto a rendered scene.
  */
 export async function startGame(
   canvas: HTMLCanvasElement,
@@ -31,7 +35,7 @@ export async function startGame(
   if (destroyPromise) await destroyPromise;
   if (signal.aborted) return;
 
-  onLoadEvent({ stage: "authenticating", detail: DEV_MODE ? "Logging in..." : "Verifying..." });
+  onLoadEvent({ stage: "authenticating", detail: DEV_MODE ? "Dev login..." : "Verifying session..." });
 
   const authed = DEV_MODE ? await devAuth(onLoadEvent) : await prodCredentialCheck();
   if (!authed || signal.aborted) {
@@ -54,11 +58,17 @@ export async function startGame(
     bootGame(canvas, signal, onLoadEvent),
   ]);
 
-  if (!engineOk && !signal.aborted) {
+  if (signal.aborted) return;
+
+  if (!engineOk) {
     onLoadEvent({ stage: "error", detail: "Engine failed to start" });
+    return;
   }
 
-  logger.game("Startup complete — awaiting player_data");
+  // Both WS and engine are ready — scene is rendered, safe to dismiss loader
+  onLoadEvent({ stage: "player_data", detail: "Spawning player..." });
+  onLoadEvent({ stage: "connected" });
+  logger.game("Startup complete");
 }
 
 export function destroyGame(): void {
