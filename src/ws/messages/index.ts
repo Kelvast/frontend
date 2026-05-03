@@ -1,6 +1,3 @@
-import "./session-opened";
-import "./session-rejected";
-import "./session-closed";
 import "./action-finished";
 import "./action-ongoing";
 import "./action-start";
@@ -13,5 +10,8 @@ import "./player-leave";
 import "./player-stopped";
 import "./resource-available";
 import "./resource-depleted";
+import "./session-closed";
+import "./session-opened";
+import "./session-rejected";
 import "./tick";
 import "./world-state";
