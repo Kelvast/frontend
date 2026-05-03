@@ -1,8 +1,8 @@
-import { Engine, Scene, AssetsManager, AudioEngine } from "@babylonjs/core";
+import { Engine, Scene, AssetsManager, CreateAudioEngineAsync } from "@babylonjs/core";
+import type { IAudioEngine } from "@babylonjs/core";
 import { logger } from "../../utils/logger";
 import { setupScene } from "./scene-setup";
 import type { SceneLighting } from "./scene-setup";
-import type { OnLoadEvent } from "../../types/mmo/loading";
 
 /*
  * GameEngine owns the Babylon Engine, Scene, AssetsManager, and AudioEngine.
@@ -16,6 +16,7 @@ export class GameEngine {
   public readonly scene: Scene;
   public lighting!: SceneLighting;
   public assets!: AssetsManager;
+  public audioEngine: IAudioEngine | null = null;
 
   private resizeHandler: () => void;
 
@@ -67,18 +68,20 @@ export class GameEngine {
   }
 
   /*
-   * bootAudio — unlock the AudioEngine so the browser permits audio playback.
-   * No sounds are registered yet; this primes the context so the first
-   * in-game sound doesn't stall waiting for user-gesture unlock.
+   * bootAudio — create the v2 AudioEngine and attempt to unlock it.
+   * No sounds are registered yet; this primes the AudioContext so the
+   * first in-game sound doesn't stall waiting for a user-gesture unlock.
+   * Failure is non-fatal — the game runs silently if audio is unavailable.
    */
-  bootAudio(): void {
+  async bootAudio(): Promise<void> {
     logger.game("  ▶ Audio");
     try {
-      AudioEngine.audioEngine?.unlock();
+      this.audioEngine = await CreateAudioEngineAsync();
+      await this.audioEngine.unlockAsync();
+      logger.game("  ✓ Audio");
     } catch {
-      /* AudioEngine may not be available in all environments */
+      logger.game("  ⚠ Audio unavailable — continuing without sound");
     }
-    logger.game("  ✓ Audio");
   }
 
   startRenderLoop(): void {
@@ -88,6 +91,7 @@ export class GameEngine {
   dispose(): void {
     logger.game("▶ engine dispose");
     window.removeEventListener("resize", this.resizeHandler);
+    this.audioEngine?.dispose();
     this.engine.dispose();
     logger.game("✓ engine dispose");
   }
