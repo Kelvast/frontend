@@ -1,8 +1,15 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { initGame, connectGame, destroyGame } from "../../game-client";
+import { startGame, destroyGame } from "../../game-client";
+import { setLoadEventCallback as setSessionCallback } from "../../ws/messages/session-opened";
+import { setLoadEventCallback as setPlayerDataCallback } from "../../ws/messages/player-data";
+import type { OnLoadEvent } from "../../types/mmo/loading";
 
-const GameCanvas = () => {
+interface Props {
+  onLoadEvent: OnLoadEvent;
+}
+
+const GameCanvas = ({ onLoadEvent }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -11,14 +18,17 @@ const GameCanvas = () => {
 
     const controller = new AbortController();
 
-    initGame(canvas, controller.signal).then((started) => {
-      if (started) connectGame();
-    });
+    setSessionCallback(onLoadEvent);
+    setPlayerDataCallback(onLoadEvent);
+
+    startGame(canvas, controller.signal, onLoadEvent);
 
     return () => {
       controller.abort();
       destroyGame();
     };
+    // onLoadEvent is stable (useCallback in GamePage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

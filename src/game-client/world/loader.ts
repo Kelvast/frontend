@@ -1,6 +1,7 @@
 import { Region, ChunkData, TileData } from "mmo-shared";
 import { logger } from "../../utils/logger";
 import { GameWorld } from "./index";
+import type { OnLoadEvent } from "../../types/mmo/loading";
 
 async function fetchChunkTiles(
   regionId: string,
@@ -17,7 +18,7 @@ async function fetchChunkTiles(
   return tiles;
 }
 
-async function fetchAllRegions(signal: AbortSignal): Promise<Region[]> {
+async function fetchAllRegions(signal: AbortSignal, onLoadEvent?: OnLoadEvent): Promise<Region[]> {
   const res = await fetch("/api/builder/regions", { signal });
   if (!res.ok) return [];
   const { regions } = (await res.json()) as {
@@ -28,6 +29,10 @@ async function fetchAllRegions(signal: AbortSignal): Promise<Region[]> {
     regions.map(async (r) => {
       const chunkEntries = await Promise.all(
         r.chunks.map(async (c) => {
+          onLoadEvent?.({
+            stage: "world",
+            detail: `region/${r.id} chunk (${c.chunkX}, ${c.chunkZ})`,
+          });
           const tiles = await fetchChunkTiles(r.id, c.chunkX, c.chunkZ, signal);
           const chunk: ChunkData = {
             chunkX: c.chunkX,
@@ -46,9 +51,13 @@ async function fetchAllRegions(signal: AbortSignal): Promise<Region[]> {
   );
 }
 
-export async function loadAllRegions(world: GameWorld, signal: AbortSignal): Promise<void> {
+export async function loadAllRegions(
+  world: GameWorld,
+  signal: AbortSignal,
+  onLoadEvent?: OnLoadEvent,
+): Promise<void> {
   try {
-    const regions = await fetchAllRegions(signal);
+    const regions = await fetchAllRegions(signal, onLoadEvent);
     if (signal.aborted) return;
     regions.forEach((r) => world.loadRegion(r));
     logger.game(`Loaded ${regions.length} region(s)`);

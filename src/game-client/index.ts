@@ -18,6 +18,7 @@ import type {
   GameSessionResponse,
   AuthResponse,
 } from "mmo-shared";
+import type { OnLoadEvent } from "../types/mmo/loading";
 
 export { GameCamera } from "./camera";
 export { GameEngine } from "./engine";
@@ -29,84 +30,172 @@ let _world: GameWorld | null = null;
 let _stopWatcher: (() => void) | null = null;
 let _destroyPromise: Promise<void> | null = null;
 
-export async function initGame(canvas: HTMLCanvasElement, signal: AbortSignal): Promise<boolean> {
+/*
+ * Full startup sequence:
+ *
+ *   1. authenticating — credential check (dev login or prod cookie verify)
+ *   2. session        — POST /api/game/session, token issued; hard gate —
+ *                       nothing else starts if this fails
+ *   3. parallel:
+ *        connecting   — WS opens, token sent
+ *        engine       — Babylon boots, scene ready
+ *        world        — regions + chunks fetched and loaded
+ *   4. player_data    — server sends skills/inventory → connected
+ *
+ * Stages 3a-3c are labelled sequentially in the UI even though they run
+ * in parallel — the loader advances through connecting → engine → world
+ * as each resolves, but all three are in-flight simultaneously.
+ */
+export async function startGame(
+  canvas: HTMLCanvasElement,
+  signal: AbortSignal,
+  onLoadEvent: OnLoadEvent,
+): Promise<void> {
   if (_destroyPromise) await _destroyPromise;
-  if (signal.aborted) return false;
+  if (signal.aborted) return;
 
-  if (_engine) {
-    logger.game("initGame called but engine already running - skipping");
+  // ── 1. Auth ──────────────────────────────────────────────────────────────
+  onLoadEvent({
+    stage: "authenticating",
+    detail: DEV_MODE ? "Logging in..." : "Verifying credentials...",
+  });
+
+  const authed = DEV_MODE ? await devAuth(onLoadEvent) : await prodCredentialCheck();
+  if (!authed || signal.aborted) {
+    if (!signal.aborted) onLoadEvent({ stage: "error", detail: "Authentication failed" });
+    return;
+  }
+
+  // ── 2. Session (hard gate) ───────────────────────────────────────────────
+  onLoadEvent({ stage: "session", detail: "Requesting game session..." });
+
+  const token = await fetchSession(onLoadEvent);
+  if (!token || signal.aborted) {
+    if (!signal.aborted) onLoadEvent({ stage: "error", detail: "Could not create game session" });
+    return;
+  }
+
+  // ── 3. Parallel: WS connect + engine + world ─────────────────────────────
+  onLoadEvent({ stage: "connecting", detail: "Opening connection..." });
+
+  const [, engineOk] = await Promise.all([
+    // 3a — WS: fire and forget, session_opened/player_data handlers take over
+    Promise.resolve(connectWS(token)),
+
+    // 3b + 3c — engine then world (must be sequential with each other)
+    (async () => {
+      if (signal.aborted) return false;
+
+      onLoadEvent({ stage: "engine", detail: "Starting Babylon..." });
+      const engine = new GameEngine(canvas);
+      if (signal.aborted) {
+        engine.dispose();
+        return false;
+      }
+
+      const scene = engine.scene;
+      const world = new GameWorld(scene);
+
+      onLoadEvent({ stage: "world", detail: "Fetching regions..." });
+      await loadAllRegions(world, signal, onLoadEvent);
+      if (signal.aborted) {
+        engine.dispose();
+        return false;
+      }
+
+      _engine = engine;
+      _world = world;
+
+      const camera = new GameCamera(scene);
+      const players = new PlayerManager(scene, world);
+      const localMesh = players.spawnLocalPlayer();
+      camera.attachToMesh(localMesh);
+
+      new KeysInput(scene, camera);
+      new PointerInput(scene, players);
+
+      _engine.engine.runRenderLoop(() => scene.render());
+
+      if (process.env.NODE_ENV === "development") {
+        _stopWatcher = createDevWatcher(() => _world);
+      }
+
+      logger.game("Engine and world ready");
+      return true;
+    })(),
+  ]);
+
+  if (!engineOk && !signal.aborted) {
+    onLoadEvent({ stage: "error", detail: "Engine failed to start" });
+    return;
+  }
+
+  // player_data handler fires "connected" — nothing more to do here
+  logger.game("Startup complete — awaiting player_data");
+}
+
+/*
+ * Dev: full login via NEXT_PUBLIC_DEV_EMAIL / NEXT_PUBLIC_DEV_PASSWORD.
+ * Stores identity in the game store. Does NOT fetch the session token —
+ * that happens in fetchSession() so the stage label is correct.
+ */
+async function devAuth(onLoadEvent: OnLoadEvent): Promise<boolean> {
+  const creds = getDevCredentials();
+  if (!creds?.email || !creds?.password) {
+    logger.warn("Dev mode: credentials not set in env");
     return false;
   }
 
-  logger.game("Initialising game");
+  logger.game("Dev auth — logging in as", creds.email);
 
-  const engine = new GameEngine(canvas);
-  if (signal.aborted) {
-    engine.dispose();
+  try {
+    const clientToken = await generateClientToken();
+    const loginRes = await browserRequest<AuthResponse>({
+      method: "POST",
+      url: "/api/auth/login",
+      data: { email: creds.email, password: creds.password, clientToken } satisfies LoginRequest,
+    });
+
+    if (!loginRes.ok) {
+      logger.warn("Dev login failed:", loginRes.message);
+      return false;
+    }
+
+    const success = loginRes as AuthSuccessResponse;
+    useGameStore.getState().storeIdentity({ uuid: success.uuid, playerName: success.playerName });
+    onLoadEvent({ stage: "authenticating", detail: `Logged in as ${success.playerName}` });
+    logger.game("Dev auth complete");
+    return true;
+  } catch (err) {
+    logger.error("Dev auth threw:", err instanceof Error ? err.message : err);
     return false;
   }
+}
 
-  const scene = engine.scene;
-  const world = new GameWorld(scene);
-
-  await loadAllRegions(world, signal);
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
-
-  _engine = engine;
-  _world = world;
-
-  const camera = new GameCamera(scene);
-  const players = new PlayerManager(scene, world);
-  const localMesh = players.spawnLocalPlayer();
-  camera.attachToMesh(localMesh);
-
-  new KeysInput(scene, camera);
-  new PointerInput(scene, players);
-
-  _engine.engine.runRenderLoop(() => scene.render());
-
-  if (process.env.NODE_ENV === "development") {
-    _stopWatcher = createDevWatcher(() => _world);
-  }
-
-  logger.game("Game ready");
+/*
+ * Prod: token already in store means the cookie is valid — no HTTP call
+ * needed at this stage. The actual session fetch happens in fetchSession().
+ */
+async function prodCredentialCheck(): Promise<boolean> {
+  // In prod the authToken cookie is the credential — if it's present the
+  // session route will succeed. We have no way to verify it client-side
+  // without making a round-trip, so we optimistically proceed to fetchSession
+  // which will 401 and redirect if the cookie is missing or expired.
   return true;
 }
 
 /*
- * Resolves the game session token then opens the WS connection.
- *
- * In dev mode: auto-logs in using NEXT_PUBLIC_DEV_EMAIL and
- * NEXT_PUBLIC_DEV_PASSWORD, fetches a game session token, and connects.
- * Falls back to connecting without a token if either step fails so the
- * engine stays usable even when the auth service is down.
- *
- * In production:
- *   - Token already in store (player came from dashboard or is still in
- *     the same session): connect immediately.
- *   - No token (direct URL, bookmark, page reload): fetch a fresh one
- *     from POST /api/game/session using the authToken cookie. A 401
- *     means the cookie is gone - the player must log in again.
+ * POST /api/game/session — hard gate for all three parallel tasks.
+ * Returns the token string on success, null on failure.
+ * If the store already has a token (came from dashboard) skips the fetch.
  */
-export async function connectGame(): Promise<void> {
-  if (DEV_MODE) {
-    await devConnect();
-    return;
-  }
-
-  const store = useGameStore.getState();
-  const existing = store.gameSessionToken;
-
+async function fetchSession(onLoadEvent: OnLoadEvent): Promise<string | null> {
+  const existing = useGameStore.getState().gameSessionToken;
   if (existing) {
-    logger.game("Session token found in store - connecting");
-    connectWS(existing);
-    return;
+    logger.game("Session token already in store");
+    onLoadEvent({ stage: "session", detail: "Session restored" });
+    return existing;
   }
-
-  logger.game("No session token - requesting new game session");
 
   try {
     const res = await browserRequest<GameSessionResponse>({
@@ -115,79 +204,22 @@ export async function connectGame(): Promise<void> {
     });
 
     if (!res.ok) {
-      logger.error("Game session request failed:", res.message);
-      return;
+      logger.error("Session request failed:", res.message);
+      return null;
     }
 
-    store.storeGameSession(res);
-    connectWS(res.gameSessionToken);
+    useGameStore.getState().storeGameSession(res);
+    onLoadEvent({ stage: "session", detail: "Session created" });
+    logger.game("Game session token acquired");
+    return res.gameSessionToken;
   } catch (err) {
     if ((err as HttpError).status === 401) {
-      logger.warn("Session request returned 401 - redirecting to login");
+      logger.warn("Session 401 — redirecting to login");
       window.location.href = "/login";
-      return;
+      return null;
     }
-    logger.error("Failed to obtain game session:", err instanceof Error ? err.message : err);
-  }
-}
-
-/*
- * Dev-only auto-login flow.
- *
- * Runs the full HTTP auth + session handshake using env credentials so
- * navigating directly to /game skips the login and dashboard screens entirely.
- * Falls back to connectWS() without a token at each failure point so Babylon
- * still loads and the WS connection attempt is visible in the console.
- */
-async function devConnect(): Promise<void> {
-  const creds = getDevCredentials();
-
-  if (!creds?.email || !creds?.password) {
-    logger.warn("Dev mode: credentials not set - connecting without token");
-    connectWS();
-    return;
-  }
-
-  logger.game("Dev mode - auto-login as", creds.email);
-
-  try {
-    const clientToken = await generateClientToken();
-
-    const loginRes = await browserRequest<AuthResponse>({
-      method: "POST",
-      url: "/api/auth/login",
-      data: { email: creds.email, password: creds.password, clientToken } satisfies LoginRequest,
-    });
-
-    if (!loginRes.ok) {
-      logger.warn("Dev auto-login failed:", loginRes.message, "- connecting without token");
-      connectWS();
-      return;
-    }
-
-    logger.game("Dev auto-login success - fetching game session");
-
-    const sessionRes = await browserRequest<GameSessionResponse>({
-      method: "POST",
-      url: "/api/game/session",
-    });
-
-    if (!sessionRes.ok) {
-      logger.warn("Dev game session failed:", sessionRes.message, "- connecting without token");
-      connectWS();
-      return;
-    }
-
-    useGameStore.getState().storeGameSession(sessionRes);
-    logger.game("Dev connecting with token");
-    connectWS(sessionRes.gameSessionToken);
-  } catch (err) {
-    logger.error(
-      "Dev auto-connect threw:",
-      err instanceof Error ? err.message : err,
-      "- connecting without token",
-    );
-    connectWS();
+    logger.error("Session request threw:", err instanceof Error ? err.message : err);
+    return null;
   }
 }
 

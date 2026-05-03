@@ -1,87 +1,27 @@
 "use client";
-import { FC, memo, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FC, memo, useCallback, useState } from "react";
 import GameCanvas from "../3-organisms/GameCanvas";
-import BaseLayout from "../4-layouts/BaseLayout";
-import Spinner from "../1-atoms/Spinner";
-import { useGameStore } from "../../utils/game-store";
-import { browserRequest, HttpError } from "../../utils/http";
-import { DEV_MODE } from "../../utils/dev";
-import { ROUTE } from "../../config";
-import type { GameSessionResponse } from "mmo-shared";
-
-type TokenState = "pending" | "ready" | "error";
+import GameLoader from "../2-molecules/GameLoader";
+import type { LoadEvent, LoadStage } from "../../types/mmo/loading";
 
 interface Props {}
 
 const GamePage: FC<Props> = () => {
-  const router = useRouter();
-  const gameSessionToken = useGameStore((s) => s.gameSessionToken);
-  const storeGameSession = useGameStore((s) => s.storeGameSession);
+  const [stage, setStage] = useState<LoadStage>("authenticating");
+  const [detail, setDetail] = useState<string | undefined>(undefined);
 
-  // In dev mode: skip the token gate entirely - connectGame() handles
-  // the full auth + session flow after GameCanvas mounts.
-  const [tokenState, setTokenState] = useState<TokenState>(
-    DEV_MODE || gameSessionToken ? "ready" : "pending",
-  );
+  const onLoadEvent = useCallback((event: LoadEvent) => {
+    setStage(event.stage);
+    if (event.detail !== undefined) setDetail(event.detail);
+  }, []);
 
-  useEffect(() => {
-    if (DEV_MODE || gameSessionToken) {
-      setTokenState("ready");
-      return;
-    }
-
-    let cancelled = false;
-
-    browserRequest<GameSessionResponse>({ method: "POST", url: "/api/game/session" })
-      .then((res) => {
-        if (cancelled) return;
-        if (!res.ok) throw new Error(res.message ?? "Could not start game session");
-        storeGameSession(res);
-        setTokenState("ready");
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        if ((err as HttpError).status === 401) {
-          router.replace(ROUTE.LOGIN);
-          return;
-        }
-        setTokenState("error");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [gameSessionToken, storeGameSession, router]);
-
-  if (tokenState === "pending") {
-    return (
-      <BaseLayout centered className="bg-black">
-        <Spinner size="md" />
-      </BaseLayout>
-    );
-  }
-
-  if (tokenState === "error") {
-    return (
-      <BaseLayout centered className="bg-black">
-        <p className="text-[var(--color-text-muted)] text-sm">
-          Failed to start session.{" "}
-          <button
-            className="underline text-[var(--color-text)]"
-            onClick={() => router.push(ROUTE.DASHBOARD)}
-          >
-            Go back
-          </button>
-        </p>
-      </BaseLayout>
-    );
-  }
+  const loaderVisible = stage !== "connected";
 
   return (
-    <BaseLayout className="bg-black">
-      <GameCanvas />
-    </BaseLayout>
+    <div className="fixed inset-0 bg-black">
+      <GameCanvas onLoadEvent={onLoadEvent} />
+      {loaderVisible && <GameLoader stage={stage} detail={detail} />}
+    </div>
   );
 };
 
