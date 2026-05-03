@@ -1,7 +1,7 @@
 "use client";
 
-import type { ClientPacket } from "mmo-shared";
-import type { LocalClientPacket } from "./types";
+import type { ClientMessage, MessageBase, MessageType } from "mmo-shared";
+import { MSG } from "mmo-shared";
 import { useGameStore } from "../utils/game-store";
 import { logger } from "../utils/logger";
 import { dispatch } from "./registry";
@@ -21,16 +21,16 @@ export function connectWS(token?: string): void {
 
     if (token) {
       logger.ws("Resuming session with token");
-      send({ type: "resume", token });
+      send({ type: MSG.SESSION_RESUME, token });
     } else {
       logger.warn("connectWS called without a token - no resume packet sent");
     }
   };
 
   ws.onmessage = (event: MessageEvent) => {
-    const msg = JSON.parse(event.data as string) as { type: string };
+    const msg = JSON.parse(event.data as string) as { type: MessageType };
 
-    if (msg.type !== "tick") {
+    if (msg.type !== MSG.TICK) {
       const bytes = new Blob([event.data]).size;
       logger.ws("←", msg.type, `(${bytes}b / ${(bytes / 1024).toFixed(2)}kb)`, msg);
     }
@@ -54,15 +54,10 @@ export function disconnect(): void {
   ws = null;
 }
 
-/*
- * Single send path for all outbound packets.
- * Accepts both shared ClientPacket and local-only packet types.
- * Dropped packets are warned — never silently lost.
- */
-export function send(packet: ClientPacket | LocalClientPacket): void {
+export function send(message: ClientMessage): void {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(packet));
+    ws.send(JSON.stringify(message));
   } else {
-    logger.warn("send called but WS not open - packet dropped:", packet.type);
+    logger.warn("send called but WS not open - packet dropped:", message.type);
   }
 }

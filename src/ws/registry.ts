@@ -1,15 +1,15 @@
+import type { MessageType } from "mmo-shared";
 import { logger } from "../utils/logger";
 
 type MessageHandler<T> = (msg: T) => void;
 
-const handlers = new Map<string, MessageHandler<unknown>>();
+const handlers = new Map<MessageType, MessageHandler<unknown>>();
 
 /*
  * Registers a typed handler for a server message type.
  * Called once per message file at module evaluation time as a side effect.
- * The type parameter constrains callers; the internal map is untyped for flexibility.
  */
-export function registerMessageHandler<T extends { type: string }>(
+export function registerMessageHandler<T extends { type: MessageType }>(
   type: T["type"],
   handler: MessageHandler<T>,
 ): void {
@@ -20,7 +20,7 @@ export function registerMessageHandler<T extends { type: string }>(
  * Dispatches a parsed inbound message to its registered handler.
  * Called by client.ts onmessage. Unknown types log a warning and are dropped.
  */
-export function dispatch(msg: { type: string }): void {
+export function dispatch(msg: { type: MessageType }): void {
   const handler = handlers.get(msg.type);
   if (handler) {
     handler(msg);

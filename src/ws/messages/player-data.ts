@@ -1,4 +1,4 @@
-import type { PlayerDataMessage } from "mmo-shared";
+import { MSG, type PlayerDataMessage } from "mmo-shared";
 import { logger } from "../../utils/logger";
 import { registerMessageHandler } from "../registry";
 
@@ -7,4 +7,4 @@ function handlePlayerData(_msg: PlayerDataMessage): void {
   logger.ws("player_data received - handler not yet wired");
 }
 
-registerMessageHandler<PlayerDataMessage>("player_data", handlePlayerData);
+registerMessageHandler<PlayerDataMessage>(MSG.PLAYER_DATA, handlePlayerData);

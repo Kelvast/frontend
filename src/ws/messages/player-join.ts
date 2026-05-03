@@ -1,4 +1,4 @@
-import type { PlayerJoinMessage } from "mmo-shared";
+import { MSG, type PlayerJoinMessage } from "mmo-shared";
 import { logger } from "../../utils/logger";
 import { useGameStore } from "../../utils/game-store";
 import { registerMessageHandler } from "../registry";
@@ -8,4 +8,4 @@ function handlePlayerJoin(msg: PlayerJoinMessage): void {
   useGameStore.getState().onPlayerJoin(msg);
 }
 
-registerMessageHandler<PlayerJoinMessage>("player_join", handlePlayerJoin);
+registerMessageHandler<PlayerJoinMessage>(MSG.PLAYER_JOIN, handlePlayerJoin);

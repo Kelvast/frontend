@@ -145,7 +145,6 @@ Inbound message routing:
 | player_leave | unregisterPlayer(data.id) |
 | player_stopped | snap position via applyTick synthetic delta |
 | tick | applyTick |
-| pong | update latency from round-trip delta |
 | logout_success | clear session, disconnect |
 | auth_fail | dev: auto-register; prod: logger.error |
 | error | logger.error |
@@ -156,7 +155,6 @@ Outbound:
 | Function | Packet sent |
 |---|---|
 | sendPlayerMove(x, y, z, pace) | { type: "move", x, y, z, pace } |
-| sendPing() | { type: "ping", t: Date.now() } |
 | sendSettings(settings) | { type: "save_settings", settings } |
 
 pace is a PaceMultiplier number. Use PACE_MULTIPLIER[mode] from mmo-shared to convert a MovementType label to its numeric value before calling sendPlayerMove. facing is not a field on MovePacket - the server derives it from the movement delta.

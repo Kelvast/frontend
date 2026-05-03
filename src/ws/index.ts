@@ -5,9 +5,6 @@
 import "./messages/index";
 
 export { connectWS, disconnect } from "./client";
-export { sendPlayerMove } from "./packets/move";
-export { sendPing } from "./packets/ping";
-export { sendLogout } from "./packets/logout";
-export { sendAction } from "./packets/action";
-export { sendActionStart } from "./packets/action-start";
-export { sendSettings } from "./packets/settings";
+export { sendPlayerMove } from "./messages/move";
+export { sendAction } from "./messages/action";
+export { sendActionStart } from "./messages/action-start";
