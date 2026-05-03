@@ -10,13 +10,9 @@ export interface SaveSettingsPacket {
   settings: UserSettings;
 }
 
-export interface PongMessage {
-  type: "pong";
-  t: number;
-}
-
 /*
- * Union of client-side-only packet types not yet promoted to mmo-shared.
+ * Client-side-only packet types not yet promoted to mmo-shared.
  * Used by send() alongside the shared ClientPacket union.
+ * Promote to mmo-shared once ping and save_settings are added to the protocol.
  */
 export type LocalClientPacket = PingPacket | SaveSettingsPacket;
