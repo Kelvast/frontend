@@ -36,28 +36,40 @@ export async function bootGame(
   onLoadEvent({ stage: "engine", detail: "Starting Babylon engine..." });
   logger.game("▶ engine");
   const engine = new GameEngine(canvas);
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
   logger.game("✓ engine");
 
   /* ---- Scene ---- */
   onLoadEvent({ stage: "scene", detail: "Building scene..." });
   logger.game("▶ scene");
   engine.bootScene();
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
   logger.game("✓ scene");
 
   /* ---- Assets ---- */
   onLoadEvent({ stage: "assets", detail: "Loading assets..." });
   logger.game("▶ assets");
   await engine.bootAssets();
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
   logger.game("✓ assets");
 
   /* ---- Audio ---- */
   onLoadEvent({ stage: "audio", detail: "Priming audio..." });
   logger.game("▶ audio");
   engine.bootAudio();
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
   logger.game("✓ audio");
 
   /* ---- World ---- */
@@ -66,7 +78,10 @@ export async function bootGame(
   logger.game("▶ world");
   const world = new GameWorld(scene);
   await loadAllRegions(world, signal, onLoadEvent);
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
   logger.game("✓ world");
 
   /* ---- Camera ---- */

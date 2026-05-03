@@ -3,7 +3,7 @@ import { GameRegion } from "./region";
 import { logger } from "../../utils/logger";
 import { Region, ChunkData, TileData } from "mmo-shared";
 import { DEV_MODE } from "../../utils/dev";
-import { setupScene } from "../scene-setup";
+import { setupScene } from "../engine/scene-setup";
 
 export class GameWorld {
   private regions: Map<string, GameRegion> = new Map();

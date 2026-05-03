@@ -29,9 +29,7 @@ const GamePage: FC = () => {
   return (
     <div className="fixed inset-0 bg-black">
       <GameCanvas onLoadEvent={onLoadEvent} />
-      {loaderMounted && (
-        <GameLoader stage={stage} detail={detail} visible={loaderVisible} />
-      )}
+      {loaderMounted && <GameLoader stage={stage} detail={detail} visible={loaderVisible} />}
     </div>
   );
 };
