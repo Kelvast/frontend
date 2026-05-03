@@ -7,13 +7,14 @@ import {
   Animation,
   Scene,
 } from "@babylonjs/core";
-import { PLAYER } from "../constants";
-import { WORLD } from "mmo-shared";
+import { PLAYER, MOVEMENT } from "../constants";
+import { WORLD, calcMoveSpeed, DEFAULT_SPEED_MODIFIERS } from "mmo-shared";
 import { tileWorldY } from "../world/tile-height";
 import { GameWorld } from "../world";
 import { logger } from "../../utils/logger";
 import { buildMoveAnimation } from "../movement/animation";
 import { buildWaypoints } from "../movement/waypoints";
+import { sendPlayerMove } from "../../ws/messages/move";
 
 /*
  * PlayerManager spawns and drives the local player mesh.
@@ -25,12 +26,30 @@ import { buildWaypoints } from "../movement/waypoints";
  */
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;
+  private moveAnim: Animation;
   private onArrival: ((tileX: number, tileZ: number) => void) | null = null;
+
+  /*
+   * Walk pace is constant while equipment modifiers are not yet implemented.
+   * Computed once and reused on every move to avoid redundant recalculation.
+   */
+  private readonly walkPace = calcMoveSpeed("walk", DEFAULT_SPEED_MODIFIERS);
 
   constructor(
     private scene: Scene,
     private world: GameWorld,
   ) {
+    /*
+     * The Animation object is created once — only its keys are replaced on each
+     * move. Name, target property, type, and loop mode are always identical.
+     */
+    this.moveAnim = new Animation(
+      "playerMove",
+      "position",
+      60,
+      Animation.ANIMATIONTYPE_VECTOR3,
+      Animation.ANIMATIONLOOPMODE_CONSTANT,
+    );
     logger.game("PlayerManager initialised");
   }
 
@@ -38,6 +57,13 @@ export class PlayerManager {
     this.onArrival = cb;
   }
 
+  /*
+   * Spawns the local player box at world origin.
+   * Position is overridden once SESSION_OPENED arrives with the server's
+   * authoritative coordinates — this is just an initial placement.
+   *
+   * TODO: replace box with animated character model
+   */
   spawnLocalPlayer(): AbstractMesh {
     logger.game("Spawning local player");
     const mesh = MeshBuilder.CreateBox(
@@ -81,22 +107,19 @@ export class PlayerManager {
       waypointsWithY,
     );
 
-    const anim = new Animation(
-      "playerMove",
-      "position",
-      fps,
-      Animation.ANIMATIONTYPE_VECTOR3,
-      Animation.ANIMATIONLOOPMODE_CONSTANT,
-    );
-    anim.setKeys(keys);
+    /*
+     * Send destination to the server before starting the local animation.
+     * The server is authoritative — a player_stopped reply will snap the
+     * client to the corrected position if the move is rejected.
+     */
+    const dest = waypointsWithY[waypointsWithY.length - 1];
+    sendPlayerMove(dest.x, dest.y, dest.z, this.walkPace);
 
-    this.localMesh.animations = [anim];
+    this.moveAnim.setKeys(keys);
+    this.localMesh.animations = [this.moveAnim];
     this.scene.beginAnimation(this.localMesh, 0, totalFrames, false, 1, () => {
-      const dest = waypointsWithY[waypointsWithY.length - 1];
-      const arrTileX = Math.floor(dest.x / s);
-      const arrTileZ = Math.floor(dest.z / s);
-      logger.game("Arrived", { tileX: arrTileX, tileZ: arrTileZ });
-      this.onArrival?.(arrTileX, arrTileZ);
+      logger.game("Arrived", { tileX, tileZ });
+      this.onArrival?.(tileX, tileZ);
     });
 
     logger.game("Moving", { to: { tileX, tileZ }, steps: waypoints.length });
