@@ -1,5 +1,5 @@
 import type {
-  LoginSuccessMessage,
+  SessionOpenedMessage,
   WorldStateMessage,
   PlayerJoinMessage,
   PlayerLeaveMessage,
@@ -21,7 +21,7 @@ export interface GameStoreState {
   gameSessionExpiresAt: number | null;
 
   // ── World ─────────────────────────────────────────────────────────────────
-  /** Full local player state. Null until login_success received over WS. */
+  /** Full local player state. Null until session_opened received over WS. */
   localPlayer: PlayerState | null;
   /** All players currently visible to this client (within chunk radius). */
   nearbyPlayers: NearbyPlayer[];
@@ -29,7 +29,6 @@ export interface GameStoreState {
 
   // ── Connection ────────────────────────────────────────────────────────────
   isConnected: boolean;
-  latency: number;
 
   // ── Settings ──────────────────────────────────────────────────────────────
   settings: UserSettings;
@@ -42,17 +41,16 @@ export interface GameStoreState {
 
   // ── Connection actions ────────────────────────────────────────────────────
   setConnected: (connected: boolean) => void;
-  setLatency: (latency: number) => void;
 
   // ── WS message handlers ───────────────────────────────────────────────────
   /**
-   * Handles login_success. Merges the server-authoritative PlayerPresence
+   * Handles session_opened. Merges the server-authoritative PlayerPresence
    * (id, x, y, z, facing) with the identity already in the store (uuid, name)
    * and default game state (skills, inventory, equipment) to produce a full
-   * PlayerState. LoginSuccessMessage only carries PlayerPresence - skills and
+   * PlayerState. SessionOpenedMessage only carries PlayerPresence - skills and
    * inventory are not on the WS message.
    */
-  onLoginSuccess: (msg: LoginSuccessMessage) => void;
+  onLoginSuccess: (msg: SessionOpenedMessage) => void;
   onLogout: () => Promise<void>;
   /** Handles world_state. Populates nearbyPlayers from the initial snapshot. */
   onWorldState: (msg: WorldStateMessage) => void;

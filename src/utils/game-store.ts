@@ -13,15 +13,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
   nearbyPlayers: [],
   worldTime: 0,
   isConnected: false,
-  latency: 0,
   settings: loadSettings(),
 
   setConnected: (connected) => {
     logger.game("Connection state:", connected ? "connected" : "disconnected");
     set({ isConnected: connected });
   },
-
-  setLatency: (latency) => set({ latency }),
 
   /*
    * Stores uuid + name from the auth response. Called at login and register.
@@ -43,12 +40,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
   },
 
   /*
-   * Handles login_success. LoginSuccessMessage carries PlayerPresence only
+   * Handles session_opened. SessionOpenedMessage carries PlayerPresence only
    * (id, uuid, name, x, y, z, facing) - skills, inventory, and equipment are
    * not on the WS message. We build a full PlayerState by merging the
    * authoritative position from the message with identity from the store.
-   * Default skills/inventory/equipment are used until a future player_state
-   * message (or protocol change) brings the real values.
+   * Default skills/inventory/equipment are used until a future player_data
+   * message brings the real values.
    */
   onLoginSuccess: (msg) => {
     set((state) => {
@@ -149,10 +146,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
    * Handles tick. Applies movement deltas to nearbyPlayers using a Map for
    * O(1) lookup per player. Players absent from deltas are unchanged.
    */
-  onTick: ({ deltas }) =>
+  onTick: ({ players }) =>
     set((state) => {
       const updates = new Map(
-        deltas.map(({ id, x, y, z, facing, pace }) => [
+        players.map(({ id, x, y, z, facing, pace }) => [
           id,
           { x, y, z, facing, pace, isMoving: true },
         ]),
