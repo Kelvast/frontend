@@ -35,23 +35,30 @@ export async function startGame(
   if (destroyPromise) await destroyPromise;
   if (signal.aborted) return;
 
+  logger.game("▶ startGame");
   onLoadEvent({ stage: "authenticating", detail: DEV_MODE ? "Dev login..." : "Verifying session..." });
 
+  logger.game("▶ auth");
   const authed = DEV_MODE ? await devAuth(onLoadEvent) : await prodCredentialCheck();
   if (!authed || signal.aborted) {
     if (!signal.aborted) onLoadEvent({ stage: "error", detail: "Authentication failed" });
+    logger.game("✗ auth failed");
     return;
   }
+  logger.game("✓ auth");
 
   onLoadEvent({ stage: "session", detail: "Requesting game session..." });
-
+  logger.game("▶ session");
   const token = await fetchSession(onLoadEvent);
   if (!token || signal.aborted) {
     if (!signal.aborted) onLoadEvent({ stage: "error", detail: "Could not create game session" });
+    logger.game("✗ session failed");
     return;
   }
+  logger.game("✓ session");
 
   onLoadEvent({ stage: "connecting", detail: "Opening connection..." });
+  logger.game("▶ WS + engine boot (parallel)");
 
   const [, engineOk] = await Promise.all([
     Promise.resolve(connectWS(token)),
@@ -62,19 +69,21 @@ export async function startGame(
 
   if (!engineOk) {
     onLoadEvent({ stage: "error", detail: "Engine failed to start" });
+    logger.game("✗ engine boot failed");
     return;
   }
 
-  // Both WS and engine are ready — scene is rendered, safe to dismiss loader
+  logger.game("✓ WS + engine boot");
+
   onLoadEvent({ stage: "player_data", detail: "Spawning player..." });
   onLoadEvent({ stage: "connected" });
-  logger.game("Startup complete");
+  logger.game("✓ startGame — scene live");
 }
 
 export function destroyGame(): void {
   if (!hasContext()) return;
 
-  logger.game("Destroying game");
+  logger.game("▶ destroyGame");
   const ctx = getContext();
 
   ctx.stopDevWatcher?.();
@@ -86,7 +95,7 @@ export function destroyGame(): void {
   const engine = ctx.engine;
   destroyPromise = Promise.resolve().then(() => {
     engine.dispose();
-    logger.game("Engine disposed");
+    logger.game("✓ destroyGame");
     destroyPromise = null;
   });
 }

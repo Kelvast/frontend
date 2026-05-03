@@ -4,14 +4,12 @@ import { registerMessageHandler } from "../registry";
 
 /*
  * PLAYER_DATA (200) — carries skills, inventory, equipment.
- * The loader is already dismissed by session-opened.ts.
- * This handler is responsible only for hydrating the store once
- * the server implements and sends this message.
+ * The loader is already dismissed by index.ts before this arrives.
  *
  * TODO: wire to useGameStore.getState().onPlayerData(msg)
  */
 function handlePlayerData(_msg: PlayerDataMessage): void {
-  logger.ws("Player data received");
+  logger.ws("✓ PLAYER_DATA received");
   // TODO: useGameStore.getState().onPlayerData(_msg);
 }
 

@@ -14,12 +14,8 @@ import type { OnLoadEvent } from "../../types/mmo/loading";
  * bootGame creates the Babylon engine, loads all world regions, wires
  * every system, and stores the result in GameContext.
  *
- * Each meaningful step emits a load event so the loader reflects
- * real progress rather than going silent after "world".
- *
- * Called after auth + session. WS connect runs in parallel — the
- * engine does not depend on the WS and the WS does not depend on
- * the engine. "connected" is fired by index.ts once this resolves.
+ * Each step emits a load event so the loader reflects real progress.
+ * "connected" is fired by index.ts after this resolves.
  */
 export async function bootGame(
   canvas: HTMLCanvasElement,
@@ -27,45 +23,45 @@ export async function bootGame(
   onLoadEvent: OnLoadEvent,
 ): Promise<boolean> {
   onLoadEvent({ stage: "engine", detail: "Starting Babylon..." });
-
+  logger.game("▶ engine");
   const engine = new GameEngine(canvas);
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
+  if (signal.aborted) { engine.dispose(); return false; }
+  logger.game("✓ engine");
 
   const { scene } = engine;
-  const world = new GameWorld(scene);
 
+  logger.game("▶ world");
   onLoadEvent({ stage: "world", detail: "Fetching regions..." });
+  const world = new GameWorld(scene);
   await loadAllRegions(world, signal, onLoadEvent);
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
+  if (signal.aborted) { engine.dispose(); return false; }
+  logger.game("✓ world");
 
   onLoadEvent({ stage: "player_data", detail: "Setting up camera..." });
+  logger.game("▶ camera");
   const camera = new GameCamera(scene);
-  logger.game("Camera ready");
+  logger.game("✓ camera");
 
   onLoadEvent({ stage: "player_data", detail: "Spawning local player..." });
+  logger.game("▶ players");
   const players = new PlayerManager(scene, world);
   const localMesh = players.spawnLocalPlayer();
   camera.attachToMesh(localMesh);
-  logger.game("Local player spawned");
+  logger.game("✓ players");
 
   onLoadEvent({ stage: "player_data", detail: "Initialising input..." });
+  logger.game("▶ input");
   const keys = new KeysInput(scene, camera);
   const pointer = new PointerInput(scene, players);
+  logger.game("✓ input");
 
+  logger.game("▶ render loop");
   engine.startRenderLoop();
-  logger.game("Render loop started");
+  logger.game("✓ render loop");
 
   const stopDevWatcher =
     process.env.NODE_ENV === "development" ? createDevWatcher(() => world) : null;
 
   setContext({ engine, world, players, camera, keys, pointer, stopDevWatcher });
-
-  logger.game("Engine, world, and all systems ready");
   return true;
 }

@@ -16,8 +16,7 @@ export class GameEngine {
   private resizeHandler: () => void;
 
   constructor(canvas: HTMLCanvasElement) {
-    logger.game("Creating Babylon engine");
-
+    logger.game("  ▶ Babylon Engine");
     this.engine = new Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
@@ -25,18 +24,18 @@ export class GameEngine {
     });
     this.engine.resize();
 
+    logger.game("  ▶ Scene");
     this.scene = new Scene(this.engine);
     this.scene.constantlyUpdateMeshUnderPointer = true;
 
     this.lighting = setupScene(this.scene);
+    logger.game("  ✓ Scene + lighting");
 
     this.resizeHandler = () => {
       this.engine.resize();
-      logger.game("Canvas resized");
+      logger.game("canvas resized");
     };
     window.addEventListener("resize", this.resizeHandler);
-
-    logger.game("Engine ready");
   }
 
   startRenderLoop(): void {
@@ -44,8 +43,9 @@ export class GameEngine {
   }
 
   dispose(): void {
-    logger.game("Disposing engine");
+    logger.game("▶ engine dispose");
     window.removeEventListener("resize", this.resizeHandler);
     this.engine.dispose();
+    logger.game("✓ engine dispose");
   }
 }

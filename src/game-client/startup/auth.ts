@@ -8,17 +8,16 @@ import type { OnLoadEvent } from "../../types/mmo/loading";
 
 /*
  * Dev auth: POST /api/auth/login using NEXT_PUBLIC_DEV_EMAIL + NEXT_PUBLIC_DEV_PASSWORD.
- * Stores identity in the game store so the session route can use it.
- * Does not fetch the session token — that is fetchSession()'s responsibility.
+ * Stores identity in the game store. Does not fetch the session token.
  */
 export async function devAuth(onLoadEvent: OnLoadEvent): Promise<boolean> {
   const creds = getDevCredentials();
   if (!creds?.email || !creds?.password) {
-    logger.warn("Dev mode: DEV_EMAIL or DEV_PASSWORD not set in env");
+    logger.warn("devAuth: DEV_EMAIL or DEV_PASSWORD not set");
     return false;
   }
 
-  logger.game("Dev auth — logging in as", creds.email);
+  logger.auth("▶ dev login as", creds.email);
 
   try {
     const clientToken = await generateClientToken();
@@ -29,26 +28,27 @@ export async function devAuth(onLoadEvent: OnLoadEvent): Promise<boolean> {
     });
 
     if (!res.ok) {
-      logger.warn("Dev login failed:", res.message);
+      logger.warn("devAuth: login failed:", res.message);
       return false;
     }
 
     const success = res as AuthSuccessResponse;
     useGameStore.getState().storeIdentity({ uuid: success.uuid, playerName: success.playerName });
     onLoadEvent({ stage: "authenticating", detail: `Logged in as ${success.playerName}` });
-    logger.game("Dev auth complete");
+    logger.auth("✓ dev login — uuid:", success.uuid, "playerName:", success.playerName);
     return true;
   } catch (err) {
-    logger.error("Dev auth threw:", err instanceof Error ? err.message : err);
+    logger.error("devAuth threw:", err instanceof Error ? err.message : err);
     return false;
   }
 }
 
 /*
- * Prod auth: the authToken cookie is the credential and cannot be read
- * client-side. We optimistically proceed — fetchSession() will 401 and
- * redirect to /login if the cookie is missing or expired.
+ * Prod auth: the authToken cookie is the credential and is httpOnly.
+ * We optimistically proceed — fetchSession() will 401 and redirect to
+ * /login if the cookie is missing or expired.
  */
 export async function prodCredentialCheck(): Promise<boolean> {
+  logger.auth("prod: relying on httpOnly cookie");
   return true;
 }

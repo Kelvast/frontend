@@ -6,13 +6,10 @@ import type { OnLoadEvent } from "../../types/mmo/loading";
 
 /*
  * SESSION_OPENED (101) — server has accepted the token and placed the
- * player in the world. Advances the loader to the "session" stage so
- * the user sees progress, then hydrates the store.
+ * player in the world. Advances the loader to "session".
  *
- * "connected" is NOT fired here. The loader should only dismiss once
- * bootGame has fully completed (engine + world + systems ready) so the
- * player sees the rendered scene, not a black canvas. index.ts fires
- * "connected" after Promise.all([connectWS, bootGame]) resolves.
+ * "connected" is NOT fired here. See index.ts — it fires after bootGame
+ * completes so the loader dismisses onto a rendered scene.
  */
 let onLoadEvent: OnLoadEvent | null = null;
 
@@ -21,7 +18,7 @@ export function setLoadEventCallback(cb: OnLoadEvent): void {
 }
 
 function handleSessionOpened(msg: SessionOpenedMessage): void {
-  logger.ws("Session opened — world:", msg.worldName, "id:", msg.id);
+  logger.ws("✓ SESSION_OPENED — world:", msg.worldName, "player id:", msg.id);
   useGameStore.getState().onLoginSuccess(msg);
   onLoadEvent?.({ stage: "session", detail: `World: ${msg.worldName} · player id: ${msg.id}` });
   onLoadEvent = null;
