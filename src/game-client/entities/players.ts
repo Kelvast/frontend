@@ -107,7 +107,10 @@ export class PlayerManager {
   }
 
   dispose(): void {
-    this.localMesh?.dispose();
-    this.localMesh = null;
+    if (this.localMesh) {
+      this.localMesh.material?.dispose();
+      this.localMesh.dispose();
+      this.localMesh = null;
+    }
   }
 }

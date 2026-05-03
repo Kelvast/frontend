@@ -73,8 +73,8 @@ export async function reloadChunkFromApi(
   chunkX: number,
   chunkZ: number,
 ): Promise<void> {
-  const controller = new AbortController();
-  const tiles = await fetchChunkTiles(regionId, chunkX, chunkZ, controller.signal);
+  const signal = AbortSignal.timeout(10_000);
+  const tiles = await fetchChunkTiles(regionId, chunkX, chunkZ, signal);
   if (!tiles) {
     logger.game(`reloadChunkFromApi - failed to fetch chunk ${chunkX},${chunkZ} in "${regionId}"`);
     return;

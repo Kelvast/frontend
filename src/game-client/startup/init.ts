@@ -8,7 +8,32 @@ import { loadAllRegions } from "../world/loader";
 import { createDevWatcher } from "../dev-watcher";
 import { setContext } from "../context";
 import { logger } from "../../utils/logger";
-import type { OnLoadEvent } from "../../types/mmo/loading";
+import type { OnLoadEvent, LoadStage } from "../../types/mmo/loading";
+import { DEV_MODE } from "../../utils/dev";
+
+/*
+ * runStage wraps each boot step with the three things every stage needs:
+ *   1. emit an onLoadEvent so the loader UI advances
+ *   2. log ▶ / ✓ bookends
+ *   3. check the abort signal after the work completes
+ *
+ * Returns false if the signal was aborted, true otherwise.
+ * The caller checks the return value and bails out early if needed.
+ */
+async function runStage<T>(
+  signal: AbortSignal,
+  onLoadEvent: OnLoadEvent,
+  stage: LoadStage,
+  detail: string,
+  work: () => T | Promise<T>,
+): Promise<{ aborted: boolean; result: T | null }> {
+  onLoadEvent({ stage, detail });
+  logger.game(`▶ ${stage}`);
+  const result = await work();
+  if (signal.aborted) return { aborted: true, result: null };
+  logger.game(`✓ ${stage}`);
+  return { aborted: false, result };
+}
 
 /*
  * bootGame drives the full client-side boot sequence and owns all
@@ -32,86 +57,63 @@ export async function bootGame(
   signal: AbortSignal,
   onLoadEvent: OnLoadEvent,
 ): Promise<boolean> {
-  /* ---- Engine ---- */
-  onLoadEvent({ stage: "engine", detail: "Starting Babylon engine..." });
-  logger.game("▶ engine");
   const engine = new GameEngine(canvas);
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
-  logger.game("✓ engine");
+
+  const abort = () => { engine.dispose(); return false; };
+
+  /* ---- Engine ---- */
+  const engineStage = await runStage(signal, onLoadEvent, "engine", "Starting Babylon engine...", () => {});
+  if (engineStage.aborted) return abort();
 
   /* ---- Scene ---- */
-  onLoadEvent({ stage: "scene", detail: "Building scene..." });
-  logger.game("▶ scene");
-  engine.bootScene();
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
-  logger.game("✓ scene");
+  const sceneStage = await runStage(signal, onLoadEvent, "scene", "Building scene...", () => engine.bootScene());
+  if (sceneStage.aborted) return abort();
 
   /* ---- Assets ---- */
-  onLoadEvent({ stage: "assets", detail: "Loading assets..." });
-  logger.game("▶ assets");
-  await engine.bootAssets();
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
-  logger.game("✓ assets");
+  const assetsStage = await runStage(signal, onLoadEvent, "assets", "Loading assets...", () => engine.bootAssets());
+  if (assetsStage.aborted) return abort();
 
   /* ---- Audio ---- */
-  onLoadEvent({ stage: "audio", detail: "Priming audio..." });
-  logger.game("▶ audio");
-  await engine.bootAudio();
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
-  logger.game("✓ audio");
+  const audioStage = await runStage(signal, onLoadEvent, "audio", "Priming audio...", () => engine.bootAudio());
+  if (audioStage.aborted) return abort();
 
   /* ---- World ---- */
   const { scene } = engine;
-  onLoadEvent({ stage: "world", detail: "Fetching regions..." });
-  logger.game("▶ world");
   const world = new GameWorld(scene);
-  await loadAllRegions(world, signal, onLoadEvent);
-  if (signal.aborted) {
-    engine.dispose();
-    return false;
-  }
-  logger.game("✓ world");
+  const worldStage = await runStage(signal, onLoadEvent, "world", "Fetching regions...", () =>
+    loadAllRegions(world, signal, onLoadEvent),
+  );
+  if (worldStage.aborted) return abort();
 
   /* ---- Camera ---- */
-  onLoadEvent({ stage: "camera", detail: "Setting up camera..." });
-  logger.game("▶ camera");
-  const camera = new GameCamera(scene);
-  logger.game("✓ camera");
+  const cameraStage = await runStage(signal, onLoadEvent, "camera", "Setting up camera...", () => new GameCamera(scene));
+  if (cameraStage.aborted) return abort();
+  const camera = cameraStage.result!;
 
   /* ---- Players ---- */
-  onLoadEvent({ stage: "players", detail: "Spawning local player..." });
-  logger.game("▶ players");
-  const players = new PlayerManager(scene, world);
-  const localMesh = players.spawnLocalPlayer();
-  camera.attachToMesh(localMesh);
-  logger.game("✓ players");
+  const playersStage = await runStage(signal, onLoadEvent, "players", "Spawning local player...", () => {
+    const players = new PlayerManager(scene, world);
+    const localMesh = players.spawnLocalPlayer();
+    camera.attachToMesh(localMesh);
+    return players;
+  });
+  if (playersStage.aborted) return abort();
+  const players = playersStage.result!;
 
   /* ---- Input ---- */
-  onLoadEvent({ stage: "input", detail: "Initialising input..." });
-  logger.game("▶ input");
-  const keys = new KeysInput(scene, camera);
-  const pointer = new PointerInput(scene, players);
-  logger.game("✓ input");
+  const inputStage = await runStage(signal, onLoadEvent, "input", "Initialising input...", () => ({
+    keys: new KeysInput(scene, camera),
+    pointer: new PointerInput(scene, players),
+  }));
+  if (inputStage.aborted) return abort();
+  const { keys, pointer } = inputStage.result!;
 
   /* ---- Render loop ---- */
   logger.game("▶ render loop");
   engine.startRenderLoop();
   logger.game("✓ render loop");
 
-  const stopDevWatcher =
-    process.env.NODE_ENV === "development" ? createDevWatcher(() => world) : null;
+  const stopDevWatcher = DEV_MODE ? createDevWatcher(() => world) : null;
 
   setContext({ engine, world, players, camera, keys, pointer, stopDevWatcher });
   return true;

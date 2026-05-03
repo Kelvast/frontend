@@ -1,4 +1,4 @@
-import { PointerEventTypes, PointerInfo, Scene } from "@babylonjs/core";
+import { PointerEventTypes, PointerInfo, Scene, Observer } from "@babylonjs/core";
 import { PlayerManager } from "../entities/players";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
@@ -13,11 +13,13 @@ import { WORLD } from "mmo-shared";
  * TODO: drag-select for multi-tile actions
  */
 export class PointerInput {
+  private observer: Observer<PointerInfo>;
+
   constructor(
     private scene: Scene,
     private players: PlayerManager,
   ) {
-    scene.onPointerObservable.add((pi) => this.onPointer(pi));
+    this.observer = scene.onPointerObservable.add((pi) => this.onPointer(pi));
     logger.game("PointerInput initialised");
   }
 
@@ -52,5 +54,9 @@ export class PointerInput {
 
     logger.game("Tile clicked", { tileX, tileZ });
     this.players.moveTo(tileX, tileZ);
+  }
+
+  dispose(): void {
+    this.scene.onPointerObservable.remove(this.observer);
   }
 }

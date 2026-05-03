@@ -4,13 +4,6 @@ import { logger } from "../../utils/logger";
 import { setupScene } from "./scene-setup";
 import type { SceneLighting } from "./scene-setup";
 
-/*
- * GameEngine owns the Babylon Engine, Scene, AssetsManager, and AudioEngine.
- *
- * Construction is intentionally split into explicit async steps so bootGame
- * can emit a loader event between each one. Nothing heavy happens in the
- * constructor — call the boot* methods in sequence after construction.
- */
 export class GameEngine {
   public readonly engine: Engine;
   public readonly scene: Scene;
@@ -42,20 +35,10 @@ export class GameEngine {
     logger.game("  ✓ Scene");
   }
 
-  /*
-   * bootScene — apply lighting and scene config.
-   * Kept separate from constructor so bootGame can emit the "scene" stage
-   * between engine init and scene setup.
-   */
   bootScene(): void {
     this.lighting = setupScene(this.scene);
   }
 
-  /*
-   * bootAssets — initialise AssetsManager and load any registered assets.
-   * Currently no assets are registered; the manager is created so future
-   * texture/mesh loading has a home without changing the boot sequence.
-   */
   async bootAssets(): Promise<void> {
     logger.game("  ▶ Assets");
     this.assets = new AssetsManager(this.scene);
@@ -68,16 +51,18 @@ export class GameEngine {
   }
 
   /*
-   * bootAudio — create the v2 AudioEngine and attempt to unlock it.
-   * No sounds are registered yet; this primes the AudioContext so the
-   * first in-game sound doesn't stall waiting for a user-gesture unlock.
-   * Failure is non-fatal — the game runs silently if audio is unavailable.
+   * bootAudio creates the AudioEngine and fires unlockAsync without awaiting it.
+   * unlockAsync blocks until the browser receives a user gesture (click/keypress),
+   * so awaiting it during programmatic boot would stall the entire sequence.
+   * The AudioContext will unlock on the first real user interaction instead.
    */
   async bootAudio(): Promise<void> {
     logger.game("  ▶ Audio");
     try {
       this.audioEngine = await CreateAudioEngineAsync();
-      await this.audioEngine.unlockAsync();
+      this.audioEngine.unlockAsync().catch(() => {
+        logger.game("  ⚠ Audio unlock deferred — waiting for user gesture");
+      });
       logger.game("  ✓ Audio");
     } catch {
       logger.game("  ⚠ Audio unavailable — continuing without sound");
