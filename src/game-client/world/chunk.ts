@@ -26,6 +26,12 @@ export class Chunk {
   constructor(
     private data: ChunkData,
     private scene: Scene,
+    /*
+     * Flat region-wide tile lookup built by GameRegion before any chunks spawn.
+     * Covers all chunks in the region so corner height averaging works seamlessly
+     * across chunk boundaries without any per-chunk neighbour resolution.
+     */
+    private getRegionTile: (tileX: number, tileZ: number) => TileData | null,
     private highlightLayer?: HighlightLayer,
   ) {
     logger.game(`Spawning chunk (${data.chunkX}, ${data.chunkZ}) in region "${data.region}"`);
@@ -49,7 +55,7 @@ export class Chunk {
     for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
       for (let col = 0; col < WORLD.CHUNK_SIZE; col++) {
         const tile = tiles[row][col];
-        const mesh = buildTileMesh(tiles, row, col, chunkX, chunkZ, this.scene);
+        const mesh = buildTileMesh(tiles, row, col, chunkX, chunkZ, this.scene, this.getRegionTile);
         mesh.material = getTileMaterial(tile, this.scene);
         mesh.isPickable = false;
         tileMeshes.push(mesh);
@@ -92,7 +98,15 @@ export class Chunk {
         const worldZ = (chunkZ * WORLD.CHUNK_SIZE + row) * WORLD.TILE_SIZE + half;
         const worldY = tileWorldY(tile.y);
 
-        const outline = buildTileMesh(tiles, row, col, chunkX, chunkZ, this.scene);
+        const outline = buildTileMesh(
+          tiles,
+          row,
+          col,
+          chunkX,
+          chunkZ,
+          this.scene,
+          this.getRegionTile,
+        );
         outline.name = `outline-${chunkX}-${chunkZ}-${col}-${row}`;
         outline.scaling = new Vector3(0.97, 1, 0.97);
         outline.position.y += 0.001;
