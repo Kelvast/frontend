@@ -1,4 +1,5 @@
 import { FC, memo, useEffect, useRef, useState } from "react";
+import { LOADER } from "../../game-client/constants";
 import type { LoadStage } from "../../types/mmo/loading";
 
 interface Props {
@@ -8,9 +9,8 @@ interface Props {
 }
 
 /*
- * Stage order must match the actual boot sequence in game-client/index.ts:
- *   authenticating → session → connecting → engine → world → player_data
- * "connected" and "error" are terminal states, not steps.
+ * Stage order must match the actual boot sequence in game-client/index.ts.
+ * "connected" and "error" are terminal states, not progress steps.
  */
 const STAGES: Exclude<LoadStage, "connected" | "error">[] = [
   "authenticating",
@@ -23,13 +23,13 @@ const STAGES: Exclude<LoadStage, "connected" | "error">[] = [
 
 const LABELS: Record<LoadStage, string> = {
   authenticating: "Authenticating",
-  session: "Starting session",
-  connecting: "Connecting",
-  engine: "Starting engine",
-  world: "Loading world",
-  player_data: "Loading player",
-  connected: "Connected",
-  error: "Failed to connect",
+  session:        "Starting session",
+  connecting:     "Connecting",
+  engine:         "Starting engine",
+  world:          "Loading world",
+  player_data:    "Loading player",
+  connected:      "Connected",
+  error:          "Failed to connect",
 };
 
 const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
@@ -37,11 +37,13 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
   const isError = stage === "error";
 
   const progress =
-    stage === "connected" ? 100 : isError ? 100 : ((currentIndex + 1) / STAGES.length) * 100;
+    stage === "connected" ? 100
+    : isError ? 100
+    : ((currentIndex + 1) / STAGES.length) * 100;
 
   /*
    * Rolling detail log — keeps the last 4 lines so the user can see
-   * chunks streaming in during the world stage.
+   * activity streaming in during the world stage.
    */
   const [detailLog, setDetailLog] = useState<string[]>([]);
   const prevDetail = useRef<string | undefined>(undefined);
@@ -52,20 +54,22 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
     setDetailLog((prev) => [...prev.slice(-3), detail]);
   }, [detail]);
 
+  const fadeDuration = `${LOADER.FADE_DURATION_MS}ms`;
+
   return (
     <div
       className="fixed inset-0 z-[200] pointer-events-none flex flex-col justify-end"
       style={{
         opacity: visible ? 1 : 0,
-        transition: "opacity 600ms ease-out",
+        transition: `opacity ${fadeDuration} ease-out`,
       }}
     >
-      {/* Full black overlay — hides canvas until connected */}
+      {/* Full black overlay — hides the canvas until boot completes */}
       <div
         className="absolute inset-0 bg-black"
         style={{
           opacity: visible ? 1 : 0,
-          transition: "opacity 600ms ease-out",
+          transition: `opacity ${fadeDuration} ease-out`,
         }}
       />
 
@@ -84,8 +88,9 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
                 key={i}
                 className="block text-xs font-mono"
                 style={{
-                  color:
-                    i === detailLog.length - 1 ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)",
+                  color: i === detailLog.length - 1
+                    ? "var(--color-text-muted)"
+                    : "var(--color-text-faint)",
                   opacity: 0.4 + (i / detailLog.length) * 0.6,
                 }}
               >
@@ -98,13 +103,13 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
         {/* Progress bar */}
         <div
           className="w-full mb-3"
-          style={{ height: "1px", background: "rgba(255,255,255,0.08)" }}
+          style={{ height: "1px", background: "var(--color-text-faint)" }}
         >
           <div
             style={{
               height: "100%",
               width: `${progress}%`,
-              background: isError ? "#e05555" : "rgba(255,255,255,0.7)",
+              background: isError ? "var(--color-danger)" : "var(--color-accent)",
               transition: "width 400ms ease-out",
             }}
           />
@@ -115,16 +120,16 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
             <span
               className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{
-                background: isError ? "#e05555" : "rgba(255,255,255,0.7)",
+                background: isError ? "var(--color-danger)" : "var(--color-accent)",
                 animation: isError ? "none" : "pulse 1.4s ease-in-out infinite",
               }}
             />
             <span
               className="text-xs uppercase"
               style={{
-                color: isError ? "#e05555" : "rgba(255,255,255,0.7)",
+                color: isError ? "var(--color-danger)" : "var(--color-accent)",
                 letterSpacing: "0.15em",
-                fontFamily: "var(--font-heading, monospace)",
+                fontFamily: "var(--font-heading)",
               }}
             >
               {LABELS[stage]}
@@ -138,13 +143,13 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
                 key={s}
                 className="inline-block rounded-full"
                 style={{
-                  width: i === currentIndex ? "6px" : "4px",
+                  width:  i === currentIndex ? "6px" : "4px",
                   height: i === currentIndex ? "6px" : "4px",
                   background: isError
-                    ? "#e05555"
+                    ? "var(--color-danger)"
                     : i <= currentIndex
-                      ? "rgba(255,255,255,0.8)"
-                      : "rgba(255,255,255,0.2)",
+                      ? "var(--color-accent)"
+                      : "var(--color-text-faint)",
                   transition: "all 300ms ease-out",
                 }}
               />

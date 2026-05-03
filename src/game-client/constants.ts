@@ -28,3 +28,15 @@ export const FLOOR = {
 export const MOVEMENT = {
   TILE_DURATION_MS: 250,
 } as const;
+
+/*
+ * LOADER timing constants.
+ * FADE_DURATION_MS  — how long the CSS opacity transition takes.
+ * UNMOUNT_DELAY_MS  — how long GamePage waits before unmounting the loader
+ *                     after "connected" fires. Must be > FADE_DURATION_MS
+ *                     so the transition fully completes before DOM removal.
+ */
+export const LOADER = {
+  FADE_DURATION_MS: 900,
+  UNMOUNT_DELAY_MS: 1100,
+} as const;
