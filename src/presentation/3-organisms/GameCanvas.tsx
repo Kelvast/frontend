@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import { startGame, destroyGame } from "../../game-client";
 import { setLoadEventCallback as setSessionCallback } from "../../ws/messages/session-opened";
-import { setLoadEventCallback as setPlayerDataCallback } from "../../ws/messages/player-data";
 import type { OnLoadEvent } from "../../types/mmo/loading";
 
 interface Props {
@@ -19,7 +18,6 @@ const GameCanvas = ({ onLoadEvent }: Props) => {
     const controller = new AbortController();
 
     setSessionCallback(onLoadEvent);
-    setPlayerDataCallback(onLoadEvent);
 
     startGame(canvas, controller.signal, onLoadEvent);
 
