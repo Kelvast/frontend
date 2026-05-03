@@ -1,8 +1,8 @@
-import type { ActionStartPacket, ActionType } from "mmo-shared";
+import type { ActionStartMessage, ActionType } from "mmo-shared";
 import { MSG } from "mmo-shared";
 import { send } from "../client";
 
 export function sendActionStart(action: ActionType, targetId: number): void {
-  const packet: ActionStartPacket = { type: MSG.ACTION_START, action, targetId };
+  const packet: ActionStartMessage = { type: MSG.ACTION_START, action, targetId };
   send(packet);
 }

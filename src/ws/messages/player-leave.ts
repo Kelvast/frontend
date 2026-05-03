@@ -1,4 +1,4 @@
-import type { PlayerLeaveMessage } from "mmo-shared";
+import { MSG, type PlayerLeaveMessage } from "mmo-shared";
 import { logger } from "../../utils/logger";
 import { useGameStore } from "../../utils/game-store";
 import { registerMessageHandler } from "../registry";
@@ -8,4 +8,4 @@ function handlePlayerLeave(msg: PlayerLeaveMessage): void {
   useGameStore.getState().onPlayerLeave(msg);
 }
 
-registerMessageHandler<PlayerLeaveMessage>("player_leave", handlePlayerLeave);
+registerMessageHandler<PlayerLeaveMessage>(MSG.PLAYER_LEAVE, handlePlayerLeave);
