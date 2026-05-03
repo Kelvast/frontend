@@ -59,22 +59,37 @@ export async function bootGame(
 ): Promise<boolean> {
   const engine = new GameEngine(canvas);
 
-  const abort = () => { engine.dispose(); return false; };
+  const abort = () => {
+    engine.dispose();
+    return false;
+  };
 
   /* ---- Engine ---- */
-  const engineStage = await runStage(signal, onLoadEvent, "engine", "Starting Babylon engine...", () => {});
+  const engineStage = await runStage(
+    signal,
+    onLoadEvent,
+    "engine",
+    "Starting Babylon engine...",
+    () => {},
+  );
   if (engineStage.aborted) return abort();
 
   /* ---- Scene ---- */
-  const sceneStage = await runStage(signal, onLoadEvent, "scene", "Building scene...", () => engine.bootScene());
+  const sceneStage = await runStage(signal, onLoadEvent, "scene", "Building scene...", () =>
+    engine.bootScene(),
+  );
   if (sceneStage.aborted) return abort();
 
   /* ---- Assets ---- */
-  const assetsStage = await runStage(signal, onLoadEvent, "assets", "Loading assets...", () => engine.bootAssets());
+  const assetsStage = await runStage(signal, onLoadEvent, "assets", "Loading assets...", () =>
+    engine.bootAssets(),
+  );
   if (assetsStage.aborted) return abort();
 
   /* ---- Audio ---- */
-  const audioStage = await runStage(signal, onLoadEvent, "audio", "Priming audio...", () => engine.bootAudio());
+  const audioStage = await runStage(signal, onLoadEvent, "audio", "Priming audio...", () =>
+    engine.bootAudio(),
+  );
   if (audioStage.aborted) return abort();
 
   /* ---- World ---- */
@@ -86,17 +101,29 @@ export async function bootGame(
   if (worldStage.aborted) return abort();
 
   /* ---- Camera ---- */
-  const cameraStage = await runStage(signal, onLoadEvent, "camera", "Setting up camera...", () => new GameCamera(scene));
+  const cameraStage = await runStage(
+    signal,
+    onLoadEvent,
+    "camera",
+    "Setting up camera...",
+    () => new GameCamera(scene),
+  );
   if (cameraStage.aborted) return abort();
   const camera = cameraStage.result!;
 
   /* ---- Players ---- */
-  const playersStage = await runStage(signal, onLoadEvent, "players", "Spawning local player...", () => {
-    const players = new PlayerManager(scene, world);
-    const localMesh = players.spawnLocalPlayer();
-    camera.attachToMesh(localMesh);
-    return players;
-  });
+  const playersStage = await runStage(
+    signal,
+    onLoadEvent,
+    "players",
+    "Spawning local player...",
+    () => {
+      const players = new PlayerManager(scene, world);
+      const localMesh = players.spawnLocalPlayer();
+      camera.attachToMesh(localMesh);
+      return players;
+    },
+  );
   if (playersStage.aborted) return abort();
   const players = playersStage.result!;
 
