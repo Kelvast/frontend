@@ -1,45 +1,49 @@
 import { FC, memo, useEffect, useRef, useState } from "react";
-import type { LoadStage, LoadEvent } from "../../types/mmo/loading";
+import type { LoadStage } from "../../types/mmo/loading";
 
 interface Props {
   stage: LoadStage;
   detail?: string;
+  visible: boolean;
 }
 
+/*
+ * Stage order must match the actual boot sequence in game-client/index.ts:
+ *   authenticating → session → connecting → engine → world → player_data
+ * "connected" and "error" are terminal states, not steps.
+ */
 const STAGES: Exclude<LoadStage, "connected" | "error">[] = [
   "authenticating",
+  "session",
+  "connecting",
   "engine",
   "world",
-  "connecting",
-  "session",
   "player_data",
 ];
 
 const LABELS: Record<LoadStage, string> = {
   authenticating: "Authenticating",
-  engine: "Starting engine",
-  world: "Loading world",
-  connecting: "Connecting",
-  session: "Opening session",
-  player_data: "Loading player",
-  connected: "Connected",
-  error: "Failed to connect",
+  session:        "Starting session",
+  connecting:     "Connecting",
+  engine:         "Starting engine",
+  world:          "Loading world",
+  player_data:    "Loading player",
+  connected:      "Connected",
+  error:          "Failed to connect",
 };
 
-const GameLoader: FC<Props> = ({ stage, detail }) => {
+const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
   const currentIndex = STAGES.indexOf(stage as (typeof STAGES)[number]);
-  const progress =
-    stage === "connected"
-      ? 100
-      : stage === "error"
-        ? 100
-        : ((currentIndex + 1) / STAGES.length) * 100;
-
   const isError = stage === "error";
 
+  const progress =
+    stage === "connected" ? 100
+    : isError ? 100
+    : ((currentIndex + 1) / STAGES.length) * 100;
+
   /*
-   * Rolling detail log — keeps the last 4 detail lines so the user can
-   * see chunks being loaded as they stream in.
+   * Rolling detail log — keeps the last 4 lines so the user can see
+   * chunks streaming in during the world stage.
    */
   const [detailLog, setDetailLog] = useState<string[]>([]);
   const prevDetail = useRef<string | undefined>(undefined);
@@ -52,78 +56,101 @@ const GameLoader: FC<Props> = ({ stage, detail }) => {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[100] px-6 pb-5 pt-8"
-      style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%)" }}
+      className="fixed inset-0 z-[200] pointer-events-none flex flex-col justify-end"
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: "opacity 600ms ease-out",
+      }}
     >
-      {/* Rolling detail log */}
-      {detailLog.length > 0 && (
-        <div className="mb-3 flex flex-col gap-0.5">
-          {detailLog.map((line, i) => (
-            <span
-              key={i}
-              className="block text-xs font-mono"
-              style={{
-                color:
-                  i === detailLog.length - 1
-                    ? "var(--color-text-muted)"
-                    : "var(--color-text-faint)",
-                opacity: 0.4 + (i / detailLog.length) * 0.6,
-              }}
-            >
-              {line}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Full black overlay — hides canvas until connected */}
+      <div
+        className="absolute inset-0 bg-black"
+        style={{
+          opacity: visible ? 1 : 0,
+          transition: "opacity 600ms ease-out",
+        }}
+      />
 
-      {/* Progress bar */}
-      <div className="w-full h-px mb-3" style={{ background: "rgba(255,255,255,0.07)" }}>
+      {/* Content sits above the overlay */}
+      <div
+        className="relative z-10 px-6 pb-5 pt-8"
+        style={{
+          background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)",
+        }}
+      >
+        {/* Rolling detail log */}
+        {detailLog.length > 0 && (
+          <div className="mb-3 flex flex-col gap-0.5">
+            {detailLog.map((line, i) => (
+              <span
+                key={i}
+                className="block text-xs font-mono"
+                style={{
+                  color: i === detailLog.length - 1 ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)",
+                  opacity: 0.4 + (i / detailLog.length) * 0.6,
+                }}
+              >
+                {line}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Progress bar */}
         <div
-          className="h-full transition-all duration-500 ease-out"
-          style={{
-            width: `${progress}%`,
-            background: isError ? "var(--color-danger)" : "var(--color-accent)",
-          }}
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+          className="w-full mb-3"
+          style={{ height: "1px", background: "rgba(255,255,255,0.08)" }}
+        >
+          <div
             style={{
-              background: isError ? "var(--color-danger)" : "var(--color-accent)",
-              animation: isError ? "none" : "pulse 1.4s ease-in-out infinite",
+              height: "100%",
+              width: `${progress}%`,
+              background: isError ? "#e05555" : "rgba(255,255,255,0.7)",
+              transition: "width 400ms ease-out",
             }}
           />
-          <span
-            className="text-xs uppercase tracking-widest"
-            style={{
-              fontFamily: "var(--font-heading)",
-              color: isError ? "var(--color-danger)" : "var(--color-accent)",
-              letterSpacing: "0.15em",
-            }}
-          >
-            {LABELS[stage]}
-          </span>
         </div>
 
-        {/* Step dots */}
-        <div className="flex items-center gap-1.5">
-          {STAGES.map((s, i) => (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <span
-              key={s}
-              className="inline-block w-1 h-1 rounded-full transition-all duration-300"
+              className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{
-                background: isError
-                  ? "var(--color-danger)"
-                  : i <= currentIndex
-                    ? "var(--color-accent)"
-                    : "var(--color-text-faint)",
-                transform: i === currentIndex ? "scale(1.5)" : "scale(1)",
+                background: isError ? "#e05555" : "rgba(255,255,255,0.7)",
+                animation: isError ? "none" : "pulse 1.4s ease-in-out infinite",
               }}
             />
-          ))}
+            <span
+              className="text-xs uppercase"
+              style={{
+                color: isError ? "#e05555" : "rgba(255,255,255,0.7)",
+                letterSpacing: "0.15em",
+                fontFamily: "var(--font-heading, monospace)",
+              }}
+            >
+              {LABELS[stage]}
+            </span>
+          </div>
+
+          {/* Step dots */}
+          <div className="flex items-center gap-1.5">
+            {STAGES.map((s, i) => (
+              <span
+                key={s}
+                className="inline-block rounded-full"
+                style={{
+                  width: i === currentIndex ? "6px" : "4px",
+                  height: i === currentIndex ? "6px" : "4px",
+                  background: isError
+                    ? "#e05555"
+                    : i <= currentIndex
+                      ? "rgba(255,255,255,0.8)"
+                      : "rgba(255,255,255,0.2)",
+                  transition: "all 300ms ease-out",
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
