@@ -1,6 +1,6 @@
 "use client";
 
-import type { MessageBase, MessageType } from "mmo-shared";
+import type { ClientMessage, MessageBase, MessageType } from "mmo-shared";
 import { MSG } from "mmo-shared";
 import { useGameStore } from "../utils/game-store";
 import { logger } from "../utils/logger";
@@ -54,10 +54,10 @@ export function disconnect(): void {
   ws = null;
 }
 
-export function send(packet: MessageBase): void {
+export function send(message: ClientMessage): void {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(packet));
+    ws.send(JSON.stringify(message));
   } else {
-    logger.warn("send called but WS not open - packet dropped:", packet.type);
+    logger.warn("send called but WS not open - packet dropped:", message.type);
   }
 }
