@@ -19,9 +19,14 @@ let destroyPromise: Promise<void> | null = null;
  *   authenticating  — dev login or prod cookie check
  *   session         — POST /api/game/session
  *   connecting      — WS opens, token sent (runs in parallel with engine boot)
- *   engine          — Babylon engine + scene created
+ *   engine          — Babylon engine created
+ *   scene           — Scene + lighting applied
+ *   assets          — AssetsManager loaded
+ *   audio           — AudioEngine primed
  *   world           — regions + chunks fetched and spawned
- *   player_data     — camera, player, and systems ready
+ *   camera          — GameCamera created and attached
+ *   players         — local player mesh spawned
+ *   input           — keyboard + pointer input initialised
  *   connected       — render loop running, scene is visible
  *
  * WS connect and engine boot are parallel. "connected" fires only after
@@ -77,8 +82,6 @@ export async function startGame(
   }
 
   logger.game("✓ WS + engine boot");
-
-  onLoadEvent({ stage: "player_data", detail: "Spawning player..." });
   onLoadEvent({ stage: "connected" });
   logger.game("✓ startGame — scene live");
 }
