@@ -1,3 +1,6 @@
+import "./session-opened";
+import "./session-rejected";
+import "./session-closed";
 import "./action-finished";
 import "./action-ongoing";
 import "./action-start";
