@@ -1,17 +1,21 @@
-import { Engine, Scene } from "@babylonjs/core";
+import { Engine, Scene, AssetsManager, AudioEngine } from "@babylonjs/core";
 import { logger } from "../../utils/logger";
 import { setupScene } from "./scene-setup";
 import type { SceneLighting } from "./scene-setup";
+import type { OnLoadEvent } from "../../types/mmo/loading";
 
 /*
- * GameEngine owns the Babylon Engine and Scene.
- * scene-setup.ts applies lighting — kept separate so lighting config
- * can be changed without touching the engine bootstrap.
+ * GameEngine owns the Babylon Engine, Scene, AssetsManager, and AudioEngine.
+ *
+ * Construction is intentionally split into explicit async steps so bootGame
+ * can emit a loader event between each one. Nothing heavy happens in the
+ * constructor — call the boot* methods in sequence after construction.
  */
 export class GameEngine {
   public readonly engine: Engine;
   public readonly scene: Scene;
-  public readonly lighting: SceneLighting;
+  public lighting!: SceneLighting;
+  public assets!: AssetsManager;
 
   private resizeHandler: () => void;
 
@@ -23,19 +27,58 @@ export class GameEngine {
       disableWebGL2Support: false,
     });
     this.engine.resize();
-
-    logger.game("  ▶ Scene");
-    this.scene = new Scene(this.engine);
-    this.scene.constantlyUpdateMeshUnderPointer = true;
-
-    this.lighting = setupScene(this.scene);
-    logger.game("  ✓ Scene + lighting");
+    logger.game("  ✓ Babylon Engine");
 
     this.resizeHandler = () => {
       this.engine.resize();
       logger.game("canvas resized");
     };
     window.addEventListener("resize", this.resizeHandler);
+
+    logger.game("  ▶ Scene");
+    this.scene = new Scene(this.engine);
+    this.scene.constantlyUpdateMeshUnderPointer = true;
+    logger.game("  ✓ Scene");
+  }
+
+  /*
+   * bootScene — apply lighting and scene config.
+   * Kept separate from constructor so bootGame can emit the "scene" stage
+   * between engine init and scene setup.
+   */
+  bootScene(): void {
+    this.lighting = setupScene(this.scene);
+  }
+
+  /*
+   * bootAssets — initialise AssetsManager and load any registered assets.
+   * Currently no assets are registered; the manager is created so future
+   * texture/mesh loading has a home without changing the boot sequence.
+   */
+  async bootAssets(): Promise<void> {
+    logger.game("  ▶ Assets");
+    this.assets = new AssetsManager(this.scene);
+    this.assets.useDefaultLoadingScreen = false;
+    await new Promise<void>((resolve) => {
+      this.assets.onFinish = () => resolve();
+      this.assets.load();
+    });
+    logger.game("  ✓ Assets (0 tasks)");
+  }
+
+  /*
+   * bootAudio — unlock the AudioEngine so the browser permits audio playback.
+   * No sounds are registered yet; this primes the context so the first
+   * in-game sound doesn't stall waiting for user-gesture unlock.
+   */
+  bootAudio(): void {
+    logger.game("  ▶ Audio");
+    try {
+      AudioEngine.audioEngine?.unlock();
+    } catch {
+      /* AudioEngine may not be available in all environments */
+    }
+    logger.game("  ✓ Audio");
   }
 
   startRenderLoop(): void {

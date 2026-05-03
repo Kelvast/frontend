@@ -3,8 +3,13 @@ export type LoadStage =
   | "session"
   | "connecting"
   | "engine"
+  | "scene"
+  | "assets"
+  | "audio"
   | "world"
-  | "player_data"
+  | "camera"
+  | "players"
+  | "input"
   | "connected"
   | "error";
 

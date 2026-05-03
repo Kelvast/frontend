@@ -9,16 +9,22 @@ interface Props {
 }
 
 /*
- * Stage order must match the actual boot sequence in game-client/index.ts.
- * "connected" and "error" are terminal states, not progress steps.
+ * STAGES defines the visual progress sequence.
+ * "connected" and "error" are terminal — not progress steps.
+ * Order must match the actual boot sequence in bootGame / index.ts.
  */
 const STAGES: Exclude<LoadStage, "connected" | "error">[] = [
   "authenticating",
   "session",
   "connecting",
   "engine",
+  "scene",
+  "assets",
+  "audio",
   "world",
-  "player_data",
+  "camera",
+  "players",
+  "input",
 ];
 
 const LABELS: Record<LoadStage, string> = {
@@ -26,8 +32,13 @@ const LABELS: Record<LoadStage, string> = {
   session:        "Starting session",
   connecting:     "Connecting",
   engine:         "Starting engine",
+  scene:          "Building scene",
+  assets:         "Loading assets",
+  audio:          "Priming audio",
   world:          "Loading world",
-  player_data:    "Loading player",
+  camera:         "Setting up camera",
+  players:        "Spawning player",
+  input:          "Initialising input",
   connected:      "Connected",
   error:          "Failed to connect",
 };
