@@ -1,5 +1,5 @@
 import { Engine, Scene, AssetsManager, CreateAudioEngineAsync } from "@babylonjs/core";
-import type { IAudioEngine } from "@babylonjs/core";
+import type { AudioEngineV2 } from "@babylonjs/core";
 import { logger } from "../../utils/logger";
 import { setupScene } from "./scene-setup";
 import type { SceneLighting } from "./scene-setup";
@@ -16,7 +16,7 @@ export class GameEngine {
   public readonly scene: Scene;
   public lighting!: SceneLighting;
   public assets!: AssetsManager;
-  public audioEngine: IAudioEngine | null = null;
+  public audioEngine: AudioEngineV2 | null = null;
 
   private resizeHandler: () => void;
 
