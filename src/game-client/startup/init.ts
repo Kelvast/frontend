@@ -25,7 +25,10 @@ export async function bootGame(
   onLoadEvent({ stage: "engine", detail: "Starting Babylon..." });
   logger.game("▶ engine");
   const engine = new GameEngine(canvas);
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
   logger.game("✓ engine");
 
   const { scene } = engine;
@@ -34,7 +37,10 @@ export async function bootGame(
   onLoadEvent({ stage: "world", detail: "Fetching regions..." });
   const world = new GameWorld(scene);
   await loadAllRegions(world, signal, onLoadEvent);
-  if (signal.aborted) { engine.dispose(); return false; }
+  if (signal.aborted) {
+    engine.dispose();
+    return false;
+  }
   logger.game("✓ world");
 
   onLoadEvent({ stage: "player_data", detail: "Setting up camera..." });

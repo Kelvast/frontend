@@ -32,7 +32,7 @@ export async function fetchSession(onLoadEvent: OnLoadEvent): Promise<string | n
 
     useGameStore.getState().storeGameSession(res);
     onLoadEvent({ stage: "session", detail: "Session created" });
-    logger.http("✓ POST /api/game/session — expires:", res.expiresAt);
+    logger.http("✓ POST /api/game/session — expires:", res.gameSessionExpiresAt);
     return res.gameSessionToken;
   } catch (err) {
     if ((err as HttpError).status === 401) {

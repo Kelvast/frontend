@@ -36,7 +36,10 @@ export async function startGame(
   if (signal.aborted) return;
 
   logger.game("▶ startGame");
-  onLoadEvent({ stage: "authenticating", detail: DEV_MODE ? "Dev login..." : "Verifying session..." });
+  onLoadEvent({
+    stage: "authenticating",
+    detail: DEV_MODE ? "Dev login..." : "Verifying session...",
+  });
 
   logger.game("▶ auth");
   const authed = DEV_MODE ? await devAuth(onLoadEvent) : await prodCredentialCheck();

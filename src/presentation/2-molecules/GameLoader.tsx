@@ -23,13 +23,13 @@ const STAGES: Exclude<LoadStage, "connected" | "error">[] = [
 
 const LABELS: Record<LoadStage, string> = {
   authenticating: "Authenticating",
-  session:        "Starting session",
-  connecting:     "Connecting",
-  engine:         "Starting engine",
-  world:          "Loading world",
-  player_data:    "Loading player",
-  connected:      "Connected",
-  error:          "Failed to connect",
+  session: "Starting session",
+  connecting: "Connecting",
+  engine: "Starting engine",
+  world: "Loading world",
+  player_data: "Loading player",
+  connected: "Connected",
+  error: "Failed to connect",
 };
 
 const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
@@ -37,9 +37,7 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
   const isError = stage === "error";
 
   const progress =
-    stage === "connected" ? 100
-    : isError ? 100
-    : ((currentIndex + 1) / STAGES.length) * 100;
+    stage === "connected" ? 100 : isError ? 100 : ((currentIndex + 1) / STAGES.length) * 100;
 
   /*
    * Rolling detail log — keeps the last 4 lines so the user can see
@@ -86,7 +84,8 @@ const GameLoader: FC<Props> = ({ stage, detail, visible }) => {
                 key={i}
                 className="block text-xs font-mono"
                 style={{
-                  color: i === detailLog.length - 1 ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)",
+                  color:
+                    i === detailLog.length - 1 ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)",
                   opacity: 0.4 + (i / detailLog.length) * 0.6,
                 }}
               >
