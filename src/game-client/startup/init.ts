@@ -65,7 +65,7 @@ export async function bootGame(
   /* ---- Audio ---- */
   onLoadEvent({ stage: "audio", detail: "Priming audio..." });
   logger.game("▶ audio");
-  engine.bootAudio();
+  await engine.bootAudio();
   if (signal.aborted) {
     engine.dispose();
     return false;
