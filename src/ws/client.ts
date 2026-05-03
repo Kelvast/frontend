@@ -1,6 +1,6 @@
 "use client";
 
-import type { MessageType } from "mmo-shared";
+import type { MessageBase, MessageType } from "mmo-shared";
 import { MSG } from "mmo-shared";
 import { useGameStore } from "../utils/game-store";
 import { logger } from "../utils/logger";
@@ -28,7 +28,7 @@ export function connectWS(token?: string): void {
   };
 
   ws.onmessage = (event: MessageEvent) => {
-    const msg = JSON.parse(event.data as string) as { type: MessageType | string };
+    const msg = JSON.parse(event.data as string) as { type: MessageType };
 
     if (msg.type !== MSG.TICK) {
       const bytes = new Blob([event.data]).size;
@@ -54,10 +54,10 @@ export function disconnect(): void {
   ws = null;
 }
 
-export function send(message: MessageType): void {
+export function send(packet: MessageBase): void {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
+    ws.send(JSON.stringify(packet));
   } else {
-    logger.warn("send called but WS not open - packet dropped:", message.type);
+    logger.warn("send called but WS not open - packet dropped:", packet.type);
   }
 }

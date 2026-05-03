@@ -8,4 +8,3 @@ export { connectWS, disconnect } from "./client";
 export { sendPlayerMove } from "./messages/move";
 export { sendAction } from "./messages/action";
 export { sendActionStart } from "./messages/action-start";
-
