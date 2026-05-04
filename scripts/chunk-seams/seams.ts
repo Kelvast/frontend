@@ -59,9 +59,15 @@ export function applyFixes(mismatches: Mismatch[], chunks: Map<string, TileGrid>
     const gridA = chunks.get(key(ax, az))!;
 
     if (m.edge === "east-west") {
-      gridA[m.index][WORLD.CHUNK_SIZE - 1] = withHeight(gridA[m.index][WORLD.CHUNK_SIZE - 1], m.heightB);
+      gridA[m.index][WORLD.CHUNK_SIZE - 1] = withHeight(
+        gridA[m.index][WORLD.CHUNK_SIZE - 1],
+        m.heightB,
+      );
     } else {
-      gridA[WORLD.CHUNK_SIZE - 1][m.index] = withHeight(gridA[WORLD.CHUNK_SIZE - 1][m.index], m.heightB);
+      gridA[WORLD.CHUNK_SIZE - 1][m.index] = withHeight(
+        gridA[WORLD.CHUNK_SIZE - 1][m.index],
+        m.heightB,
+      );
     }
     dirty.add(key(ax, az));
   }

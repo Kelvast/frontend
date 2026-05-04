@@ -46,7 +46,10 @@ function tileBlendedWorldY(tiles: TileData[][], row: number, col: number): numbe
    * cornerY() in tile-mesh.ts.
    */
   const corners = [
-    [-1, -1], [-1, 1], [1, -1], [1, 1],
+    [-1, -1],
+    [-1, 1],
+    [1, -1],
+    [1, 1],
   ] as const;
 
   let sum = 0;

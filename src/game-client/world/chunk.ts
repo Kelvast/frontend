@@ -63,7 +63,9 @@ export class Chunk {
       merged.isPickable = false;
       this.meshes = [merged];
     } else {
-      tileMeshes.forEach((m) => { m.isPickable = false; });
+      tileMeshes.forEach((m) => {
+        m.isPickable = false;
+      });
       this.meshes = tileMeshes;
     }
 
@@ -100,10 +102,18 @@ export class Chunk {
       const floorY = floorWorldY(node.floor);
 
       const positions: number[] = [
-        -half, yNW, -half,
-         half, yNE, -half,
-         half, ySE,  half,
-        -half, ySW,  half,
+        -half,
+        yNW,
+        -half,
+        half,
+        yNE,
+        -half,
+        half,
+        ySE,
+        half,
+        -half,
+        ySW,
+        half,
       ];
       const indices: number[] = [0, 1, 2, 0, 2, 3];
       const normals: number[] = [];
@@ -164,25 +174,46 @@ export class Chunk {
         outline.name = `outline-${chunkX}-${chunkZ}-${col}-${row}`;
         outline.scaling = new Vector3(0.97, 1, 0.97);
         outline.position.y += 0.001;
-        const outlineMat = new StandardMaterial(`outline-mat-${chunkX}-${chunkZ}-${col}-${row}`, this.scene);
+        const outlineMat = new StandardMaterial(
+          `outline-mat-${chunkX}-${chunkZ}-${col}-${row}`,
+          this.scene,
+        );
         outlineMat.emissiveColor = Color3.Black();
         outlineMat.wireframe = true;
         outline.material = outlineMat;
         outline.isPickable = false;
         this.devMeshes.push(outline);
 
-        const label = this._makeCoordLabel(tileX, tileZ, worldX, worldY, worldZ, `label-${chunkX}-${chunkZ}-${col}-${row}`);
+        const label = this._makeCoordLabel(
+          tileX,
+          tileZ,
+          worldX,
+          worldY,
+          worldZ,
+          `label-${chunkX}-${chunkZ}-${col}-${row}`,
+        );
         this.devMeshes.push(label);
       }
     }
   }
 
-  private _makeCoordLabel(tileX: number, tileZ: number, worldX: number, worldY: number, worldZ: number, name: string): Mesh {
+  private _makeCoordLabel(
+    tileX: number,
+    tileZ: number,
+    worldX: number,
+    worldY: number,
+    worldZ: number,
+    name: string,
+  ): Mesh {
     const resolution = 128;
     const lineHeight = 28;
     const s = WORLD.TILE_SIZE;
 
-    const tex = new DynamicTexture(`tex-${name}`, { width: resolution, height: resolution }, this.scene);
+    const tex = new DynamicTexture(
+      `tex-${name}`,
+      { width: resolution, height: resolution },
+      this.scene,
+    );
     tex.hasAlpha = true;
 
     const ctx = tex.getContext();
