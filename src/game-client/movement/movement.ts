@@ -1,3 +1,4 @@
+import type { Coords, ResolvedPace } from "mmo-shared";
 import { calcMoveSpeed, DEFAULT_SPEED_MODIFIERS } from "mmo-shared";
 import { getContext } from "../context";
 import { useGameStore } from "../../utils/game-store";

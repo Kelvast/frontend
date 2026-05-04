@@ -165,7 +165,21 @@ export const useGameStore = create<GameStoreState>((set) => ({
     }),
 
   onPlayerMoveAck: (path: Coords[], pace: ResolvedPace) => {
-    set({ pendingPath: { path, pace } });
+    set((state) => {
+      const last = path.at(-1);
+      if (!last || !state.localPlayer) return { pendingPath: { path, pace } };
+      return {
+        pendingPath: { path, pace },
+        localPlayer: {
+          ...state.localPlayer,
+          x: last.x,
+          y: last.y,
+          floor: last.floor,
+          z: last.z,
+          isMoving: true,
+        },
+      };
+    });
   },
 
   clearPendingPath: () => {
