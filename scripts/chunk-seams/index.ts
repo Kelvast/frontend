@@ -12,7 +12,6 @@
  * seam-consistent state.
  */
 
-import * as readline from "readline";
 import { discoverChunks } from "./discovery";
 import { parseChunk } from "./parse";
 import { checkSeams, applyFixes } from "./seams";
@@ -22,20 +21,6 @@ import { HEIGHT_NAME, ChunkCoord, TileGrid, MAX_SLOPE_STEP } from "./types";
 
 const FIX_MODE = process.argv.includes("--fix");
 const EASE_MODE = process.argv.includes("--ease");
-
-async function confirm(question: string): Promise<void> {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  await new Promise<void>((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      if (answer.toLowerCase() !== "y") {
-        console.log("Aborted.");
-        process.exit(0);
-      }
-      resolve();
-    });
-  });
-}
 
 async function main(): Promise<void> {
   const modeLabel =
@@ -79,17 +64,16 @@ async function main(): Promise<void> {
     }
 
     if (!FIX_MODE) {
-      console.log("\nRun with --fix to snap mismatched border tiles.");
+      console.log("\nRun with --fix to snap mismatched border tiles.\n");
     } else {
-      await confirm(`\nFix ${mismatches.length} seam tile(s)? [y/N] `);
       const dirty = applyFixes(mismatches, chunks);
       for (const k of dirty) {
         const [cx, cz] = k.split(",").map(Number) as ChunkCoord;
         writeChunk(cx, cz, chunks.get(k)!);
         console.log(`  ✓ Fixed seams in (${cx}, ${cz})`);
       }
+      console.log();
     }
-    console.log();
   }
 
   // ── Phase 2: slope easing ─────────────────────────────────────────────────
@@ -121,8 +105,6 @@ async function main(): Promise<void> {
     const [cx, cz] = k.split(",").map(Number);
     console.log(`  (${cx}, ${cz})`);
   }
-
-  await confirm(`\nWrite ${easeDirty.size} eased chunk(s)? [y/N] `);
 
   for (const k of easeDirty) {
     const [cx, cz] = k.split(",").map(Number) as ChunkCoord;

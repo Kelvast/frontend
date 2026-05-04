@@ -1,4 +1,6 @@
+// src/utils/chunk-parse.ts
 import { TileType, TileData, TileHeight, TILE_WALKABLE, tileData, TILES } from "mmo-shared";
+import type { ObjectInstance, NpcSpawn } from "mmo-shared";
 
 const HEIGHT_FROM_KEY = Object.fromEntries(
   Object.entries(TileHeight)
@@ -116,7 +118,23 @@ function extractTilesBlock(source: string): string | null {
   return null;
 }
 
-export function parseChunkTs(source: string): { tiles: TileData[][]; pvp: boolean } | null {
+export interface ParsedChunk {
+  tiles: TileData[][];
+  pvp: boolean;
+  objects: ObjectInstance[];
+  npcSpawns: NpcSpawn[];
+}
+
+/*
+ * Parses a chunk .ts source file into structured data.
+ *
+ * objects and npcSpawns are not stored in chunk files - they live in the
+ * region index. This parser always returns empty arrays for both fields so
+ * callers get a complete ParsedChunk shape without needing to handle
+ * undefined. The route handler preserves the existing values from disk rather
+ * than relying on these parsed values.
+ */
+export function parseChunkTs(source: string): ParsedChunk | null {
   try {
     const aliases = parseAliases(source);
     const tilesBlock = extractTilesBlock(source);
@@ -135,7 +153,7 @@ export function parseChunkTs(source: string): { tiles: TileData[][]; pvp: boolea
       tiles.push(cells as TileData[]);
     }
 
-    return { tiles, pvp };
+    return { tiles, pvp, objects: [], npcSpawns: [] };
   } catch {
     return null;
   }

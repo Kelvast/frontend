@@ -11,7 +11,6 @@ import { logger } from "../../utils/logger";
 import type { OnLoadEvent, LoadStage } from "../../types/mmo/loading";
 import { DEV_MODE } from "../../utils/dev";
 import { useGameStore } from "../../utils/game-store";
-import { WORLD } from "mmo-shared";
 
 /*
  * runStage wraps each boot step with the three things every stage needs:
@@ -38,10 +37,10 @@ async function runStage<T>(
 }
 
 /*
- * Returns a promise that resolves with the tile coords from SESSION_OPENED.
- * Subscribes to the game store and resolves the first time localPlayer is
- * populated. Safe to call before or after SESSION_OPENED has fired - if
- * localPlayer is already set it resolves immediately.
+ * Waits for SESSION_OPENED to hydrate the store with the server-authoritative
+ * spawn position. Resolves immediately if the session has already arrived,
+ * otherwise subscribes and resolves on the first localPlayer write.
+ * No timeout - WS connection errors are handled upstream in index.ts.
  */
 function waitForSpawnCoords(): Promise<{ x: number; z: number }> {
   return new Promise((resolve) => {
@@ -69,8 +68,8 @@ function waitForSpawnCoords(): Promise<{ x: number; z: number }> {
  *   assets      — AssetsManager loaded (0 tasks today, real content later)
  *   audio       — AudioEngine primed
  *   world       — regions + chunks fetched from API and spawned
- *   camera      — GameCamera created and attached
- *   players     — local player mesh spawned
+ *   players     — waits for SESSION_OPENED, spawns local mesh at server coords
+ *   camera      — GameCamera created and attached to local mesh
  *   input       — keyboard + pointer input initialised
  *
  * "connected" is emitted by index.ts after this resolves and the WS
@@ -124,17 +123,6 @@ export async function bootGame(
   );
   if (worldStage.aborted) return abort();
 
-  /* ---- Camera ---- */
-  const cameraStage = await runStage(
-    signal,
-    onLoadEvent,
-    "camera",
-    "Setting up camera...",
-    () => new GameCamera(scene),
-  );
-  if (cameraStage.aborted) return abort();
-  const camera = cameraStage.result!;
-
   /* ---- Players ---- */
   const playersStage = await runStage(
     signal,
@@ -151,14 +139,20 @@ export async function bootGame(
        * is ready, so we wait here rather than racing against it.
        */
       const spawnCoords = await waitForSpawnCoords();
-
-      const localMesh = players.spawnLocalPlayer(spawnCoords.x, spawnCoords.z);
-      camera.attachToMesh(localMesh);
-      return players;
+      return { players, localMesh: players.spawnLocalPlayer(spawnCoords.x, spawnCoords.z) };
     },
   );
   if (playersStage.aborted) return abort();
-  const players = playersStage.result!;
+  const { players, localMesh } = playersStage.result!;
+
+  /* ---- Camera ---- */
+  const cameraStage = await runStage(signal, onLoadEvent, "camera", "Setting up camera...", () => {
+    const camera = new GameCamera(scene);
+    camera.attachToMesh(localMesh);
+    return camera;
+  });
+  if (cameraStage.aborted) return abort();
+  const camera = cameraStage.result!;
 
   /* ---- Input ---- */
   const inputStage = await runStage(signal, onLoadEvent, "input", "Initialising input...", () => ({

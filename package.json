@@ -1,6 +1,6 @@
 {
   "name": "mmo-client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "ISC",
   "readme": "README.md",
   "engines": {
@@ -12,7 +12,12 @@
     "build": "next build --webpack",
     "start": "next start",
     "format": "prettier --write .",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit",
+    "seams": "npx tsx src/scripts/chunk-seams/index.ts",
+    "seams:fix": "npx tsx src/scripts/chunk-seams/index.ts --fix",
+    "seams:ease": "npx tsx src/scripts/chunk-seams/index.ts --ease",
+    "seams:fix:ease": "npx tsx src/scripts/chunk-seams/index.ts --fix --ease",
+    "seams:format": "npm run seams:fix:ease && npm run format"
   },
   "dependencies": {
     "@babylonjs/core": "9.0.0",

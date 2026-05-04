@@ -1,25 +1,25 @@
 import { ChunkData, TILES } from "mmo-shared";
 
-const { D, DD1, DI1, DI2, DI3, G, GD1, GD2, GI1, GI2, GI5, R, RD1, RD2, RI1, RI2, RI3, RI5 } = TILES; // prettier-ignore
+const { G, GD1, GI1, GI2, GI4, GI6, S, SD1, SD2, SI1, SI2, SI3, SI4, SI5, SI6, SI7, SI8 } = TILES; // prettier-ignore
 
 export default {
   pvp: false,
   tiles: [
-    [G, G, G, G, G, D, R, R, R, D, G, G, G, G, G, GI1],
-    [G, G, G, G, DI1, DI2, RI1, RI2, RI1, DI2, DI1, G, G, G, G, GI1],
-    [G, G, G, DI1, DI3, RI1, RI2, RI3, RI2, RI1, DI3, DI1, G, G, G, GD1],
-    [G, G, GI1, GI2, RI1, RI2, RI2, RI2, RI2, RI2, RI1, GI2, GI1, G, G, GD1],
-    [G, GI1, GI2, R, R, R, R, R, R, R, R, R, GI2, GI1, G, GI1],
-    [G, D, R, R, R, R, R, R, R, R, R, R, R, D, GI2, GI5],
-    [R, R, R, R, R, R, R, R, R, R, R, R, R, R, RI2, RI5],
-    [G, D, R, R, R, R, R, R, R, R, R, R, R, D, G, G],
-    [G, GD1, RD1, RD1, RD1, R, R, R, R, R, RD1, RD1, RD1, GD1, G, G],
-    [G, GD2, RD2, RD2, D, D, R, R, R, D, DD1, RD2, RD2, GD2, G, G],
-    [G, GD2, DD1, D, D, D, D, R, D, D, D, D, DD1, GD2, G, G],
-    [G, GD1, D, D, D, D, D, D, D, D, D, D, D, GD1, G, G],
-    [G, G, D, D, D, D, D, D, D, D, D, D, D, G, G, G],
-    [G, G, G, D, D, D, D, D, D, D, D, D, G, G, G, G],
-    [G, G, G, G, GD1, D, D, D, D, D, GD1, G, G, G, G, G],
-    [G, G, G, G, G, G, D, D, D, G, G, G, G, G, G, G],
+    [G, G, SI4, G, G, G, G, G, G, G, G, G, G, G, G, GI1],
+    [G, GI2, SI2, G, G, G, G, G, G, G, G, G, G, G, G, GI1],
+    [G, GI2, SI2, G, GI2, SI2, S, SD2, SD2, SD2, SD2, SD2, SD2, SD2, SD2, GD1],
+    [SI8, SI4, SI2, GI2, SI3, SI2, S, SD2, G, SD2, SD2, SD2, G, G, SD2, GD1],
+    [SI8, SI6, SI4, SI4, SI2, SI2, G, SD2, SD2, G, SD2, G, G, G, SD1, GI1],
+    [SI1, SI4, SI4, GI6, SI4, SI2, G, G, SD2, SD2, SD2, SD2, SD2, G, SI1, SI5],
+    [SI1, SI4, SI4, SI5, SI3, SI2, SI1, G, S, G, G, SD2, G, G, SI2, SI5],
+    [SI7, SI6, SI6, SI4, SI3, SI4, SI2, S, SI2, S, G, G, SD2, SD2, G, S],
+    [SI8, SI8, SI6, SI6, SI4, SI2, SI1, SI2, S, SI2, G, SD2, G, SD2, SD2, S],
+    [SI8, SI8, SI6, SI4, SI4, GI2, SI2, SI2, SI2, SI2, G, G, SD2, SD2, G, S],
+    [SI8, SI8, SI6, SI4, SI6, SI4, SI4, SI2, SI2, S, SD2, G, SD2, SD2, SD2, S],
+    [SI8, SI8, SI6, SI4, SI6, SI4, SI2, GI2, SI1, G, SD2, G, SD2, SD2, G, S],
+    [SI8, SI6, SI4, GI4, SI4, SI2, GI2, SI3, SI2, GI2, S, G, SD2, SD2, SD2, S],
+    [SI8, SI6, SI4, GI4, SI2, GI2, SI4, SI2, SI4, SI2, S, G, SD2, SD2, SD2, S],
+    [G, SI6, SI2, SI2, G, GI2, SI2, GI2, SI2, S, SD2, G, G, G, G, G],
+    [SI8, SI8, G, G, G, G, G, G, G, G, SD2, SD2, G, G, G, G],
   ],
 } satisfies Pick<ChunkData, "pvp" | "tiles">;
