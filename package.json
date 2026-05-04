@@ -13,10 +13,10 @@
     "start": "next start",
     "format": "prettier --write .",
     "test": "tsc --noEmit",
-    "seams": "npx tsx src/scripts/chunk-seams/index.ts",
-    "seams:fix": "npx tsx src/scripts/chunk-seams/index.ts --fix",
-    "seams:ease": "npx tsx src/scripts/chunk-seams/index.ts --ease",
-    "seams:fix:ease": "npx tsx src/scripts/chunk-seams/index.ts --fix --ease",
+    "seams": "npx tsx scripts/chunk-seams/index.ts",
+    "seams:fix": "npx tsx scripts/chunk-seams/index.ts --fix",
+    "seams:ease": "npx tsx scripts/chunk-seams/index.ts --ease",
+    "seams:fix:ease": "npx tsx scripts/chunk-seams/index.ts --fix --ease",
     "seams:format": "npm run seams:fix:ease && npm run format"
   },
   "dependencies": {
