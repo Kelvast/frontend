@@ -1,11 +1,15 @@
 import type { PlayerMoveAckMessage } from "mmo-shared";
+import { MSG } from "mmo-shared";
+import { registerMessageHandler } from "../registry";
 import type { PlayerManager } from "../../game-client/entities/players";
 
-/*
- * Handles PLAYER_MOVE_ACK from the server.
- * The server has run pathfinding and returned the full authoritative path.
- * We hand it directly to PlayerManager to animate — nothing else happens here.
- */
-export function handlePlayerMoveAck(msg: PlayerMoveAckMessage, players: PlayerManager): void {
-  players.animatePath(msg.path, msg.pace);
+let players: PlayerManager | null = null;
+
+export function initPlayerMoveAck(pm: PlayerManager): void {
+  players = pm;
 }
+
+registerMessageHandler<PlayerMoveAckMessage>(MSG.PLAYER_MOVE_ACK, (msg) => {
+  if (!players) return;
+  players.animatePath(msg.path, msg.pace);
+});
