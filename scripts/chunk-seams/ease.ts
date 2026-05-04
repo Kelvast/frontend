@@ -11,7 +11,7 @@ const CARDINALS: [number, number][] = [
 
 /*
  * Relaxation pass over a single chunk's interior tiles.
- * Border tiles (row 0, row CHUNK_SIZE-1, col 0, col CHUNK_SIZE-1) are read as
+ * Border tiles (row 0, row WORLD.CHUNK_SIZE-1, col 0, col WORLD.CHUNK_SIZE-1) are read as
  * anchors but never written — they are the seam contract with neighbours.
  *
  * Each pass clamps every interior tile to within MAX_SLOPE_STEP of each
