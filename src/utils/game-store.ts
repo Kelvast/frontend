@@ -13,6 +13,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
   nearbyPlayers: [],
   worldTime: 0,
   isConnected: false,
+  latency: 0,
   settings: loadSettings(),
 
   setConnected: (connected) => {
@@ -58,6 +59,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         playerName: state.identity?.playerName ?? msg.playerName,
         x: msg.x,
         y: msg.y,
+        floor: msg.floor,
         z: msg.z,
         facing: msg.facing,
         skills: defaultSkills(),
@@ -97,6 +99,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         playerName: p.playerName,
         x: p.x,
         y: p.y,
+        floor: p.floor,
         z: p.z,
         facing: p.facing,
         isMoving: false,
@@ -118,6 +121,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
         playerName: msg.player.playerName,
         x: msg.player.x,
         y: msg.player.y,
+        floor: msg.player.floor,
         z: msg.player.z,
         facing: msg.player.facing,
         isMoving: false,
@@ -149,9 +153,9 @@ export const useGameStore = create<GameStoreState>((set) => ({
   onTick: ({ players }) =>
     set((state) => {
       const updates = new Map(
-        players.map(({ id, x, y, z, facing, pace }) => [
+        players.map(({ id, x, y, floor, z, facing, pace }) => [
           id,
-          { x, y, z, facing, pace, isMoving: true },
+          { x, y, floor, z, facing, pace, isMoving: true },
         ]),
       );
       return {
@@ -167,12 +171,31 @@ export const useGameStore = create<GameStoreState>((set) => ({
    * Handles player_stopped. Snaps the player to the server-authoritative
    * final position to correct any interpolation drift from the tick stream.
    */
-  onPlayerStopped: ({ id, x, y, z, facing }) =>
+  onPlayerStopped: ({ id, x, y, floor, z, facing }) =>
     set((state) => ({
       nearbyPlayers: state.nearbyPlayers.map((p) =>
-        p.id === id ? { ...p, x, y, z, facing, isMoving: false, lastUpdated: Date.now() } : p,
+        p.id === id
+          ? { ...p, x, y, floor, z, facing, isMoving: false, lastUpdated: Date.now() }
+          : p,
       ),
     })),
+
+  onPlayerData: (msg) =>
+    set((state) => {
+      if (!state.localPlayer) {
+        logger.warn("onPlayerData received before localPlayer exists - ignoring");
+        return {};
+      }
+      logger.game("Player data received - applying skills/inventory/equipment");
+      return {
+        localPlayer: {
+          ...state.localPlayer,
+          skills: msg.skills,
+          inventory: msg.inventory,
+          equipment: msg.equipment,
+        },
+      };
+    }),
 
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     const updated = patchSettings(key, value);

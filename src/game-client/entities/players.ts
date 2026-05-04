@@ -7,7 +7,7 @@ import {
   Animation,
   Scene,
 } from "@babylonjs/core";
-import { PLAYER, MOVEMENT } from "../constants";
+import { PLAYER } from "../constants";
 import { WORLD, calcMoveSpeed, DEFAULT_SPEED_MODIFIERS } from "mmo-shared";
 import { tileWorldY } from "../world/tile-height";
 import { GameWorld } from "../world";
@@ -27,7 +27,9 @@ import { sendPlayerMove } from "../../ws/messages/move";
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;
   private moveAnim: Animation;
-  private onArrival: ((tileX: number, tileZ: number) => void) | null = null;
+  private onArrival:
+    | ((tileX: number, tileY: number, tileFloor: number, tileZ: number) => void)
+    | null = null;
 
   /*
    * Walk pace is constant while equipment modifiers are not yet implemented.
@@ -53,7 +55,11 @@ export class PlayerManager {
     logger.game("PlayerManager initialised");
   }
 
-  setOnArrival(cb: (tileX: number, tileZ: number) => void): void {
+  /*
+   * Callback fires on arrival with the full tile position (x, y, floor, z)
+   * so callers can sync the store without re-deriving tile data.
+   */
+  setOnArrival(cb: (tileX: number, tileY: number, tileFloor: number, tileZ: number) => void): void {
     this.onArrival = cb;
   }
 
@@ -64,15 +70,17 @@ export class PlayerManager {
    *
    * TODO: replace box with animated character model
    */
-  spawnLocalPlayer(): AbstractMesh {
-    logger.game("Spawning local player");
+  spawnLocalPlayer(spawnTileX = 0, spawnTileZ = 0): AbstractMesh {
+    logger.game("Spawning local player", { spawnTileX, spawnTileZ });
     const mesh = MeshBuilder.CreateBox(
       "localPlayer",
       { width: PLAYER.SIZE, height: PLAYER.HEIGHT, depth: PLAYER.SIZE },
       this.scene,
     );
-    const half = WORLD.TILE_SIZE / 2;
-    mesh.position = new Vector3(half, PLAYER.Y_OFFSET, half);
+    const s = WORLD.TILE_SIZE;
+    const tile = this.world.getTileAt(spawnTileX, spawnTileZ);
+    const groundY = tile ? tileWorldY(tile.y) + PLAYER.Y_OFFSET : PLAYER.Y_OFFSET;
+    mesh.position = new Vector3(spawnTileX * s + s / 2, groundY, spawnTileZ * s + s / 2);
 
     const mat = new StandardMaterial("localPlayerMat", this.scene);
     mat.diffuseColor = new Color3(0, 0.7, 1);
@@ -102,24 +110,35 @@ export class PlayerManager {
       return new Vector3(wp.x, groundY, wp.z);
     });
 
-    const { keys, totalFrames, fps } = buildMoveAnimation(
+    const { keys, totalFrames } = buildMoveAnimation(
       this.localMesh.position.clone(),
       waypointsWithY,
     );
 
     /*
-     * Send destination to the server before starting the local animation.
+     * Send destination tile coords (not world-space) to the server.
+     * MoveMessage.x/z are tile coordinates per protocol. y and floor come
+     * from the destination tile — Vector3 only carries world-space position.
      * The server is authoritative — a player_stopped reply will snap the
      * client to the corrected position if the move is rejected.
      */
-    const dest = waypointsWithY[waypointsWithY.length - 1];
-    sendPlayerMove(dest.x, dest.y, dest.z, this.walkPace);
+    const destTile = this.world.getTileAt(tileX, tileZ);
+    const destY = destTile?.y ?? 0;
+    const destFloor = destTile?.floor ?? 0;
+    sendPlayerMove(tileX, destY, destFloor, tileZ, this.walkPace);
 
     this.moveAnim.setKeys(keys);
     this.localMesh.animations = [this.moveAnim];
     this.scene.beginAnimation(this.localMesh, 0, totalFrames, false, 1, () => {
-      logger.game("Arrived", { tileX, tileZ });
-      this.onArrival?.(tileX, tileZ);
+      const dest = waypointsWithY[waypointsWithY.length - 1];
+      const arrTileX = Math.floor(dest.x / s);
+      const arrTileZ = Math.floor(dest.z / s);
+      const arrTile = this.world.getTileAt(arrTileX, arrTileZ);
+      const arrY = arrTile?.y ?? 0;
+      const arrFloor = arrTile?.floor ?? 0;
+      logger.game("Arrived", { tileX: arrTileX, tileY: arrY, floor: arrFloor, tileZ: arrTileZ });
+      sendPlayerMove(arrTileX, arrY, arrFloor, arrTileZ, this.walkPace);
+      this.onArrival?.(arrTileX, arrY, arrFloor, arrTileZ);
     });
 
     logger.game("Moving", { to: { tileX, tileZ }, steps: waypoints.length });

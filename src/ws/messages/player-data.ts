@@ -1,6 +1,7 @@
 import { MSG, type PlayerDataMessage } from "mmo-shared";
 import { logger } from "../../utils/logger";
 import { registerMessageHandler } from "../registry";
+import { useGameStore } from "../../utils/game-store";
 
 /*
  * PLAYER_DATA (200) — carries skills, inventory, equipment.
@@ -8,9 +9,9 @@ import { registerMessageHandler } from "../registry";
  *
  * TODO: wire to useGameStore.getState().onPlayerData(msg)
  */
-function handlePlayerData(_msg: PlayerDataMessage): void {
-  logger.ws("✓ PLAYER_DATA received");
-  // TODO: useGameStore.getState().onPlayerData(_msg);
+function handlePlayerData(msg: PlayerDataMessage): void {
+  logger.ws("player_data received");
+  useGameStore.getState().onPlayerData(msg);
 }
 
 registerMessageHandler<PlayerDataMessage>(MSG.PLAYER_DATA, handlePlayerData);

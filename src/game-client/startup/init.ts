@@ -10,6 +10,8 @@ import { setContext } from "../context";
 import { logger } from "../../utils/logger";
 import type { OnLoadEvent, LoadStage } from "../../types/mmo/loading";
 import { DEV_MODE } from "../../utils/dev";
+import { useGameStore } from "../../utils/game-store";
+import { WORLD } from "mmo-shared";
 
 /*
  * runStage wraps each boot step with the three things every stage needs:
@@ -119,7 +121,10 @@ export async function bootGame(
     "Spawning local player...",
     () => {
       const players = new PlayerManager(scene, world);
-      const localMesh = players.spawnLocalPlayer();
+      const { localPlayer } = useGameStore.getState();
+      const spawnTileX = localPlayer ? Math.floor(localPlayer.x / WORLD.TILE_SIZE) : 0;
+      const spawnTileZ = localPlayer ? Math.floor(localPlayer.z / WORLD.TILE_SIZE) : 0;
+      const localMesh = players.spawnLocalPlayer(spawnTileX, spawnTileZ);
       camera.attachToMesh(localMesh);
       return players;
     },
