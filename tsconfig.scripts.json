@@ -1,9 +1,18 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "outDir": "dist-scripts",
-    "noEmit": false
+    "lib": ["esnext"],
+    "types": ["node"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": true
   },
-  "include": ["scripts/**/*.ts"]
+  "include": [
+    "scripts/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "src",
+    "bin"
+  ]
 }
