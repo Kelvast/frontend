@@ -38,6 +38,28 @@ async function runStage<T>(
 }
 
 /*
+ * Returns a promise that resolves with the tile coords from SESSION_OPENED.
+ * Subscribes to the game store and resolves the first time localPlayer is
+ * populated. Safe to call before or after SESSION_OPENED has fired - if
+ * localPlayer is already set it resolves immediately.
+ */
+function waitForSpawnCoords(): Promise<{ x: number; z: number }> {
+  return new Promise((resolve) => {
+    const current = useGameStore.getState().localPlayer;
+    if (current) {
+      resolve({ x: current.x, z: current.z });
+      return;
+    }
+    const unsub = useGameStore.subscribe((state) => {
+      if (state.localPlayer) {
+        unsub();
+        resolve({ x: state.localPlayer.x, z: state.localPlayer.z });
+      }
+    });
+  });
+}
+
+/*
  * bootGame drives the full client-side boot sequence and owns all
  * loader stage transitions inside the parallel boot window.
  *
@@ -119,12 +141,18 @@ export async function bootGame(
     onLoadEvent,
     "players",
     "Spawning local player...",
-    () => {
+    async () => {
       const players = new PlayerManager(scene, world);
-      const { localPlayer } = useGameStore.getState();
-      const spawnTileX = localPlayer ? Math.floor(localPlayer.x / WORLD.TILE_SIZE) : 0;
-      const spawnTileZ = localPlayer ? Math.floor(localPlayer.z / WORLD.TILE_SIZE) : 0;
-      const localMesh = players.spawnLocalPlayer(spawnTileX, spawnTileZ);
+
+      /*
+       * Wait for SESSION_OPENED to fire and populate the store with the
+       * server-authoritative tile coords. connectWS runs in parallel with
+       * bootGame - the session may not have arrived yet by the time world
+       * is ready, so we wait here rather than racing against it.
+       */
+      const spawnCoords = await waitForSpawnCoords();
+
+      const localMesh = players.spawnLocalPlayer(spawnCoords.x, spawnCoords.z);
       camera.attachToMesh(localMesh);
       return players;
     },

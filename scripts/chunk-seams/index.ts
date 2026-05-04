@@ -38,11 +38,14 @@ async function confirm(question: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const modeLabel = [FIX_MODE && "fix", EASE_MODE && "ease"].filter(Boolean).join(" + ") || "report only";
+  const modeLabel =
+    [FIX_MODE && "fix", EASE_MODE && "ease"].filter(Boolean).join(" + ") || "report only";
   console.log(`\n🗺  Chunk seam checker — ${modeLabel}\n`);
 
   const coords = discoverChunks();
-  console.log(`Found ${coords.length} chunk(s): ${coords.map(([x, z]) => `(${x},${z})`).join(" ")}\n`);
+  console.log(
+    `Found ${coords.length} chunk(s): ${coords.map(([x, z]) => `(${x},${z})`).join(" ")}\n`,
+  );
 
   const chunks = new Map<string, TileGrid>();
 
@@ -111,7 +114,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`⚠️  ${easeDirty.size} chunk(s) have interior tiles exceeding MAX_SLOPE_STEP=${MAX_SLOPE_STEP}:\n`);
+  console.log(
+    `⚠️  ${easeDirty.size} chunk(s) have interior tiles exceeding MAX_SLOPE_STEP=${MAX_SLOPE_STEP}:\n`,
+  );
   for (const k of easeDirty) {
     const [cx, cz] = k.split(",").map(Number);
     console.log(`  (${cx}, ${cz})`);

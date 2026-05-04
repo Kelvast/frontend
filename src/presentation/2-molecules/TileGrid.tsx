@@ -3,7 +3,7 @@
 import { FC, memo, useState } from "react";
 import type { TileData } from "mmo-shared";
 import TileCell from "../1-atoms/TileCell";
-import { getTileColor } from "../../game-client/world/tile-colors";
+import { getTileColor } from "../../game-client/world/tile-render";
 
 interface Props {
   tiles: TileData[][];

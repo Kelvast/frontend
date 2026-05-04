@@ -15,7 +15,14 @@ export function checkSeams(chunks: Map<string, TileGrid>, coords: ChunkCoord[]):
         const hA = gridA[row][CHUNK_SIZE - 1].y;
         const hB = gridE[row][0].y;
         if (hA !== hB) {
-          mismatches.push({ chunkA: [cx, cz], chunkB: [cx + 1, cz], edge: "east-west", index: row, heightA: hA, heightB: hB });
+          mismatches.push({
+            chunkA: [cx, cz],
+            chunkB: [cx + 1, cz],
+            edge: "east-west",
+            index: row,
+            heightA: hA,
+            heightB: hB,
+          });
         }
       }
     }
@@ -26,7 +33,14 @@ export function checkSeams(chunks: Map<string, TileGrid>, coords: ChunkCoord[]):
         const hA = gridA[CHUNK_SIZE - 1][col].y;
         const hB = gridS[0][col].y;
         if (hA !== hB) {
-          mismatches.push({ chunkA: [cx, cz], chunkB: [cx, cz + 1], edge: "south-north", index: col, heightA: hA, heightB: hB });
+          mismatches.push({
+            chunkA: [cx, cz],
+            chunkB: [cx, cz + 1],
+            edge: "south-north",
+            index: col,
+            heightA: hA,
+            heightB: hB,
+          });
         }
       }
     }

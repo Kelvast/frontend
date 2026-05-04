@@ -3,7 +3,7 @@
 import { FC, memo, useEffect, useRef } from "react";
 import type { TileData } from "mmo-shared";
 import { WORLD } from "mmo-shared";
-import { getTileColor } from "../../game-client/world/tile-colors";
+import { getTileColor } from "../../game-client/world/tile-render";
 
 const CELL = 4;
 export const CHUNK_PX = WORLD.CHUNK_SIZE * CELL;

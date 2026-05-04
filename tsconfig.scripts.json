@@ -7,12 +7,6 @@
     "moduleResolution": "nodenext",
     "noEmit": true
   },
-  "include": [
-    "scripts/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "src",
-    "bin"
-  ]
+  "include": ["scripts/**/*"],
+  "exclude": ["node_modules", "src", "bin"]
 }

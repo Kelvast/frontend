@@ -73,7 +73,6 @@ export function getTileColor(tile: TileData): string {
   return applyHeightTintHex(TILE_COLORS[tile.type], slopeTint * floorTint);
 }
 
-
 function hexToColor3(hex: string): Color3 {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;

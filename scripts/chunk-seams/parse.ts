@@ -15,7 +15,12 @@ function buildAliasMap(src: string): Map<string, TileData> {
   if (destructureMatch) {
     const keys = destructureMatch[1]
       .split(",")
-      .map((k) => k.trim().replace(/\/\/[^\n]*/g, "").trim())
+      .map((k) =>
+        k
+          .trim()
+          .replace(/\/\/[^\n]*/g, "")
+          .trim(),
+      )
       .filter(Boolean);
     for (const key of keys) {
       const tile = (TILES as Record<string, TileData | undefined>)[key];
