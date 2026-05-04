@@ -7,6 +7,7 @@ import type {
   PlayerStoppedMessage,
   GameSession,
   PlayerIdentity,
+  PlayerDataMessage,
 } from "mmo-shared";
 import type { PlayerState, NearbyPlayer } from "./player";
 import type { UserSettings } from "./settings";
@@ -62,6 +63,8 @@ export interface GameStoreState {
   onTick: (msg: TickMessage) => void;
   /** Handles player_stopped. Snaps a player to their authoritative final position. */
   onPlayerStopped: (msg: PlayerStoppedMessage) => void;
+  /** Handles player_data. Applies real skills, inventory, and equipment to localPlayer. */
+  onPlayerData: (msg: PlayerDataMessage) => void;
 
   // ── Settings actions ──────────────────────────────────────────────────────
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;

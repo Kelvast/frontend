@@ -6,9 +6,17 @@ import {
   AbstractMesh,
   Vector3,
 } from "@babylonjs/core";
-import { CAMERA } from "./constants";
-import { logger } from "../utils/logger";
+import { CAMERA } from "../constants";
+import { logger } from "../../utils/logger";
 
+/*
+ * CameraSystem wraps the ArcRotateCamera.
+ * Handles zoom limits, orbit controls, and target locking.
+ *
+ * TODO: smooth camera lag (lerp target position over N frames)
+ * TODO: camera collision so it doesn't clip through terrain
+ * TODO: camera shake system for hit feedback
+ */
 export class GameCamera {
   public readonly camera: ArcRotateCamera;
 

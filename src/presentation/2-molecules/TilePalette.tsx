@@ -2,9 +2,9 @@
 
 import { FC, memo } from "react";
 import { TileHeight, TileType, TILE_WALKABLE } from "mmo-shared";
-import { TILE_COLORS } from "../../game-client/world/tile-colors";
 import PaletteButton from "../1-atoms/PaletteButton";
 import SectionLabel from "../1-atoms/SectionLabel";
+import { TILE_COLORS } from "../../game-client/world/tile-render";
 
 interface Props {
   selectedType: TileType;

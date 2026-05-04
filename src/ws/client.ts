@@ -12,18 +12,18 @@ export function connectWS(token?: string): void {
   if (ws) return;
 
   const url = process.env.NEXT_PUBLIC_MMO_SERVER_URL ?? "ws://localhost:8080";
-  logger.ws("Connecting to", url);
+  logger.ws("▶ connecting to", url);
   ws = new WebSocket(url);
 
   ws.onopen = () => {
-    logger.ws("Connected");
+    logger.ws("✓ connected");
     useGameStore.getState().setConnected(true);
 
     if (token) {
-      logger.ws("Resuming session with token");
+      logger.ws("▶ sending SESSION_RESUME");
       send({ type: MSG.SESSION_RESUME, token });
     } else {
-      logger.warn("connectWS called without a token - no resume packet sent");
+      logger.warn("connectWS: no token — SESSION_RESUME not sent");
     }
   };
 
@@ -39,17 +39,18 @@ export function connectWS(token?: string): void {
   };
 
   ws.onclose = () => {
-    logger.ws("Disconnected");
+    logger.ws("✗ disconnected");
     useGameStore.getState().setConnected(false);
     ws = null;
   };
 
   ws.onerror = (error) => {
-    logger.error("WebSocket error", error);
+    logger.error("WS error:", error);
   };
 }
 
 export function disconnect(): void {
+  logger.ws("▶ disconnect");
   ws?.close();
   ws = null;
 }
@@ -58,6 +59,6 @@ export function send(message: ClientMessage): void {
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(message));
   } else {
-    logger.warn("send called but WS not open - packet dropped:", message.type);
+    logger.warn("send: WS not open — packet dropped:", message.type);
   }
 }

@@ -1,8 +1,13 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { initGame, connectGame, destroyGame } from "../../game-client";
+import { startGame, destroyGame } from "../../game-client";
+import type { OnLoadEvent } from "../../types/mmo/loading";
 
-const GameCanvas = () => {
+interface Props {
+  onLoadEvent: OnLoadEvent;
+}
+
+const GameCanvas = ({ onLoadEvent }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -10,15 +15,14 @@ const GameCanvas = () => {
     if (!canvas) return;
 
     const controller = new AbortController();
-
-    initGame(canvas, controller.signal).then((started) => {
-      if (started) connectGame();
-    });
+    startGame(canvas, controller.signal, onLoadEvent);
 
     return () => {
       controller.abort();
       destroyGame();
     };
+    // onLoadEvent is stable (useCallback in GamePage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

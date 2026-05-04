@@ -1,10 +1,12 @@
-import { TileType, TileData, TileHeight, TILE_WALKABLE, tileData } from "mmo-shared";
+// src/utils/chunk-parse.ts
+import { TileType, TileData, TileHeight, TILE_WALKABLE, tileData, TILES } from "mmo-shared";
+import type { ObjectInstance, NpcSpawn } from "mmo-shared";
 
-const HEIGHT_FROM_KEY: Record<string, TileHeight> = Object.fromEntries(
+const HEIGHT_FROM_KEY = Object.fromEntries(
   Object.entries(TileHeight)
     .filter(([, v]) => typeof v === "number")
     .map(([k, v]) => [k, v as TileHeight]),
-);
+) as Record<string, TileHeight>;
 
 function isTileType(value: string): value is TileType {
   return value in TILE_WALKABLE;
@@ -12,8 +14,40 @@ function isTileType(value: string): value is TileType {
 
 type AliasMap = Record<string, TileData>;
 
+/*
+ * Handles three alias declaration styles that may appear in chunk files:
+ *
+ * 1. TILES destructure (current style):
+ *      const { G, GI1, GI2, ... } = TILES;
+ *    Each key is looked up directly in the live TILES object.
+ *
+ * 2. tileData short form (legacy):
+ *      const G = tileData("grass");
+ *
+ * 3. tileData with height (legacy):
+ *      const GI1 = tileData("grass", TileHeight.SLOPE_LOW);
+ */
 function parseAliases(source: string): AliasMap {
   const map: AliasMap = {};
+
+  const destructureRe = /const\s*\{([^}]+)\}\s*=\s*TILES\s*;/;
+  const destructureMatch = source.match(destructureRe);
+  if (destructureMatch) {
+    const keys = destructureMatch[1]
+      .split(",")
+      .map((k) =>
+        k
+          .trim()
+          .replace(/\/\/[^\n]*/g, "")
+          .trim(),
+      )
+      .filter(Boolean);
+    for (const key of keys) {
+      const tile = (TILES as Record<string, TileData | undefined>)[key];
+      if (tile) map[key] = tile;
+    }
+    return map;
+  }
 
   const shortRe = /^const (\w+) = tileData\("(\w+)"\);$/gm;
   let m: RegExpExecArray | null;
@@ -84,7 +118,23 @@ function extractTilesBlock(source: string): string | null {
   return null;
 }
 
-export function parseChunkTs(source: string): { tiles: TileData[][]; pvp: boolean } | null {
+export interface ParsedChunk {
+  tiles: TileData[][];
+  pvp: boolean;
+  objects: ObjectInstance[];
+  npcSpawns: NpcSpawn[];
+}
+
+/*
+ * Parses a chunk .ts source file into structured data.
+ *
+ * objects and npcSpawns are not stored in chunk files - they live in the
+ * region index. This parser always returns empty arrays for both fields so
+ * callers get a complete ParsedChunk shape without needing to handle
+ * undefined. The route handler preserves the existing values from disk rather
+ * than relying on these parsed values.
+ */
+export function parseChunkTs(source: string): ParsedChunk | null {
   try {
     const aliases = parseAliases(source);
     const tilesBlock = extractTilesBlock(source);
@@ -103,7 +153,7 @@ export function parseChunkTs(source: string): { tiles: TileData[][]; pvp: boolea
       tiles.push(cells as TileData[]);
     }
 
-    return { tiles, pvp };
+    return { tiles, pvp, objects: [], npcSpawns: [] };
   } catch {
     return null;
   }

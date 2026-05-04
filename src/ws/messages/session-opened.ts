@@ -4,17 +4,18 @@ import { useGameStore } from "../../utils/game-store";
 import { registerMessageHandler } from "../registry";
 
 /*
- * Handles SESSION_OPENED (101).
+ * SESSION_OPENED (101) — server has accepted the token and placed the
+ * player in the world.
  *
- * First message of the two-message handshake that fully hydrates the client.
- * Carries PlayerPresence (id, uuid, playerName, x, y, z, facing) and worldName.
- * Position here is always authoritative and overrides any cached value.
+ * This handler only hydrates the store. It does NOT touch loader state.
  *
- * PlayerDataMessage follows immediately after - the client is not fully
- * hydrated until both messages are received.
+ * Loader stages are driven exclusively by index.ts and init.ts in a
+ * strict sequential order. The WS handshake runs in parallel with engine
+ * boot, so any loader event fired here could arrive while the loader is
+ * already at a later stage — causing the bar to jump backwards.
  */
 function handleSessionOpened(msg: SessionOpenedMessage): void {
-  logger.ws("Session opened - world:", msg.worldName, "id:", msg.id);
+  logger.ws("✓ SESSION_OPENED — world:", msg.worldName, "player id:", msg.id);
   useGameStore.getState().onLoginSuccess(msg);
 }
 

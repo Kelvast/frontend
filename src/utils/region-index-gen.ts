@@ -12,7 +12,7 @@ export function generateRegionIndexTs(regionId: string, chunkKeys: string[]): st
       const chunkX = Number(x);
       const chunkZ = Number(z);
       const varName = `chunk_${x.replace("-", "n")}_${z.replace("-", "n")}`;
-      return `  "${chunkX},${chunkZ}": { ...${varName}, chunkX: ${chunkX}, chunkZ: ${chunkZ}, region: "${regionId}" },`;
+      return `    "${chunkX},${chunkZ}": { ...${varName}, chunkX: ${chunkX}, chunkZ: ${chunkZ}, region: "${regionId}", objects: [], npcSpawns: [] },`;
     })
     .join("\n");
 

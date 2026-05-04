@@ -1,3 +1,4 @@
+// src/app/api/builder/chunk/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
@@ -7,6 +8,7 @@ import {
   generateRegionsRootIndexTs,
 } from "../../../../utils/region-index-gen";
 import { parseChunkTs } from "../../../../utils/chunk-parse";
+import type { ObjectInstance, NpcSpawn } from "mmo-shared";
 import { BuilderSaveRequest } from "../../../../types";
 
 const REGIONS_ROOT = path.resolve("src/game-client/world/regions");
@@ -86,10 +88,34 @@ export async function POST(request: NextRequest) {
     const filePath = safeChunkPath(regionId, chunkX, chunkZ);
     if (!filePath) return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
 
+    /*
+     * Read the existing chunk file before overwriting so that npcSpawns and
+     * objects authored directly in the source files are not clobbered by a
+     * map-builder tile save. The builder only edits tiles and pvp - all other
+     * fields are preserved verbatim from disk.
+     */
+    let existingObjects: ObjectInstance[] = [];
+    let existingNpcSpawns: NpcSpawn[] = [];
+    if (fs.existsSync(filePath)) {
+      const existing = parseChunkTs(fs.readFileSync(filePath, "utf-8"));
+      if (existing) {
+        existingObjects = existing.objects;
+        existingNpcSpawns = existing.npcSpawns;
+      }
+    }
+
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(
       filePath,
-      generateChunkTs({ chunkX, chunkZ, region: regionId, pvp, tiles, objects: [], npcSpawns: [] }),
+      generateChunkTs({
+        chunkX,
+        chunkZ,
+        region: regionId,
+        pvp,
+        tiles,
+        objects: existingObjects,
+        npcSpawns: existingNpcSpawns,
+      }),
     );
 
     if (previousRegionId && previousRegionId !== regionId) {
