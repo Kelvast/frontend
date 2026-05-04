@@ -105,15 +105,21 @@ useZoom (utils/use-zoom.ts): simpler standalone hook for elements that need pinc
 
 ## Zustand Store (utils/game-store.ts)
 
-Single store, no slices. All WS message types imported from mmo-shared. There is no indexRegistry - the server sends a numeric id on every message and PlayerState is keyed by id directly.
+Single store, no slices. All WS message types imported from `mmo-shared`.
 
-hydrateLocalPlayer: called on login_success. Builds the full PlayerState from LoginSuccessMessage and upserts into nearbyPlayers. Also sets myId.
-
-registerPlayer: called on player_join and world_state entries. Remote players seed skills/inventory/equipment with defaultSkills() / defaultInventory() / defaultEquipment() from mmo-shared.
-
-applyTick: receives TickMessage ({ t, p: [id, x, y, z, facing, pace][] }). Builds a Map for O(1) lookup and patches matching PlayerState entries. pace at index [5] is server-resolved tiles/s - use it to drive Babylon interpolation.
-
-updateSettings: updates a single top-level key on settings in the store. Also persists via saveSettings from utils/settings.ts.
+| Action | Triggered by |
+|---|---|
+| `onLoginSuccess` | `session_opened` (101) — builds `localPlayer` from `SessionOpenedMessage`, sets `myId` |
+| `onPlayerData` | `player_data` (200) — hydrates skills, inventory, equipment onto `localPlayer` |
+| `onPlayerJoin` | `player_join` (201) — upserts player into `nearbyPlayers` |
+| `onPlayerLeave` | `player_leave` (202) — removes player from `nearbyPlayers` by id |
+| `onPlayerStopped` | `player_stopped` (203) — snaps nearby player position, clears `isMoving`. Local player snapping not yet implemented |
+| `onPlayerMoveAck` | `player_move_ack` (205) — writes `pendingPath` to store, updates `localPlayer` x/y/floor/z to path destination |
+| `clearPendingPath` | called by `PlayerManager` after consuming `pendingPath` |
+| `onWorldState` | `world_state` (300) — seeds `nearbyPlayers` from bulk snapshot |
+| `onTick` | `tick` (301) — receives `TickMessage`, patches matching `nearbyPlayers` entries |
+| `updateSettings` | UI — updates a single top-level key, also calls `patchSettings` from `utils/settings.ts` |
+| `onLogout` | session close / logout — clears identity, session, `localPlayer`, `nearbyPlayers` |
 
 ---
 
@@ -129,35 +135,34 @@ UserSettings and DEFAULT_SETTINGS are defined in src/types/mmo/settings.ts.
 
 ---
 
-## WebSocket Client (utils/ws-client.ts)
+## WebSocket Client (src/ws/)
 
-Singleton - one WebSocket instance per tab. connectWS(token?) is the only entry point.
+Singleton - one WebSocket instance per tab. `connectWS(token?)` is the only entry point, exported from `src/ws/client.ts`.
 
-On open in dev mode (NEXT_PUBLIC_DEV_MODE === "true"): reads credentials from dev.ts and auto-sends a login packet. Otherwise: sends a resume packet with the stored token if provided.
+On open in dev mode (`NEXT_PUBLIC_DEV_MODE === "true"`): reads credentials from `dev.ts` and auto-sends a login packet. Otherwise: sends a resume packet with the stored token if provided.
 
-Inbound message routing:
+Inbound messages are dispatched via a self-registering handler registry in `src/ws/registry.ts`. Each file under `src/ws/messages/` calls `registerMessageHandler(type, handler)` once at module load time. `src/ws/client.ts` calls `dispatch(msg)` on every inbound message - it contains no routing table.
 
-| data.type | Action |
+| `data.type` | Opcode | Handler file | Store action |
+|---|---|---|---|
+| `session_opened` | 101 | `session-opened.ts` | `onLoginSuccess`, `storeGameSession` |
+| `session_rejected` | 102 | `session-rejected.ts` | redirect to login |
+| `session_closed` | 103 | `session-close.ts` | `onLogout` |
+| `player_data` | 200 | `player-data.ts` | `onPlayerData` |
+| `player_join` | 201 | `player-join.ts` | `onPlayerJoin` |
+| `player_leave` | 202 | `player-leave.ts` | `onPlayerLeave` |
+| `player_stopped` | 203 | `player-stopped.ts` | `onPlayerStopped` |
+| `player_move_ack` | 205 | `player-move-ack.ts` | `onPlayerMoveAck(msg.path, msg.pace)` |
+| `world_state` | 300 | `world-state.ts` | `onWorldState` |
+| `tick` | 301 | `tick.ts` | `onTick` |
+| unknown | — | registry fallback | `logger.warn` — never throw |
+
+Outbound packet files live in `src/ws/packets/`:
+
+| Function | Packet |
 |---|---|
-| login_success | hydrateLocalPlayer, setSession |
-| world_state | registerPlayer for each player in snapshot |
-| player_join | registerPlayer |
-| player_leave | unregisterPlayer(data.id) |
-| player_stopped | snap position via applyTick synthetic delta |
-| tick | applyTick |
-| logout_success | clear session, disconnect |
-| auth_fail | dev: auto-register; prod: logger.error |
-| error | logger.error |
-| unknown | logger.warn - never throw |
-
-Outbound:
-
-| Function | Packet sent |
-|---|---|
-| sendPlayerMove(x, y, z, pace) | { type: "move", x, y, z, pace } |
-| sendSettings(settings) | { type: "save_settings", settings } |
-
-pace is a PaceMultiplier number. Use PACE_MULTIPLIER[mode] from mmo-shared to convert a MovementType label to its numeric value before calling sendPlayerMove. facing is not a field on MovePacket - the server derives it from the movement delta.
+| `sendPlayerMove(toX, toZ, path, pace)` | `{ type: 204, x, z, path, pace }` |
+| `sendSettings(settings)` | `{ type: "save_settings", settings }` |
 
 ---
 
@@ -183,20 +188,21 @@ src/types/index.ts is the barrel. Always import from ../../types, not directly f
 
 ## Player Rendering (entities/players.ts)
 
-PlayerManager holds a meshes map keyed by player id. Each render frame, syncPlayers(nearbyPlayers, myId) is called:
+`PlayerManager` holds a `meshes` map keyed by player id.
 
-1. For each player in the store - if no mesh exists, spawnPlayer creates a box mesh; otherwise updatePlayer lerps its position
-2. For each mesh key not in the store - removePlayer disposes the mesh
+Local player movement is ACK-gated — the mesh does not move until `player_move_ack` (205) is received. On ACK, `onPlayerMoveAck` writes `pendingPath` to the store and updates `localPlayer` position to the path destination. `PlayerManager`'s store subscription fires, calls `stopAnimation` to cancel any in-progress walk, then calls `animatePath(path)`.
 
-Local player has its own localMesh reference (blue box). Remote players are orange boxes.
+`animatePath(path)` resolves `worldY` per step from `world.getNavNode(step.x, step.z)` and applies `PLAYER.Y_OFFSET`, builds Babylon keyframes via `buildMoveAnimation`, then calls `scene.beginAnimation`.
+
+Remote players are driven by tick data only (`onTick` → `applyTick` on their `PlayerState`).
 
 ---
 
 ## World & Chunks (game-client/world/)
 
-GameWorld owns a Map of GameRegion keyed by region id. Key methods: loadRegion, loadChunk, hasChunk, reloadChunk, reloadRegion.
+`GameWorld` exposes a flat `navmesh: Map<string, NavNode>` built from `TILE_WALKABLE` tiles after region load, rebuilt on each `reloadChunk`. `getNavNode(x, z)` is the single public accessor - used by `animatePath` in `PlayerManager` and by `buildClientPath` in `movement/pathfinding.ts`.
 
-GameRegion owns the chunk and tile data maps. Chunk constructs 256 CreateGround tile meshes in a 16x16 grid coloured from TILE_COLORS. dispose() destroys all meshes.
+`NavNode` carries `worldY` (blended visual height matching tile mesh geometry), `y` (tile height index), `floor`, `walkable`, and `blockedEdges`.
 
 ---
 
