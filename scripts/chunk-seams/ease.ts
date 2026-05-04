@@ -1,6 +1,6 @@
-import { TileHeight } from "mmo-shared";
+import { TileHeight, WORLD } from "mmo-shared";
 import { withHeight } from "./palette";
-import { CHUNK_SIZE, MAX_SLOPE_STEP, TileGrid } from "./types";
+import { MAX_SLOPE_STEP, TileGrid } from "./types";
 
 const CARDINALS: [number, number][] = [
   [0, -1],
@@ -11,7 +11,7 @@ const CARDINALS: [number, number][] = [
 
 /*
  * Relaxation pass over a single chunk's interior tiles.
- * Border tiles (row 0, row CHUNK_SIZE-1, col 0, col CHUNK_SIZE-1) are read as
+ * Border tiles (row 0, row WORLD.CHUNK_SIZE-1, col 0, col WORLD.CHUNK_SIZE-1) are read as
  * anchors but never written — they are the seam contract with neighbours.
  *
  * Each pass clamps every interior tile to within MAX_SLOPE_STEP of each
@@ -30,15 +30,15 @@ export function easeChunk(grid: TileGrid): boolean {
   let changed = true;
   while (changed) {
     changed = false;
-    for (let row = 1; row < CHUNK_SIZE - 1; row++) {
-      for (let col = 1; col < CHUNK_SIZE - 1; col++) {
+    for (let row = 1; row < WORLD.CHUNK_SIZE - 1; row++) {
+      for (let col = 1; col < WORLD.CHUNK_SIZE - 1; col++) {
         const current = grid[row][col];
         let h = current.y as number;
 
         for (const [dr, dc] of CARDINALS) {
           const nr = row + dr;
           const nc = col + dc;
-          if (nr < 0 || nr >= CHUNK_SIZE || nc < 0 || nc >= CHUNK_SIZE) continue;
+          if (nr < 0 || nr >= WORLD.CHUNK_SIZE || nc < 0 || nc >= WORLD.CHUNK_SIZE) continue;
           const nh = grid[nr][nc].y as number;
           if (h - nh > MAX_SLOPE_STEP) h = nh + MAX_SLOPE_STEP;
           if (nh - h > MAX_SLOPE_STEP) h = nh - MAX_SLOPE_STEP;

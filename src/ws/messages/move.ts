@@ -1,14 +1,18 @@
-import type { MoveMessage, ResolvedPace } from "mmo-shared";
+import type { Coords, MoveMessage, ResolvedPace } from "mmo-shared";
 import { MSG } from "mmo-shared";
 import { send } from "../client";
 
+/*
+ * Sends a movement request to the server with the destination tile only.
+ * The server runs pathfinding and responds with PLAYER_MOVE_ACK containing
+ * the full authoritative path.
+ */
 export function sendPlayerMove(
-  x: number,
-  y: number,
-  floor: number,
-  z: number,
+  destX: number,
+  destZ: number,
+  path: Coords[],
   pace: ResolvedPace,
 ): void {
-  const packet: MoveMessage = { type: MSG.PLAYER_MOVE, x, y, floor, z, pace };
+  const packet: MoveMessage = { type: MSG.PLAYER_MOVE, x: destX, z: destZ, path, pace };
   send(packet);
 }

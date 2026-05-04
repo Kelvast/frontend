@@ -1,28 +1,19 @@
 import { Vector3 } from "@babylonjs/core";
+import type { Coords } from "mmo-shared";
 import { WORLD } from "mmo-shared";
 import { PLAYER } from "../constants";
 
 const s = WORLD.TILE_SIZE;
 
-function tileCentre(worldCoord: number): number {
-  return Math.floor(worldCoord / s) * s + s / 2;
+function tileCentre(tileCoord: number): number {
+  return tileCoord * s + s / 2;
 }
 
-export function buildWaypoints(from: Vector3, toX: number, toZ: number): Vector3[] {
-  let x = tileCentre(from.x);
-  let z = tileCentre(from.z);
-  const endX = tileCentre(toX);
-  const endZ = tileCentre(toZ);
-
-  if (x === endX && z === endZ) return [];
-
-  const waypoints: Vector3[] = [];
-
-  while (x !== endX || z !== endZ) {
-    if (x !== endX) x += x < endX ? s : -s;
-    if (z !== endZ) z += z < endZ ? s : -s;
-    waypoints.push(new Vector3(x, PLAYER.Y_OFFSET, z));
-  }
-
-  return waypoints;
+/*
+ * Converts server-authoritative path (tile coords) into world-space Vector3
+ * waypoints for Babylon.js interpolation. The starting tile is excluded — the
+ * player mesh is already there.
+ */
+export function pathToWaypoints(path: Coords[]): Vector3[] {
+  return path.map(({ x, z }) => new Vector3(tileCentre(x), PLAYER.Y_OFFSET, tileCentre(z)));
 }

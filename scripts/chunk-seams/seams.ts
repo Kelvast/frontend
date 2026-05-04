@@ -1,5 +1,6 @@
+import { WORLD } from "mmo-shared";
 import { withHeight } from "./palette";
-import { CHUNK_SIZE, type ChunkCoord, type Mismatch, type TileGrid } from "./types";
+import { type ChunkCoord, type Mismatch, type TileGrid } from "./types";
 
 export function checkSeams(chunks: Map<string, TileGrid>, coords: ChunkCoord[]): Mismatch[] {
   const mismatches: Mismatch[] = [];
@@ -11,8 +12,8 @@ export function checkSeams(chunks: Map<string, TileGrid>, coords: ChunkCoord[]):
 
     const gridE = chunks.get(key(cx + 1, cz));
     if (gridE) {
-      for (let row = 0; row < CHUNK_SIZE; row++) {
-        const hA = gridA[row][CHUNK_SIZE - 1].y;
+      for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
+        const hA = gridA[row][WORLD.CHUNK_SIZE - 1].y;
         const hB = gridE[row][0].y;
         if (hA !== hB) {
           mismatches.push({
@@ -29,8 +30,8 @@ export function checkSeams(chunks: Map<string, TileGrid>, coords: ChunkCoord[]):
 
     const gridS = chunks.get(key(cx, cz + 1));
     if (gridS) {
-      for (let col = 0; col < CHUNK_SIZE; col++) {
-        const hA = gridA[CHUNK_SIZE - 1][col].y;
+      for (let col = 0; col < WORLD.CHUNK_SIZE; col++) {
+        const hA = gridA[WORLD.CHUNK_SIZE - 1][col].y;
         const hB = gridS[0][col].y;
         if (hA !== hB) {
           mismatches.push({
@@ -58,9 +59,15 @@ export function applyFixes(mismatches: Mismatch[], chunks: Map<string, TileGrid>
     const gridA = chunks.get(key(ax, az))!;
 
     if (m.edge === "east-west") {
-      gridA[m.index][CHUNK_SIZE - 1] = withHeight(gridA[m.index][CHUNK_SIZE - 1], m.heightB);
+      gridA[m.index][WORLD.CHUNK_SIZE - 1] = withHeight(
+        gridA[m.index][WORLD.CHUNK_SIZE - 1],
+        m.heightB,
+      );
     } else {
-      gridA[CHUNK_SIZE - 1][m.index] = withHeight(gridA[CHUNK_SIZE - 1][m.index], m.heightB);
+      gridA[WORLD.CHUNK_SIZE - 1][m.index] = withHeight(
+        gridA[WORLD.CHUNK_SIZE - 1][m.index],
+        m.heightB,
+      );
     }
     dirty.add(key(ax, az));
   }

@@ -1,4 +1,4 @@
-import { TileData, TileHeight, WORLD } from "mmo-shared";
+import { TileData, TileHeight } from "mmo-shared";
 
 /*
  * Script-local type aliases. All tile types and world constants come from
@@ -31,5 +31,3 @@ export const HEIGHT_NAME = Object.fromEntries(
     .filter(([, v]) => typeof v === "number")
     .map(([k, v]) => [v as number, k]),
 ) as Record<number, string>;
-
-export const { CHUNK_SIZE } = WORLD;

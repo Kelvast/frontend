@@ -1,12 +1,14 @@
 import { Scene, HighlightLayer } from "@babylonjs/core";
 import { GameRegion } from "./region";
+import { Navmesh, NavNode, navKey } from "./navmesh";
 import { logger } from "../../utils/logger";
-import { Region, ChunkData, TileData } from "mmo-shared";
+import { Region, ChunkData } from "mmo-shared";
 import { DEV_MODE } from "../../utils/dev";
 import { setupScene } from "../engine/scene-setup";
 
 export class GameWorld {
   private regions: Map<string, GameRegion> = new Map();
+  private navmesh: Navmesh = new Map();
   private highlightLayer: HighlightLayer | undefined;
 
   constructor(private scene: Scene) {
@@ -20,12 +22,12 @@ export class GameWorld {
     logger.game("World ready");
   }
 
-  getTileAt(tileX: number, tileZ: number): TileData | null {
-    for (const region of this.regions.values()) {
-      const tile = region.getTileAt(tileX, tileZ);
-      if (tile) return tile;
-    }
-    return null;
+  /*
+   * Single accessor for all tile data. O(1) flat map lookup.
+   * Replaces all getTileAt call sites.
+   */
+  getNavNode(x: number, z: number): NavNode | undefined {
+    return this.navmesh.get(navKey(x, z));
   }
 
   loadRegion(data: Region): void {
@@ -33,7 +35,7 @@ export class GameWorld {
       logger.game(`Region "${data.id}" already loaded - skipping`);
       return;
     }
-    this.regions.set(data.id, new GameRegion(data, this.scene, this.highlightLayer));
+    this.regions.set(data.id, new GameRegion(data, this.scene, this.navmesh, this.highlightLayer));
   }
 
   reloadRegion(fresh: Region): void {
@@ -59,6 +61,7 @@ export class GameWorld {
     logger.game("Disposing world");
     this.regions.forEach((r) => r.dispose());
     this.regions.clear();
+    this.navmesh.clear();
     this.highlightLayer?.dispose();
   }
 }

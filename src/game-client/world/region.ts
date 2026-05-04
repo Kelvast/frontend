@@ -1,6 +1,7 @@
 import { Scene, HighlightLayer } from "@babylonjs/core";
-import { Region, ChunkData, TileData, WORLD } from "mmo-shared";
+import { Region, ChunkData } from "mmo-shared";
 import { Chunk } from "./chunk";
+import { Navmesh, mergeNavmesh } from "./navmesh";
 import { logger } from "../../utils/logger";
 
 export class GameRegion {
@@ -11,26 +12,18 @@ export class GameRegion {
   constructor(
     data: Region,
     private scene: Scene,
+    private navmesh: Navmesh,
     private highlightLayer?: HighlightLayer,
   ) {
     this.data = data;
     logger.game(`Loading region "${data.name}" (${Object.keys(data.chunks).length} chunks)`);
     Object.entries(data.chunks).forEach(([key, chunkData]) => {
-      this.chunks.set(key, new Chunk(chunkData, scene, highlightLayer));
+      const chunk = new Chunk(chunkData, scene, highlightLayer);
+      mergeNavmesh(navmesh, chunk.buildNavNodes());
+      this.chunks.set(key, chunk);
       this.rawData.set(key, chunkData);
     });
     logger.game(`Region "${data.name}" ready`);
-  }
-
-  getTileAt(tileX: number, tileZ: number): TileData | null {
-    const chunkX = Math.floor(tileX / WORLD.CHUNK_SIZE);
-    const chunkZ = Math.floor(tileZ / WORLD.CHUNK_SIZE);
-    const key = `${chunkX},${chunkZ}`;
-    const chunkData = this.rawData.get(key);
-    if (!chunkData) return null;
-    const localCol = tileX - chunkX * WORLD.CHUNK_SIZE;
-    const localRow = tileZ - chunkZ * WORLD.CHUNK_SIZE;
-    return chunkData.tiles[localRow]?.[localCol] ?? null;
   }
 
   private hasChanged(key: string, fresh: ChunkData): boolean {
@@ -47,7 +40,9 @@ export class GameRegion {
       existing.dispose();
       this.chunks.delete(key);
     }
-    this.chunks.set(key, new Chunk(chunkData, this.scene, this.highlightLayer));
+    const chunk = new Chunk(chunkData, this.scene, this.highlightLayer);
+    mergeNavmesh(this.navmesh, chunk.buildNavNodes());
+    this.chunks.set(key, chunk);
     this.rawData.set(key, chunkData);
     logger.game(`HMR - chunk ${key} reloaded in "${this.data.name}"`);
   }
@@ -56,9 +51,7 @@ export class GameRegion {
     const freshKeys = new Set(Object.keys(fresh.chunks));
 
     Object.entries(fresh.chunks).forEach(([key, chunkData]) => {
-      if (this.hasChanged(key, chunkData)) {
-        this.reloadChunk(key, chunkData);
-      }
+      if (this.hasChanged(key, chunkData)) this.reloadChunk(key, chunkData);
     });
 
     this.chunks.forEach((chunk, key) => {
