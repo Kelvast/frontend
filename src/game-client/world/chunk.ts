@@ -7,8 +7,6 @@ import {
   Color3,
   Vector3,
   HighlightLayer,
-  ActionManager,
-  ExecuteCodeAction,
 } from "@babylonjs/core";
 import { ChunkData, TileData, WORLD } from "mmo-shared";
 import { logger } from "../../utils/logger";
@@ -24,6 +22,7 @@ export class Chunk {
   private meshes: Mesh[] = [];
   private tileMeshes: Mesh[] = [];
   private devMeshes: Mesh[] = [];
+  private navNodes: Map<string, NavNode> | null = null;
 
   constructor(
     private data: ChunkData,
@@ -36,10 +35,11 @@ export class Chunk {
 
   /*
    * Returns the navmesh nodes for this chunk so GameWorld can merge them
-   * into the world-flat navmesh. Called by GameRegion after construction.
+   * into the world-flat navmesh. Nodes are built once during spawn() and
+   * cached — this call is free.
    */
   buildNavNodes(): Map<string, NavNode> {
-    return buildChunkNavmesh(this.data);
+    return this.navNodes!;
   }
 
   getMeshes(): Mesh[] {
@@ -50,6 +50,12 @@ export class Chunk {
     const { chunkX, chunkZ, tiles } = this.data;
     const tileMeshes: Mesh[] = [];
     const s = WORLD.TILE_SIZE;
+
+    /*
+     * Build navmesh once here. spawnPickableTiles and buildNavNodes both
+     * need it — building it twice was the previous bug.
+     */
+    this.navNodes = buildChunkNavmesh(this.data);
 
     for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
       for (let col = 0; col < WORLD.CHUNK_SIZE; col++) {
@@ -71,7 +77,7 @@ export class Chunk {
       this.meshes = tileMeshes;
     }
 
-    this.spawnPickableTiles(tiles, chunkX, chunkZ, s);
+    this.spawnPickableTiles(s);
 
     if (DEV_MODE && this.highlightLayer) {
       this._spawnDevOverlay(tiles, chunkX, chunkZ);
@@ -82,12 +88,11 @@ export class Chunk {
 
   /*
    * One invisible pickable ground plane per walkable tile, named tile-{x}-{z}.
-   * Ray-casts in PointerInput only hit these — unwalkable tiles have no mesh.
+   * Uses the already-built navNodes — no second navmesh build.
+   * No material assigned — invisible meshes do not need one.
    */
-  private spawnPickableTiles(tiles: TileData[][], chunkX: number, chunkZ: number, s: number): void {
-    const navNodes = buildChunkNavmesh(this.data);
-
-    for (const node of navNodes.values()) {
+  private spawnPickableTiles(s: number): void {
+    for (const node of this.navNodes!.values()) {
       if (!node.walkable) continue;
 
       const mesh = MeshBuilder.CreateGround(
@@ -103,6 +108,7 @@ export class Chunk {
       );
       mesh.isPickable = true;
       mesh.isVisible = false;
+      mesh.material = null;
       this.tileMeshes.push(mesh);
     }
   }
@@ -179,5 +185,6 @@ export class Chunk {
     this.meshes = [];
     this.tileMeshes = [];
     this.devMeshes = [];
+    this.navNodes = null;
   }
 }

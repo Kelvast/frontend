@@ -11,7 +11,7 @@ import { PLAYER } from "../constants";
 import { WORLD, ResolvedPace, Coords } from "mmo-shared";
 import { GameWorld } from "../world";
 import { logger } from "../../utils/logger";
-import { buildMoveAnimation, ANIM_FPS, FRAMES_PER_TILE } from "../movement/animation";
+import { buildMoveAnimation, ANIM_FPS } from "../movement/animation";
 import { useGameStore } from "../../utils/game-store";
 
 /*
@@ -84,7 +84,7 @@ export class PlayerManager {
     this.scene.stopAnimation(this.localMesh);
 
     const s = WORLD.TILE_SIZE;
-    const fpt = Math.round(FRAMES_PER_TILE / pace);
+    const fpt = Math.round(ANIM_FPS / pace);
 
     const waypoints: Vector3[] = path.map((step) => {
       const node = this.world.getNavNode(step.x, step.z);

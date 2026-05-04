@@ -1,8 +1,13 @@
 import { Vector3 } from "@babylonjs/core";
-import { MOVEMENT } from "../constants";
 
 export const ANIM_FPS = 60;
-export const FRAMES_PER_TILE = Math.round((MOVEMENT.TILE_DURATION_MS / 1000) * ANIM_FPS);
+
+/*
+ * framesPerTile is derived at call time from pace (tiles/s):
+ *   fpt = ANIM_FPS / pace
+ * e.g. walk pace 4 tiles/s → 60/4 = 15 frames per tile → 250ms per tile at 60fps
+ * TILE_DURATION_MS is no longer needed — pace is authoritative.
+ */
 
 export interface MoveAnimationData {
   keys: { frame: number; value: Vector3 }[];
