@@ -2,6 +2,7 @@ import {
   Scene,
   Mesh,
   MeshBuilder,
+  VertexData,
   StandardMaterial,
   DynamicTexture,
   Color3,
@@ -15,8 +16,6 @@ import { buildTileMesh } from "./tile-mesh";
 import { tileWorldY, floorWorldY } from "./tile-height";
 import { getTileMaterial } from "./tile-material-cache";
 import { buildChunkNavmesh, NavNode } from "./navmesh";
-
-const PICKABLE_Y_OFFSET = 0.01;
 
 export class Chunk {
   private meshes: Mesh[] = [];
@@ -33,11 +32,6 @@ export class Chunk {
     this.spawn();
   }
 
-  /*
-   * Returns the navmesh nodes for this chunk so GameWorld can merge them
-   * into the world-flat navmesh. Nodes are built once during spawn() and
-   * cached — this call is free.
-   */
   buildNavNodes(): Map<string, NavNode> {
     return this.navNodes!;
   }
@@ -51,10 +45,6 @@ export class Chunk {
     const tileMeshes: Mesh[] = [];
     const s = WORLD.TILE_SIZE;
 
-    /*
-     * Build navmesh once here. spawnPickableTiles and buildNavNodes both
-     * need it — building it twice was the previous bug.
-     */
     this.navNodes = buildChunkNavmesh(this.data);
 
     for (let row = 0; row < WORLD.CHUNK_SIZE; row++) {
@@ -77,7 +67,7 @@ export class Chunk {
       this.meshes = tileMeshes;
     }
 
-    this.spawnPickableTiles(s);
+    this.spawnPickableTiles(tiles, chunkX, chunkZ, s);
 
     if (DEV_MODE && this.highlightLayer) {
       this._spawnDevOverlay(tiles, chunkX, chunkZ);
@@ -87,25 +77,49 @@ export class Chunk {
   }
 
   /*
-   * One invisible pickable ground plane per walkable tile, named tile-{x}-{z}.
-   * Uses the already-built navNodes — no second navmesh build.
-   * No material assigned — invisible meshes do not need one.
+   * One invisible pickable mesh per walkable tile, built with the same
+   * 4-corner vertex geometry as the visual tile. A flat CreateGround plane
+   * misses ray-casts on sloped tiles because the plane diverges from the
+   * visual surface at tile edges. Using the real quad geometry means the
+   * ray hits exactly what the player sees.
    */
-  private spawnPickableTiles(s: number): void {
+  private spawnPickableTiles(tiles: TileData[][], chunkX: number, chunkZ: number, s: number): void {
+    const half = s / 2;
+
     for (const node of this.navNodes!.values()) {
       if (!node.walkable) continue;
 
-      const mesh = MeshBuilder.CreateGround(
-        `tile-${node.x}-${node.z}`,
-        { width: s, height: s },
-        this.scene,
-      );
+      const row = node.z - chunkZ * WORLD.CHUNK_SIZE;
+      const col = node.x - chunkX * WORLD.CHUNK_SIZE;
 
-      mesh.position = new Vector3(
-        node.x * s + s / 2,
-        node.worldY + PICKABLE_Y_OFFSET,
-        node.z * s + s / 2,
-      );
+      const yNW = this.cornerY(tiles, row, col, -1, -1);
+      const yNE = this.cornerY(tiles, row, col, -1, 1);
+      const ySW = this.cornerY(tiles, row, col, 1, -1);
+      const ySE = this.cornerY(tiles, row, col, 1, 1);
+
+      const floorY = floorWorldY(node.floor);
+
+      const positions: number[] = [
+        -half, yNW, -half,
+         half, yNE, -half,
+         half, ySE,  half,
+        -half, ySW,  half,
+      ];
+      const indices: number[] = [0, 1, 2, 0, 2, 3];
+      const normals: number[] = [];
+      VertexData.ComputeNormals(positions, indices, normals);
+
+      const vd = new VertexData();
+      vd.positions = positions;
+      vd.indices = indices;
+      vd.normals = normals;
+
+      const mesh = new Mesh(`tile-${node.x}-${node.z}`, this.scene);
+      vd.applyToMesh(mesh);
+
+      mesh.position.x = node.x * s + half;
+      mesh.position.y = floorY;
+      mesh.position.z = node.z * s + half;
       mesh.isPickable = true;
       mesh.isVisible = false;
       mesh.material = null;
@@ -113,8 +127,27 @@ export class Chunk {
     }
   }
 
+  /*
+   * Mirrors cornerY() from tile-mesh.ts exactly.
+   * Must stay in sync with that function.
+   */
+  private cornerY(tiles: TileData[][], row: number, col: number, dr: number, dc: number): number {
+    const clampRow = Math.max(0, Math.min(tiles.length - 1, row + dr));
+    const clampCol = Math.max(0, Math.min(tiles[0].length - 1, col + dc));
+    const r0 = Math.max(0, Math.min(tiles.length - 1, row));
+    const c0 = Math.max(0, Math.min(tiles[0].length - 1, col));
+
+    const heights = [
+      tiles[r0][c0].y,
+      tiles[clampRow][c0].y,
+      tiles[r0][clampCol].y,
+      tiles[clampRow][clampCol].y,
+    ];
+
+    return heights.reduce((sum, h) => sum + tileWorldY(h), 0) / heights.length;
+  }
+
   private _spawnDevOverlay(tiles: TileData[][], chunkX: number, chunkZ: number): void {
-    const hl = this.highlightLayer!;
     const half = WORLD.TILE_SIZE / 2;
     const s = WORLD.TILE_SIZE;
 
