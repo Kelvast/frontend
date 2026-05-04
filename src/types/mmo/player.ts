@@ -25,6 +25,7 @@ export interface NearbyPlayer {
   playerName: string;
   x: number;
   y: number;
+  floor: number;
   z: number;
   facing: Direction;
   isMoving: boolean;

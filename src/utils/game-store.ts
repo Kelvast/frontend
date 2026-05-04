@@ -164,12 +164,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
       };
     }),
 
-  /*
-   * Handles player_move_ack. Stores the server-resolved path so PlayerManager
-   * can subscribe and drive the animation. Cleared after consumption.
-   */
   onPlayerMoveAck: (path: Coords[], pace: ResolvedPace) => {
     set({ pendingPath: { path, pace } });
+  },
+
+  clearPendingPath: () => {
+    set({ pendingPath: null });
   },
 
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {

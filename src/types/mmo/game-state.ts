@@ -8,6 +8,8 @@ import type {
   GameSession,
   PlayerIdentity,
   PlayerDataMessage,
+  Coords,
+  ResolvedPace,
 } from "mmo-shared";
 import type { PlayerState, NearbyPlayer } from "./player";
 import type { UserSettings } from "./settings";
@@ -30,6 +32,10 @@ export interface GameStoreState {
 
   // ── Connection ────────────────────────────────────────────────────────────
   isConnected: boolean;
+  latency: number;
+
+  // ── Movement ──────────────────────────────────────────────────────────────
+  pendingPath: { path: Coords[]; pace: ResolvedPace } | null;
 
   // ── Settings ──────────────────────────────────────────────────────────────
   settings: UserSettings;
@@ -65,6 +71,10 @@ export interface GameStoreState {
   onPlayerStopped: (msg: PlayerStoppedMessage) => void;
   /** Handles player_data. Applies real skills, inventory, and equipment to localPlayer. */
   onPlayerData: (msg: PlayerDataMessage) => void;
+  /** Handles player_move_ack. Stores the server-resolved path for PlayerManager to consume. */
+  onPlayerMoveAck: (path: Coords[], pace: ResolvedPace) => void;
+  /** Clears pendingPath after PlayerManager has consumed and started the animation. */
+  clearPendingPath: () => void;
 
   // ── Settings actions ──────────────────────────────────────────────────────
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;

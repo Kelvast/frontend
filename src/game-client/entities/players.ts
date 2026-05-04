@@ -47,7 +47,7 @@ export class PlayerManager {
     this.unsubscribe = useGameStore.subscribe((state) => {
       if (state.pendingPath) {
         this.animatePath(state.pendingPath.path, state.pendingPath.pace);
-        useGameStore.getState().onPlayerMoveAck([], 1);
+        useGameStore.getState().clearPendingPath();
       }
     });
 
