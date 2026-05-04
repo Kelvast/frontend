@@ -34,7 +34,7 @@ initGame(canvas) is the entry point. It is guarded - calling it twice is a no-op
 1. Creates GameEngine (Babylon Engine + Scene)
 2. Creates GameWorld (lighting)
 3. Creates GameCamera (arc-rotate, follows local player)
-4. Creates PlayerManager (spawns local player box mesh)
+4. Creates PlayerManager (subscribes to store; spawns meshes on player join/login)
 5. Attaches input handlers
 6. Starts the render loop
 7. Fetches all chunk data via the builder API - guarded with an AbortController so React StrictMode's double-mount does not cause a double-fetch
@@ -157,6 +157,8 @@ Inbound messages are dispatched via a self-registering handler registry in `src/
 | `tick` | 301 | `tick.ts` | `onTick` |
 | unknown | — | registry fallback | `logger.warn` — never throw |
 
+`session_opened` and `player_data` always arrive in sequence on connect — the client is not fully hydrated until both are received.
+
 Outbound packet files live in `src/ws/packets/`:
 
 | Function | Packet |
@@ -200,7 +202,9 @@ Remote players are driven by tick data only (`onTick` → `applyTick` on their `
 
 ## World & Chunks (game-client/world/)
 
-`GameWorld` exposes a flat `navmesh: Map<string, NavNode>` built from `TILE_WALKABLE` tiles after region load, rebuilt on each `reloadChunk`. `getNavNode(x, z)` is the single public accessor - used by `animatePath` in `PlayerManager` and by `buildClientPath` in `movement/pathfinding.ts`.
+`GameWorld` owns a `Map<string, GameRegion>` keyed by region id. Public methods: `loadRegion`, `reloadRegion`, `reloadChunk`, `getNavNode`, `dispose`. `GameRegion` owns a `chunks: Map<string, Chunk>` and a `rawData: Map<string, ChunkData>`. On construction and reload, each `Chunk` builds its nav nodes via `buildChunkNavmesh` and they are merged into the shared navmesh via `mergeNavmesh`. `Chunk` constructs tile meshes using `tile-render.ts`, `tile-mesh.ts`, `tile-walls.ts`, and `tile-material-cache.ts`; `dispose()` destroys all meshes.
+
+`GameWorld` also exposes a flat `navmesh: Map<string, NavNode>` covering every tile in every loaded region, rebuilt on each `reloadChunk`. `getNavNode(x, z)` is the single public accessor — used by `animatePath` in `PlayerManager` and by `buildClientPath` in `movement/pathfinding.ts`. Every tile gets a node regardless of walkability; `walkable` and `blockedEdges` are fields on `NavNode`.
 
 `NavNode` carries `worldY` (blended visual height matching tile mesh geometry), `y` (tile height index), `floor`, `walkable`, and `blockedEdges`.
 

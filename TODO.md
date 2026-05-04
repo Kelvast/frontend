@@ -2,6 +2,7 @@
 
 - Gate `sendPlayerMove` to at most one call per `TICK_INTERVAL_MS`
 - Fix `player_stopped` handler - local player stopped not yet handled; server rejects silently from client perspective
+- Guard game start until both `session_opened` and `player_data` have been received - client is not fully hydrated until both arrive
 - Client-side prediction - advance local player position at `ResolvedPace` tiles/sec between ticks; reconcile against `player_stopped`
 - Chunk streaming - load chunks outward from player position at runtime (spiral load pattern)
 - Chunk unloading - dispose chunks beyond a max radius as the player moves
