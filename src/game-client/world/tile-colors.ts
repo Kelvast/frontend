@@ -1,4 +1,4 @@
-import { TileHeight, TileType, TileData } from "mmo-shared";
+import { TileHeight, TileType, TileData, Floor } from "mmo-shared";
 
 export const TILE_COLORS: Record<TileType, string> = {
   grass: "#4a7c3f",
@@ -11,27 +11,46 @@ export const TILE_COLORS: Record<TileType, string> = {
 };
 
 /*
- * Brightness multiplier per slope height.
- * Only covers TileHeight slope values - floor tinting is applied separately
- * via tile.floor, not tile.y, since floor is now its own axis.
+ * Brightness multiplier per TileHeight value.
+ * Inclines brighten progressively (ascending = more light).
+ * Declines darken progressively (descending = less light).
+ * GROUND is neutral 1.0. Floor-level tinting is handled separately via FLOOR_TINT.
  */
 export const HEIGHT_TINT: Record<TileHeight, number> = {
+  [TileHeight.DECLINE_FULL]: 0.72,
+  [TileHeight.DECLINE_SEVEN_EIGHTHS]: 0.75,
+  [TileHeight.DECLINE_THREE_QUARTERS]: 0.78,
+  [TileHeight.DECLINE_FIVE_EIGHTHS]: 0.81,
+  [TileHeight.DECLINE_HALF]: 0.84,
+  [TileHeight.DECLINE_THREE_EIGHTHS]: 0.87,
+  [TileHeight.DECLINE_ONE_QUARTER]: 0.91,
+  [TileHeight.DECLINE_ONE_EIGHTH]: 0.95,
   [TileHeight.GROUND]: 1.0,
-  [TileHeight.SLOPE_LOW]: 0.96,
-  [TileHeight.SLOPE_LOW_MID]: 0.93,
-  [TileHeight.SLOPE_MID]: 0.97,
-  [TileHeight.SLOPE_MID_HIGH]: 1.03,
-  [TileHeight.SLOPE_HIGH]: 1.07,
+  [TileHeight.INCLINE_ONE_EIGHTH]: 1.03,
+  [TileHeight.INCLINE_ONE_QUARTER]: 1.06,
+  [TileHeight.INCLINE_THREE_EIGHTHS]: 1.08,
+  [TileHeight.INCLINE_HALF]: 1.1,
+  [TileHeight.INCLINE_FIVE_EIGHTHS]: 1.12,
+  [TileHeight.INCLINE_THREE_QUARTERS]: 1.14,
+  [TileHeight.INCLINE_SEVEN_EIGHTHS]: 1.16,
+  [TileHeight.INCLINE_FULL]: 1.18,
 };
 
 /*
- * Floor tint brightens tiles on upper floors so they read as elevated.
+ * Brightness multiplier per Floor value.
+ * Upper floors brighten — elevated surfaces catch more light.
+ * Dungeon floors darken — underground receives less ambient light.
+ * Combined multiplicatively with HEIGHT_TINT in getTileColor.
  */
-export const FLOOR_TINT: Record<number, number> = {
-  0: 1.0,
-  1: 1.12,
-  2: 1.16,
-  3: 1.2,
+export const FLOOR_TINT: Record<Floor, number> = {
+  [Floor.DUNGEON_VOID]: 0.5,
+  [Floor.DUNGEON_DEEPEST]: 0.6,
+  [Floor.DUNGEON_DEEPER]: 0.7,
+  [Floor.DUNGEON_DEEP]: 0.82,
+  [Floor.GROUND]: 1.0,
+  [Floor.FIRST]: 1.12,
+  [Floor.SECOND]: 1.16,
+  [Floor.THIRD]: 1.2,
 };
 
 export function applyHeightTintHex(hex: string, tint: number): string {
@@ -43,6 +62,6 @@ export function applyHeightTintHex(hex: string, tint: number): string {
 
 export function getTileColor(tile: TileData): string {
   const slopeTint = HEIGHT_TINT[tile.y];
-  const floorTint = FLOOR_TINT[tile.floor] ?? 1.0;
+  const floorTint = FLOOR_TINT[tile.floor];
   return applyHeightTintHex(TILE_COLORS[tile.type], slopeTint * floorTint);
 }
