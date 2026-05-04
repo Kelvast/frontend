@@ -10,11 +10,15 @@ export interface MoveAnimationData {
   fps: number;
 }
 
-export function buildMoveAnimation(from: Vector3, waypoints: Vector3[]): MoveAnimationData {
-  const totalFrames = waypoints.length * FRAMES_PER_TILE;
+export function buildMoveAnimation(
+  from: Vector3,
+  waypoints: Vector3[],
+  framesPerTile: number,
+): MoveAnimationData {
+  const totalFrames = waypoints.length * framesPerTile;
   const keys = [{ frame: 0, value: from }];
   waypoints.forEach((wp, i) => {
-    keys.push({ frame: (i + 1) * FRAMES_PER_TILE, value: wp });
+    keys.push({ frame: (i + 1) * framesPerTile, value: wp });
   });
   return { keys, totalFrames, fps: ANIM_FPS };
 }

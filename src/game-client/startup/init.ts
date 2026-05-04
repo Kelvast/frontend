@@ -157,7 +157,7 @@ export async function bootGame(
   /* ---- Input ---- */
   const inputStage = await runStage(signal, onLoadEvent, "input", "Initialising input...", () => ({
     keys: new KeysInput(scene, camera),
-    pointer: new PointerInput(scene, players),
+    pointer: new PointerInput(scene),
   }));
   if (inputStage.aborted) return abort();
   const { keys, pointer } = inputStage.result!;

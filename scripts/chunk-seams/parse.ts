@@ -1,8 +1,8 @@
 import * as fs from "fs";
-import { TileData, TileHeight, TILES } from "mmo-shared";
+import { TileData, TileHeight, TILES, WORLD } from "mmo-shared";
 import { REVERSE_TILES } from "./palette";
 import { chunkFileFor } from "./discovery";
-import { CHUNK_SIZE, TileGrid } from "./types";
+import { TileGrid } from "./types";
 
 function buildAliasMap(src: string): Map<string, TileData> {
   const map = new Map<string, TileData>();
@@ -69,12 +69,12 @@ export function parseChunk(cx: number, cz: number): TileGrid | null {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    if (cells.length === CHUNK_SIZE) {
+    if (cells.length === WORLD.CHUNK_SIZE) {
       const row = cells.map((alias) => aliasMap.get(alias));
       if (row.some((t) => t === undefined)) return null;
       grid.push(row as TileData[]);
     }
   }
 
-  return grid.length === CHUNK_SIZE ? grid : null;
+  return grid.length === WORLD.CHUNK_SIZE ? grid : null;
 }

@@ -1,12 +1,11 @@
 import { PointerEventTypes, PointerInfo, Scene, Observer } from "@babylonjs/core";
-import { PlayerManager } from "../entities/players";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
-import { WORLD } from "mmo-shared";
+import { sendPlayerMove } from "../../ws/messages/move";
 
 /*
- * PointerInput handles left-click tile selection and routes it to
- * PlayerManager.moveTo().
+ * PointerInput handles left-click tile selection and sends the destination
+ * to the server via WS. All pathfinding is server-side.
  *
  * TODO: right-click context menu (examine, attack, pick up)
  * TODO: hover highlight on walkable tiles
@@ -15,10 +14,7 @@ import { WORLD } from "mmo-shared";
 export class PointerInput {
   private observer: Observer<PointerInfo>;
 
-  constructor(
-    private scene: Scene,
-    private players: PlayerManager,
-  ) {
+  constructor(private scene: Scene) {
     this.observer = scene.onPointerObservable.add((pi) => this.onPointer(pi));
     logger.game("PointerInput initialised");
   }
@@ -35,25 +31,27 @@ export class PointerInput {
     const button = (pi.event as PointerEvent).button;
     if (button !== 0) return;
 
-    const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) =>
-      mesh.name.startsWith("grid-"),
+    const pick = this.scene.pick(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      (mesh) => mesh.name.startsWith("tile-"),
     );
 
-    if (DEV_MODE)
-      logger.game("POINTERDOWN", {
-        hit: pick.hit,
-        mesh: pick.pickedMesh?.name ?? null,
-        point: pick.pickedPoint,
-      });
+    if (!pick.hit || !pick.pickedMesh) return;
 
-    if (!pick.hit || !pick.pickedPoint) return;
+    /*
+     * Tile coords are embedded in the mesh name (tile-{x}-{z}).
+     * No world-space math needed — the name is the source of truth.
+     */
+    const parts = pick.pickedMesh.name.split("-");
+    const tileX = parseInt(parts[1], 10);
+    const tileZ = parseInt(parts[2], 10);
 
-    const s = WORLD.TILE_SIZE;
-    const tileX = Math.floor(pick.pickedPoint.x / s);
-    const tileZ = Math.floor(pick.pickedPoint.z / s);
+    if (isNaN(tileX) || isNaN(tileZ)) return;
 
-    logger.game("Tile clicked", { tileX, tileZ });
-    this.players.moveTo(tileX, tileZ);
+    if (DEV_MODE) logger.game("Tile clicked", { tileX, tileZ });
+
+    sendPlayerMove(tileX, tileZ);
   }
 
   dispose(): void {

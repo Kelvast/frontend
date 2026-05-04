@@ -7,6 +7,7 @@ import "./move";
 import "./player-data";
 import "./player-join";
 import "./player-leave";
+import "./player-move-ack";
 import "./player-stopped";
 import "./resource-available";
 import "./resource-depleted";
