@@ -11,8 +11,8 @@
     "incremental": true,
     "jsx": "react-jsx",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "noEmit": true,
     "types": ["node"],
+    "noEmit": true,
     "allowJs": false,
     "plugins": [{ "name": "next" }]
   },
