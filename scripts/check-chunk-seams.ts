@@ -17,15 +17,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as readline from "readline";
-import { TileHeight } from "mmo-shared";
+import { TileHeight, TileData, TILES } from "mmo-shared";
 
 const CHUNK_SIZE = 16;
 const FIX_MODE = process.argv.includes("--fix");
 
-/*
- * Derive a name lookup from the TileHeight enum so this script never goes
- * out of sync if new height values are added to mmo-shared.
- */
 const HEIGHT_NAME = Object.fromEntries(
   Object.entries(TileHeight)
     .filter(([, v]) => typeof v === "number")
@@ -59,21 +55,47 @@ function discoverChunks(): ChunkCoord[] {
 
 // ── Parse chunk source ───────────────────────────────────────────────────────
 
+function buildAliasMap(src: string): Map<string, TileHeight> {
+  const map = new Map<string, TileHeight>();
+
+  /*
+   * Current format: const { G, GI1, GI2, ... } = TILES;
+   * Look each key up in the live TILES object to get its height.
+   */
+  const destructureRe = /const\s*\{([^}]+)\}\s*=\s*TILES\s*;/;
+  const destructureMatch = src.match(destructureRe);
+  if (destructureMatch) {
+    const keys = destructureMatch[1]
+      .split(",")
+      .map((k) => k.trim().replace(/\/\/[^\n]*/g, "").trim())
+      .filter(Boolean);
+    for (const key of keys) {
+      const tile = (TILES as Record<string, TileData | undefined>)[key];
+      if (tile) map.set(key, tile.y);
+    }
+    return map;
+  }
+
+  /*
+   * Legacy format: const Grass = tileData("grass");
+   *                const Grass_SLOPE_MID = tileData("grass", TileHeight.SLOPE_MID);
+   */
+  const aliasRe = /const\s+(\w+)\s*=\s*tileData\([^)]*?(?:TileHeight\.(\w+))?\s*\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = aliasRe.exec(src)) !== null) {
+    const heightName = m[2] ?? "GROUND";
+    map.set(m[1], TileHeight[heightName as keyof typeof TileHeight] ?? TileHeight.GROUND);
+  }
+
+  return map;
+}
+
 function parseChunk(cx: number, cz: number): HeightGrid | null {
   const filePath = chunkFileFor(cx, cz);
   if (!fs.existsSync(filePath)) return null;
   const src = fs.readFileSync(filePath, "utf8");
 
-  // Build alias -> TileHeight map from const declarations like:
-  //   const Grass_SLOPE_MID = tileData("grass", TileHeight.SLOPE_MID);
-  //   const Grass = tileData("grass");
-  const aliasMap = new Map<string, TileHeight>();
-  const aliasRe = /const\s+(\w+)\s*=\s*tileData\([^)]*?(?:TileHeight\.(\w+))?\s*\)/g;
-  let m: RegExpExecArray | null;
-  while ((m = aliasRe.exec(src)) !== null) {
-    const heightName = m[2] ?? "GROUND";
-    aliasMap.set(m[1], TileHeight[heightName as keyof typeof TileHeight] ?? TileHeight.GROUND);
-  }
+  const aliasMap = buildAliasMap(src);
 
   const tilesMatch = src.match(/tiles:\s*\[([\s\S]+?)\]\s*,?\s*\}\s*satisfies/);
   if (!tilesMatch) {
@@ -122,14 +144,7 @@ function checkSeams(chunks: Map<string, HeightGrid>, coords: ChunkCoord[]): Mism
         const hA = gridA[row][CHUNK_SIZE - 1];
         const hB = gridE[row][0];
         if (hA !== hB) {
-          mismatches.push({
-            chunkA: [cx, cz],
-            chunkB: [cx + 1, cz],
-            edge: "east-west",
-            index: row,
-            heightA: hA,
-            heightB: hB,
-          });
+          mismatches.push({ chunkA: [cx, cz], chunkB: [cx + 1, cz], edge: "east-west", index: row, heightA: hA, heightB: hB });
         }
       }
     }
@@ -140,14 +155,7 @@ function checkSeams(chunks: Map<string, HeightGrid>, coords: ChunkCoord[]): Mism
         const hA = gridA[CHUNK_SIZE - 1][col];
         const hB = gridS[0][col];
         if (hA !== hB) {
-          mismatches.push({
-            chunkA: [cx, cz],
-            chunkB: [cx, cz + 1],
-            edge: "south-north",
-            index: col,
-            heightA: hA,
-            heightB: hB,
-          });
+          mismatches.push({ chunkA: [cx, cz], chunkB: [cx, cz + 1], edge: "south-north", index: col, heightA: hA, heightB: hB });
         }
       }
     }
@@ -179,44 +187,69 @@ function applyFixes(mismatches: Mismatch[], chunks: Map<string, HeightGrid>): Se
 
 // ── Write chunk file ─────────────────────────────────────────────────────────
 
+/*
+ * Builds a reverse map from TileHeight value + type → TILES key.
+ * We need to know what tile type the original chunk used so the fixed file
+ * stays consistent. We infer it from the first tile in the grid.
+ */
+function buildReverseMap(): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const [key, tile] of Object.entries(TILES as Record<string, TileData>)) {
+    m.set(`${tile.type}:${tile.y}`, key);
+  }
+  return m;
+}
+
+const REVERSE_TILES = buildReverseMap();
+
 function writeChunk(cx: number, cz: number, grid: HeightGrid, srcTemplate: string): void {
-  const usedHeights = new Set(grid.flat());
-
-  const prefixMatch = srcTemplate.match(/const\s+(\w+)\s*=\s*tileData\("(\w+)"\s*\)/);
-  const tileType = prefixMatch?.[1] ?? "Grass";
-  const tileTexture = prefixMatch?.[2] ?? "grass";
-
-  const nonGroundHeights = Object.values(TileHeight).filter(
-    (v): v is TileHeight => typeof v === "number" && v !== TileHeight.GROUND,
-  );
-
-  const aliasLines: string[] = [`const ${tileType} = tileData("${tileTexture}");`];
-  for (const h of nonGroundHeights) {
-    if (usedHeights.has(h)) {
-      aliasLines.push(
-        `const ${tileType}_${HEIGHT_NAME[h]} = tileData("${tileTexture}", TileHeight.${HEIGHT_NAME[h]});`,
-      );
+  /*
+   * Infer the tile type used by this chunk from the existing TILES destructure
+   * or the first legacy alias declaration. Fall back to "grass" if unreadable.
+   */
+  let dominantType = "grass";
+  const destructureRe = /const\s*\{([^}]+)\}\s*=\s*TILES\s*;/;
+  const destructureMatch = srcTemplate.match(destructureRe);
+  if (destructureMatch) {
+    const firstKey = destructureMatch[1]
+      .split(",")
+      .map((k) => k.trim().replace(/\/\/[^\n]*/g, "").trim())
+      .find(Boolean);
+    if (firstKey) {
+      const tile = (TILES as Record<string, TileData | undefined>)[firstKey];
+      if (tile) dominantType = tile.type;
     }
+  } else {
+    const legacyMatch = srcTemplate.match(/tileData\("(\w+)"/);
+    if (legacyMatch) dominantType = legacyMatch[1];
   }
 
-  const alias = (h: TileHeight) =>
-    h === TileHeight.GROUND ? tileType : `${tileType}_${HEIGHT_NAME[h]}`;
+  const tilesKeyFor = (h: TileHeight): string => {
+    const key = REVERSE_TILES.get(`${dominantType}:${h}`);
+    if (!key) throw new Error(`No TILES entry for type="${dominantType}" y=${h}`);
+    return key;
+  };
+
+  const usedKeys = [...new Set(grid.flat().map(tilesKeyFor))].sort();
+  const colWidth = Math.max(...usedKeys.map((k) => k.length));
+
+  const destructure = `const { ${usedKeys.join(", ")} } = TILES; // prettier-ignore`;
 
   const rows = grid
     .map((row) => {
-      const cells = row.map((h) => `      ${alias(h)},`).join("\n");
-      return `    [\n${cells}\n    ]`;
+      const cells = row.map((h) => tilesKeyFor(h).padEnd(colWidth));
+      return `    [ ${cells.join(", ")} ],`;
     })
-    .join(",\n");
+    .join("\n");
 
-  const out = `import { ChunkData, tileData, TileHeight } from "mmo-shared";
+  const out = `import { ChunkData, TILES } from "mmo-shared";
 
-${aliasLines.join("\n")}
+${destructure}
 
 export default {
   pvp: false,
   tiles: [
-${rows},
+${rows}
   ],
 } satisfies Pick<ChunkData, "pvp" | "tiles">;
 `;
@@ -230,9 +263,7 @@ async function main(): Promise<void> {
   console.log(`\n🗺  Chunk seam checker — ${FIX_MODE ? "FIX mode" : "report only"}\n`);
 
   const coords = discoverChunks();
-  console.log(
-    `Found ${coords.length} chunk(s): ${coords.map(([x, z]) => `(${x},${z})`).join(" ")}\n`,
-  );
+  console.log(`Found ${coords.length} chunk(s): ${coords.map(([x, z]) => `(${x},${z})`).join(" ")}\n`);
 
   const chunks = new Map<string, HeightGrid>();
   const sources = new Map<string, string>();

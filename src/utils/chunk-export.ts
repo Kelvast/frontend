@@ -1,9 +1,8 @@
 import { TileData, ChunkData, TILES } from "mmo-shared";
 
 /*
- * Builds a reverse map from TileData identity → TILES key by comparing
- * type and y of every entry in the TILES registry.
- * Used to emit the short TILES key name rather than a tileData() call.
+ * Reverse map: "type:y" → TILES key (e.g. "grass:1" → "GI1").
+ * Built once at module load — used by both generateChunkTs and the seam fixer.
  */
 function buildTilesKeyMap(): Map<string, string> {
   const m = new Map<string, string>();
@@ -27,11 +26,19 @@ export function generateChunkTs(data: ChunkData): string {
 
   const destructure = `const { ${usedKeys.join(", ")} } = TILES; // prettier-ignore`;
 
+  /*
+   * Pad each cell to the same width so columns align, then trim the trailing
+   * spaces from the last cell in each row — matches the hand-authored style
+   * where the final entry has no trailing whitespace before the bracket.
+   */
   const colWidth = Math.max(...usedKeys.map((k) => k.length));
 
   const rows = data.tiles
     .map((row) => {
-      const cells = row.map((t) => tileKey(t).padEnd(colWidth));
+      const cells = row.map((t, i) => {
+        const key = tileKey(t);
+        return i < row.length - 1 ? key.padEnd(colWidth) : key;
+      });
       return `    [ ${cells.join(", ")} ],`;
     })
     .join("\n");
