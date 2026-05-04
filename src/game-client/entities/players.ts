@@ -7,14 +7,12 @@ import {
   Animation,
   Scene,
 } from "@babylonjs/core";
-import { PLAYER, MOVEMENT } from "../constants";
-import { WORLD, PathStep, ResolvedPace } from "mmo-shared";
+import { PLAYER } from "../constants";
+import { WORLD, ResolvedPace, Coords } from "mmo-shared";
 import { GameWorld } from "../world";
 import { logger } from "../../utils/logger";
-import { buildMoveAnimation } from "../movement/animation";
-
-const ANIM_FPS = 60;
-const FRAMES_PER_TILE = Math.round((MOVEMENT.TILE_DURATION_MS / 1000) * ANIM_FPS);
+import { buildMoveAnimation, ANIM_FPS, FRAMES_PER_TILE } from "../movement/animation";
+import { useGameStore } from "../../utils/game-store";
 
 /*
  * PlayerManager spawns and drives the local player mesh.
@@ -28,6 +26,7 @@ const FRAMES_PER_TILE = Math.round((MOVEMENT.TILE_DURATION_MS / 1000) * ANIM_FPS
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;
   private moveAnim: Animation;
+  private unsubscribe: (() => void) | null = null;
 
   constructor(
     private scene: Scene,
@@ -40,15 +39,21 @@ export class PlayerManager {
       Animation.ANIMATIONTYPE_VECTOR3,
       Animation.ANIMATIONLOOPMODE_CONSTANT,
     );
+
+    /*
+     * Subscribe to pendingPath. When the store receives a PLAYER_MOVE_ACK
+     * the path is written here, we animate immediately, then clear it.
+     */
+    this.unsubscribe = useGameStore.subscribe((state) => {
+      if (state.pendingPath) {
+        this.animatePath(state.pendingPath.path, state.pendingPath.pace);
+        useGameStore.getState().onPlayerMoveAck([], 1);
+      }
+    });
+
     logger.game("PlayerManager initialised");
   }
 
-  /*
-   * Spawns the local player box at the given tile position.
-   * Position is overridden once SESSION_OPENED delivers server-authoritative coords.
-   *
-   * TODO: replace box with animated character model
-   */
   spawnLocalPlayer(spawnTileX = 0, spawnTileZ = 0): AbstractMesh {
     logger.game("Spawning local player", { spawnTileX, spawnTileZ });
     const mesh = MeshBuilder.CreateBox(
@@ -71,16 +76,15 @@ export class PlayerManager {
 
   /*
    * Animates the local player along the server-resolved path.
-   * Each PathStep carries pre-authoritative x, z, y and floor.
-   * worldY is read from the navmesh — one O(1) lookup per step.
+   * pace is a multiplier — higher = faster, fewer frames per tile.
    */
-  animatePath(path: PathStep[], pace: ResolvedPace): void {
+  private animatePath(path: Coords[], pace: ResolvedPace): void {
     if (!this.localMesh || path.length === 0) return;
 
     this.scene.stopAnimation(this.localMesh);
 
     const s = WORLD.TILE_SIZE;
-    const framesPerTile = Math.round((1 / pace) * 1000 / 1000 * 60);
+    const fpt = Math.round(FRAMES_PER_TILE / pace);
 
     const waypoints: Vector3[] = path.map((step) => {
       const node = this.world.getNavNode(step.x, step.z);
@@ -91,7 +95,7 @@ export class PlayerManager {
     const { keys, totalFrames } = buildMoveAnimation(
       this.localMesh.position.clone(),
       waypoints,
-      framesPerTile,
+      fpt,
     );
 
     this.moveAnim.setKeys(keys);
@@ -104,6 +108,8 @@ export class PlayerManager {
   }
 
   dispose(): void {
+    this.unsubscribe?.();
+    this.unsubscribe = null;
     if (this.localMesh) {
       this.localMesh.material?.dispose();
       this.localMesh.dispose();

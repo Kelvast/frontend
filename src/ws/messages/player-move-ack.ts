@@ -1,15 +1,8 @@
 import type { PlayerMoveAckMessage } from "mmo-shared";
 import { MSG } from "mmo-shared";
 import { registerMessageHandler } from "../registry";
-import type { PlayerManager } from "../../game-client/entities/players";
-
-let players: PlayerManager | null = null;
-
-export function initPlayerMoveAck(pm: PlayerManager): void {
-  players = pm;
-}
+import { useGameStore } from "../../utils/game-store";
 
 registerMessageHandler<PlayerMoveAckMessage>(MSG.PLAYER_MOVE_ACK, (msg) => {
-  if (!players) return;
-  players.animatePath(msg.path, msg.pace);
+  useGameStore.getState().onPlayerMoveAck(msg.path, msg.pace);
 });

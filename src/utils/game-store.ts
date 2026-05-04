@@ -4,6 +4,7 @@ import type { UserSettings } from "../types/mmo/settings";
 import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
 import { defaultSkills, defaultInventory, defaultEquipment } from "mmo-shared";
+import type { Coords, ResolvedPace } from "mmo-shared";
 
 export const useGameStore = create<GameStoreState>((set) => ({
   identity: null,
@@ -15,39 +16,23 @@ export const useGameStore = create<GameStoreState>((set) => ({
   isConnected: false,
   latency: 0,
   settings: loadSettings(),
+  pendingPath: null,
 
   setConnected: (connected) => {
     logger.game("Connection state:", connected ? "connected" : "disconnected");
     set({ isConnected: connected });
   },
 
-  /*
-   * Stores uuid + name from the auth response. Called at login and register.
-   * This is the only thing the HTTP auth layer gives us - no game state.
-   */
   storeIdentity: ({ uuid, playerName }) => {
     logger.auth("Identity stored - uuid:", uuid, "playerName:", playerName);
     set({ identity: { uuid, playerName } });
   },
 
-  /*
-   * Stores the game session token issued by POST /api/game/session.
-   * Held in Zustand only - never written to localStorage or a cookie.
-   * Passed to connectWS() when the player clicks Play.
-   */
   storeGameSession: ({ gameSessionToken, gameSessionExpiresAt }) => {
     logger.game("Game session stored, expires:", new Date(gameSessionExpiresAt).toISOString());
     set({ gameSessionToken, gameSessionExpiresAt });
   },
 
-  /*
-   * Handles session_opened. SessionOpenedMessage carries PlayerPresence only
-   * (id, uuid, name, x, y, z, facing) - skills, inventory, and equipment are
-   * not on the WS message. We build a full PlayerState by merging the
-   * authoritative position from the message with identity from the store.
-   * Default skills/inventory/equipment are used until a future player_data
-   * message brings the real values.
-   */
   onLoginSuccess: (msg) => {
     set((state) => {
       if (!state.identity) {
@@ -84,14 +69,11 @@ export const useGameStore = create<GameStoreState>((set) => ({
       localPlayer: null,
       nearbyPlayers: [],
       isConnected: false,
+      pendingPath: null,
     });
     logger.auth("Logged out - identity and session cleared");
   },
 
-  /*
-   * Handles world_state. Replaces nearbyPlayers with the initial snapshot
-   * of all players visible to this client on entry.
-   */
   onWorldState: ({ players }) => {
     set({
       nearbyPlayers: players.map((p) => ({
@@ -110,10 +92,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
     logger.game("World state received - players in range:", players.length);
   },
 
-  /*
-   * Handles player_join. Upserts the player into nearbyPlayers - if the id
-   * already exists (e.g. stale entry) it is replaced, otherwise appended.
-   */
   onPlayerJoin: (msg) =>
     set((state) => {
       const player = {
@@ -137,19 +115,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
       };
     }),
 
-  /*
-   * Handles player_leave. Removes the player from nearbyPlayers by session id.
-   */
   onPlayerLeave: ({ id }) =>
     set((state) => {
       logger.game("Player left - id:", id);
       return { nearbyPlayers: state.nearbyPlayers.filter((p) => p.id !== id) };
     }),
 
-  /*
-   * Handles tick. Applies movement deltas to nearbyPlayers using a Map for
-   * O(1) lookup per player. Players absent from deltas are unchanged.
-   */
   onTick: ({ players }) =>
     set((state) => {
       const updates = new Map(
@@ -167,10 +138,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
       };
     }),
 
-  /*
-   * Handles player_stopped. Snaps the player to the server-authoritative
-   * final position to correct any interpolation drift from the tick stream.
-   */
   onPlayerStopped: ({ id, x, y, floor, z, facing }) =>
     set((state) => ({
       nearbyPlayers: state.nearbyPlayers.map((p) =>
@@ -196,6 +163,14 @@ export const useGameStore = create<GameStoreState>((set) => ({
         },
       };
     }),
+
+  /*
+   * Handles player_move_ack. Stores the server-resolved path so PlayerManager
+   * can subscribe and drive the animation. Cleared after consumption.
+   */
+  onPlayerMoveAck: (path: Coords[], pace: ResolvedPace) => {
+    set({ pendingPath: { path, pace } });
+  },
 
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     const updated = patchSettings(key, value);

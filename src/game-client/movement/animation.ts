@@ -1,8 +1,8 @@
 import { Vector3 } from "@babylonjs/core";
 import { MOVEMENT } from "../constants";
 
-const ANIM_FPS = 60;
-const FRAMES_PER_TILE = Math.round((MOVEMENT.TILE_DURATION_MS / 1000) * ANIM_FPS);
+export const ANIM_FPS = 60;
+export const FRAMES_PER_TILE = Math.round((MOVEMENT.TILE_DURATION_MS / 1000) * ANIM_FPS);
 
 export interface MoveAnimationData {
   keys: { frame: number; value: Vector3 }[];
