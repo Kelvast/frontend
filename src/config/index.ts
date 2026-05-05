@@ -21,6 +21,13 @@ export const NEXT_PUBLIC_DEV_EMAIL: string = process.env.NEXT_PUBLIC_DEV_EMAIL!;
 /** Dev account password. Only used when NEXT_PUBLIC_DEV_MODE is true. */
 export const NEXT_PUBLIC_DEV_PASSWORD: string = process.env.NEXT_PUBLIC_DEV_PASSWORD!;
 
+/**
+ * When "true", all guarded routes (/login, /register, /dashboard, /game, /map-builder)
+ * become accessible. Set this in the Vercel dashboard to open the game without a code deploy.
+ */
+export const NEXT_PUBLIC_EARLY_ACCESS: boolean =
+  process.env.NEXT_PUBLIC_EARLY_ACCESS === "true";
+
 export const ROUTE = {
   HOME: "/",
   LOGIN: "/login",

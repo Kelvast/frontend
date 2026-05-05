@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { FC } from "react";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "../styles/globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--loaded-font-body" });
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--loaded-font-heading" });
 
 export const metadata: Metadata = {
-  title: "MMO Client",
-  description: "Next.js + Babylon.js + Zustand + Atomic Design",
+  title: "Kelvast",
+  description: "A browser-based 3D MMORPG. No pay-to-win. No installs.",
 };
 
 interface Props {
@@ -17,7 +18,7 @@ interface Props {
 const RootLayout: FC<Props> = ({ children }) => {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.variable} ${spaceGrotesk.variable}`}>{children}</body>
     </html>
   );
 };
