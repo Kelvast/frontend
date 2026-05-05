@@ -11,7 +11,7 @@ const LandingNav: FC = () => {
 
   useEffect(() => {
     const onScroll = () => {
-      setVisible(window.scrollY > window.innerHeight * 0.85);
+      setVisible(window.scrollY > window.innerHeight * 0.6);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
