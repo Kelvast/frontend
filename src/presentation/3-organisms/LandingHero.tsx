@@ -17,7 +17,7 @@ const LandingHero: FC = () => {
         <KelvastLogo variant="stacked" size="xxl" fill="var(--color-text)" />
 
         <p className="text-[var(--color-text-muted)] text-lg md:text-xl leading-relaxed max-w-md">
-          A browser-based 3D MMORPG. No installs. No pay-to-win.
+          A browser-based 3D MMORPG. No installs.
         </p>
       </div>
 

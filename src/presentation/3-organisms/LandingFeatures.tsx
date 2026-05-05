@@ -19,8 +19,8 @@ const FEATURES: Feature[] = [
   },
   {
     tag: "Access",
-    title: "No install. Ever.",
-    body: "Kelvast runs entirely in your browser. No launcher, no client, no setup. Open a tab and you are in.",
+    title: "No install.",
+    body: "Kelvast runs entirely in your browser. Open a tab and you are in.",
   },
 ];
 

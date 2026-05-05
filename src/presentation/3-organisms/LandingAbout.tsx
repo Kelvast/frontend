@@ -6,15 +6,15 @@ const LandingAbout: FC = () => {
       <div className="grid md:grid-cols-2 gap-16 items-center">
         <div>
           <h2 className="font-heading font-bold text-3xl md:text-4xl text-[var(--color-text)] mb-6 leading-tight">
-            Built for players, not monetisation.
+            A new world to get lost in.
           </h2>
           <p className="text-[var(--color-text-muted)] text-base leading-relaxed mb-4">
-            Kelvast is an MMORPG where everything you earn comes from play. Gear, levels, and
-            status are built through time and skill — nothing else.
+            Kelvast is built out of passion for the genre. A persistent world, real progression,
+            and a game that respects your time. That is what we are making.
           </p>
           <p className="text-[var(--color-text-muted)] text-base leading-relaxed">
-            This is a hobby project built by one person, in the open. It is early, it is
-            growing, and it is genuinely free to play.
+            It is early. The world is small and the feature list is short. But the foundation
+            is real, and it is growing.
           </p>
         </div>
 
