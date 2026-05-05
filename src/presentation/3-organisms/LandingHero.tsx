@@ -1,7 +1,4 @@
 import { FC, memo } from "react";
-import Link from "next/link";
-import Button from "../1-atoms/Button";
-import { ROUTE } from "../../config";
 import KelvastLogo from "../1-atoms/KelvastLogo";
 
 const LandingHero: FC = () => {
@@ -12,23 +9,15 @@ const LandingHero: FC = () => {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 80% 55% at 50% 40%, rgba(240,165,0,0.06) 0%, transparent 70%)",
+            "radial-gradient(ellipse 80% 55% at 50% 40%, rgba(212,146,10,0.06) 0%, transparent 70%)",
         }}
       />
 
-      <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl mx-auto pt-20">
+      <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl mx-auto">
         <KelvastLogo variant="stacked" size="xxl" fill="var(--color-text)" />
 
         <p className="text-[var(--color-text-muted)] text-lg md:text-xl leading-relaxed max-w-md">
-          A browser-based 3D MMORPG. No installs. No pay-to-win. Just the world.
-        </p>
-
-        <Link href={ROUTE.REGISTER} prefetch={false}>
-          <Button size="lg">Request Early Access</Button>
-        </Link>
-
-        <p className="text-[var(--color-text-faint)] text-xs">
-          Your account will be ready. We will let you know when the world opens.
+          A browser-based 3D MMORPG. No installs. No pay-to-win.
         </p>
       </div>
 

@@ -15,12 +15,12 @@ const FEATURES: Feature[] = [
   {
     tag: "Combat",
     title: "Skill over spend.",
-    body: "Every piece of gear, every ability, every title is earned through play. The best items in the world come from the hardest content - not a shop.",
+    body: "Every piece of gear, every ability, every title is earned through play. The best items in the world come from the hardest content — not a shop.",
   },
   {
     tag: "Access",
     title: "No install. Ever.",
-    body: "Kelvast runs entirely in the browser over WebSockets. Babylon.js handles the 3D world natively. Open a tab and you are in.",
+    body: "Kelvast runs entirely in your browser. No launcher, no client, no setup. Open a tab and you are in.",
   },
 ];
 
@@ -31,7 +31,9 @@ const LandingFeatures: FC = () => {
         {FEATURES.map(({ tag, title, body }, i) => (
           <div
             key={tag}
-            className={`grid md:grid-cols-2 gap-12 items-center ${i % 2 !== 0 ? "md:[&>*:first-child]:order-last" : ""}`}
+            className={`grid md:grid-cols-2 gap-12 items-center ${
+              i % 2 !== 0 ? "md:[&>*:first-child]:order-last" : ""
+            }`}
           >
             <div>
               <span className="block text-xs font-semibold tracking-widest uppercase text-[var(--color-accent)] mb-3">

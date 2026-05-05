@@ -1,11 +1,5 @@
 import { FC, memo } from "react";
 
-const STATS = [
-  { value: "3D", label: "Runs entirely in the browser - no download required" },
-  { value: "MMO", label: "Persistent shared world - always on" },
-  { value: "0", label: "Pay-to-win mechanics, ever" },
-];
-
 const LandingAbout: FC = () => {
   return (
     <section className="w-full max-w-5xl mx-auto px-6 py-24 md:py-32">
@@ -16,26 +10,16 @@ const LandingAbout: FC = () => {
           </h2>
           <p className="text-[var(--color-text-muted)] text-base leading-relaxed mb-4">
             Kelvast is an MMORPG where everything you earn comes from play. Gear, levels, and
-            status are built through time and skill - nothing else.
+            status are built through time and skill — nothing else.
           </p>
           <p className="text-[var(--color-text-muted)] text-base leading-relaxed">
-            No client to install. Open a tab and enter the world. Built on Babylon.js and
-            running over WebSockets, the world is always on.
+            This is a hobby project built by one person, in the open. It is early, it is
+            growing, and it is genuinely free to play.
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
-          {STATS.map(({ value, label }) => (
-            <div
-              key={value}
-              className="flex items-center gap-5 p-5 rounded-[var(--radius-lg)] bg-[var(--color-surface)] border border-[var(--color-border)]"
-            >
-              <span className="font-heading font-black text-4xl text-[var(--color-accent)] w-14 shrink-0 leading-none">
-                {value}
-              </span>
-              <span className="text-[var(--color-text-muted)] text-sm leading-snug">{label}</span>
-            </div>
-          ))}
+        <div className="rounded-[var(--radius-xl)] bg-[var(--color-surface)] border border-[var(--color-border)] aspect-video flex items-center justify-center">
+          <span className="text-[var(--color-text-faint)] text-sm">Screenshot coming soon</span>
         </div>
       </div>
     </section>
