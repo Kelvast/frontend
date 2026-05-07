@@ -12,12 +12,11 @@ import { WORLD, ResolvedPace, Coords } from "mmo-shared";
 import { GameWorld } from "../world";
 import { logger } from "../../utils/logger";
 import { buildMoveAnimation, ANIM_FPS } from "../movement/animation";
-import { useGameStore } from "../../utils/game-store";
 
 /*
  * PlayerManager spawns and drives the local player mesh.
- * Movement is driven entirely by server path responses — the client
- * never calculates waypoints or sends pace.
+ * Movement is triggered directly by the PLAYER_MOVE_ACK message handler
+ * via animatePath() — no Zustand subscription, no pendingPath polling.
  *
  * TODO: replace box mesh with animated character model
  * TODO: nameplate rendering above mesh
@@ -25,23 +24,11 @@ import { useGameStore } from "../../utils/game-store";
  */
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;
-  private unsubscribe: (() => void) | null = null;
 
   constructor(
     private scene: Scene,
     private world: GameWorld,
   ) {
-    /*
-     * Subscribe to pendingPath. When the store receives a PLAYER_MOVE_ACK
-     * the path is written here, we animate immediately, then clear it.
-     */
-    this.unsubscribe = useGameStore.subscribe((state) => {
-      if (state.pendingPath) {
-        this.animatePath(state.pendingPath.path, state.pendingPath.pace);
-        useGameStore.getState().clearPendingPath();
-      }
-    });
-
     logger.game("PlayerManager initialised");
   }
 
@@ -66,19 +53,20 @@ export class PlayerManager {
   }
 
   /*
-   * Animates the local player along the server-resolved path.
-   * pace is tiles/s — higher = faster, fewer frames per tile.
+   * Called directly by the PLAYER_MOVE_ACK handler — not via a store subscription.
+   * Driving animation from the message handler guarantees it fires exactly once
+   * per server ack, with no risk of a subscriber re-firing on unrelated state
+   * changes or on the clearPendingPath write that used to follow it.
    *
    * A fresh Animation instance is created on every call. Reusing a shared
-   * Animation object and mutating it with setKeys while Babylon still holds
-   * a reference to it caused the keyframe curve to be double-applied,
-   * making the player shoot to the destination on rapid re-clicks.
+   * Animation object and mutating its keys while Babylon still holds a reference
+   * caused the keyframe curve to be double-applied on rapid re-clicks.
    */
-  private animatePath(path: Coords[], pace: ResolvedPace): void {
+  animatePath(path: Coords[], pace: ResolvedPace): void {
     if (!this.localMesh || path.length === 0) return;
 
-    // Stop any running animation and clear the array so Babylon holds no
-    // stale reference before we attach the new Animation object.
+    // Stop any in-progress animation and clear stale references before
+    // attaching a new Animation object.
     this.scene.stopAnimation(this.localMesh);
     this.localMesh.animations = [];
 
@@ -108,6 +96,23 @@ export class PlayerManager {
     anim.setKeys(keys);
     this.localMesh.animations = [anim];
     this.scene.beginAnimation(this.localMesh, 0, totalFrames, false, 1);
+
+    logger.game("animatePath — steps:", path.length, "pace:", pace, "fpt:", fpt);
+  }
+
+  /*
+   * Snap the local player mesh to a server-authoritative tile position.
+   * Called when the server sends player_stopped with a corrected position.
+   */
+  snapToTile(tileX: number, tileZ: number): void {
+    if (!this.localMesh) return;
+    this.scene.stopAnimation(this.localMesh);
+    this.localMesh.animations = [];
+    const s = WORLD.TILE_SIZE;
+    const node = this.world.getNavNode(tileX, tileZ);
+    const worldY = node ? node.worldY + PLAYER.Y_OFFSET : PLAYER.Y_OFFSET;
+    this.localMesh.position = new Vector3(tileX * s + s / 2, worldY, tileZ * s + s / 2);
+    logger.game("snapToTile — x:", tileX, "z:", tileZ);
   }
 
   getLocalPlayer(): AbstractMesh | null {
@@ -115,8 +120,6 @@ export class PlayerManager {
   }
 
   dispose(): void {
-    this.unsubscribe?.();
-    this.unsubscribe = null;
     if (this.localMesh) {
       this.scene.stopAnimation(this.localMesh);
       this.localMesh.animations = [];

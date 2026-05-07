@@ -16,7 +16,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
   isConnected: false,
   latency: 0,
   settings: loadSettings(),
-  pendingPath: null,
 
   setConnected: (connected) => {
     logger.game("Connection state:", connected ? "connected" : "disconnected");
@@ -69,7 +68,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
       localPlayer: null,
       nearbyPlayers: [],
       isConnected: false,
-      pendingPath: null,
     });
     logger.auth("Logged out - identity and session cleared");
   },
@@ -137,7 +135,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
       });
 
       // Apply server-authoritative position to localPlayer if included in tick.
-      // Does not clear pendingPath — correction does not mean rejection.
+      // Does not stop animation — a position correction mid-path is not a rejection.
       const localDelta = state.localPlayer ? updates.get(state.localPlayer.id) : undefined;
 
       return {
@@ -155,14 +153,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
           ? { ...p, x, y, floor, z, facing, isMoving: false, lastUpdated: Date.now() }
           : p,
       );
-
-      // If the server stopped the local player, snap position and cancel pending movement.
       const isLocal = state.localPlayer?.id === id;
-
       return {
         nearbyPlayers: updatedNearby,
         ...(isLocal && {
-          pendingPath: null,
           localPlayer: state.localPlayer
             ? { ...state.localPlayer, x, y, floor, z, facing, isMoving: false }
             : null,
@@ -190,9 +184,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
   onPlayerMoveAck: (path: Coords[], pace: ResolvedPace) => {
     set((state) => {
       const last = path.at(-1);
-      if (!last || !state.localPlayer) return { pendingPath: { path, pace } };
+      if (!last || !state.localPlayer) return {};
+      // Update store position to the server-confirmed destination.
+      // Animation is driven separately by player-move-ack.ts via PlayerManager.
       return {
-        pendingPath: { path, pace },
         localPlayer: {
           ...state.localPlayer,
           x: last.x,
@@ -203,10 +198,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
         },
       };
     });
-  },
-
-  clearPendingPath: () => {
-    set({ pendingPath: null });
   },
 
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
