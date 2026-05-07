@@ -25,21 +25,12 @@ import { useGameStore } from "../../utils/game-store";
  */
 export class PlayerManager {
   private localMesh: AbstractMesh | null = null;
-  private moveAnim: Animation;
   private unsubscribe: (() => void) | null = null;
 
   constructor(
     private scene: Scene,
     private world: GameWorld,
   ) {
-    this.moveAnim = new Animation(
-      "playerMove",
-      "position",
-      ANIM_FPS,
-      Animation.ANIMATIONTYPE_VECTOR3,
-      Animation.ANIMATIONLOOPMODE_CONSTANT,
-    );
-
     /*
      * Subscribe to pendingPath. When the store receives a PLAYER_MOVE_ACK
      * the path is written here, we animate immediately, then clear it.
@@ -76,12 +67,20 @@ export class PlayerManager {
 
   /*
    * Animates the local player along the server-resolved path.
-   * pace is a multiplier — higher = faster, fewer frames per tile.
+   * pace is tiles/s — higher = faster, fewer frames per tile.
+   *
+   * A fresh Animation instance is created on every call. Reusing a shared
+   * Animation object and mutating it with setKeys while Babylon still holds
+   * a reference to it caused the keyframe curve to be double-applied,
+   * making the player shoot to the destination on rapid re-clicks.
    */
   private animatePath(path: Coords[], pace: ResolvedPace): void {
     if (!this.localMesh || path.length === 0) return;
 
+    // Stop any running animation and clear the array so Babylon holds no
+    // stale reference before we attach the new Animation object.
     this.scene.stopAnimation(this.localMesh);
+    this.localMesh.animations = [];
 
     const s = WORLD.TILE_SIZE;
     const fpt = Math.round(ANIM_FPS / pace);
@@ -92,14 +91,22 @@ export class PlayerManager {
       return new Vector3(step.x * s + s / 2, worldY, step.z * s + s / 2);
     });
 
+    const anim = new Animation(
+      "playerMove",
+      "position",
+      ANIM_FPS,
+      Animation.ANIMATIONTYPE_VECTOR3,
+      Animation.ANIMATIONLOOPMODE_CONSTANT,
+    );
+
     const { keys, totalFrames } = buildMoveAnimation(
       this.localMesh.position.clone(),
       waypoints,
       fpt,
     );
 
-    this.moveAnim.setKeys(keys);
-    this.localMesh.animations = [this.moveAnim];
+    anim.setKeys(keys);
+    this.localMesh.animations = [anim];
     this.scene.beginAnimation(this.localMesh, 0, totalFrames, false, 1);
   }
 
@@ -111,6 +118,8 @@ export class PlayerManager {
     this.unsubscribe?.();
     this.unsubscribe = null;
     if (this.localMesh) {
+      this.scene.stopAnimation(this.localMesh);
+      this.localMesh.animations = [];
       this.localMesh.material?.dispose();
       this.localMesh.dispose();
       this.localMesh = null;
