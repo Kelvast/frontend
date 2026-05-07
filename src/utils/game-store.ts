@@ -129,23 +129,46 @@ export const useGameStore = create<GameStoreState>((set) => ({
           { x, y, floor, z, facing, pace, isMoving: true },
         ]),
       );
+
+      const updatedNearby = state.nearbyPlayers.map((player) => {
+        const delta = updates.get(player.id);
+        if (!delta) return player;
+        return { ...player, ...delta, lastUpdated: Date.now() };
+      });
+
+      // Apply server-authoritative position to localPlayer if included in tick.
+      // Does not clear pendingPath — correction does not mean rejection.
+      const localDelta = state.localPlayer ? updates.get(state.localPlayer.id) : undefined;
+
       return {
-        nearbyPlayers: state.nearbyPlayers.map((player) => {
-          const delta = updates.get(player.id);
-          if (!delta) return player;
-          return { ...player, ...delta, lastUpdated: Date.now() };
+        nearbyPlayers: updatedNearby,
+        ...(localDelta && state.localPlayer && {
+          localPlayer: { ...state.localPlayer, ...localDelta, lastUpdated: Date.now() },
         }),
       };
     }),
 
   onPlayerStopped: ({ id, x, y, floor, z, facing }) =>
-    set((state) => ({
-      nearbyPlayers: state.nearbyPlayers.map((p) =>
+    set((state) => {
+      const updatedNearby = state.nearbyPlayers.map((p) =>
         p.id === id
           ? { ...p, x, y, floor, z, facing, isMoving: false, lastUpdated: Date.now() }
           : p,
-      ),
-    })),
+      );
+
+      // If the server stopped the local player, snap position and cancel pending movement.
+      const isLocal = state.localPlayer?.id === id;
+
+      return {
+        nearbyPlayers: updatedNearby,
+        ...(isLocal && {
+          pendingPath: null,
+          localPlayer: state.localPlayer
+            ? { ...state.localPlayer, x, y, floor, z, facing, isMoving: false }
+            : null,
+        }),
+      };
+    }),
 
   onPlayerData: (msg) =>
     set((state) => {
