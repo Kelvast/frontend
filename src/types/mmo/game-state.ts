@@ -34,9 +34,6 @@ export interface GameStoreState {
   isConnected: boolean;
   latency: number;
 
-  // ── Movement ──────────────────────────────────────────────────────────────
-  pendingPath: { path: Coords[]; pace: ResolvedPace } | null;
-
   // ── Settings ──────────────────────────────────────────────────────────────
   settings: UserSettings;
 
@@ -65,16 +62,17 @@ export interface GameStoreState {
   onPlayerJoin: (msg: PlayerJoinMessage) => void;
   /** Handles player_leave. Removes a player from nearbyPlayers by session id. */
   onPlayerLeave: (msg: PlayerLeaveMessage) => void;
-  /** Handles tick. Applies movement deltas to nearbyPlayers. */
+  /** Handles tick. Applies movement deltas to nearbyPlayers and localPlayer position. */
   onTick: (msg: TickMessage) => void;
   /** Handles player_stopped. Snaps a player to their authoritative final position. */
   onPlayerStopped: (msg: PlayerStoppedMessage) => void;
   /** Handles player_data. Applies real skills, inventory, and equipment to localPlayer. */
   onPlayerData: (msg: PlayerDataMessage) => void;
-  /** Handles player_move_ack. Stores the server-resolved path for PlayerManager to consume. */
+  /**
+   * Handles player_move_ack. Updates localPlayer position to the server-confirmed
+   * destination. Animation is driven separately by player-move-ack.ts via PlayerManager.
+   */
   onPlayerMoveAck: (path: Coords[], pace: ResolvedPace) => void;
-  /** Clears pendingPath after PlayerManager has consumed and started the animation. */
-  clearPendingPath: () => void;
 
   // ── Settings actions ──────────────────────────────────────────────────────
   updateSettings: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void;
