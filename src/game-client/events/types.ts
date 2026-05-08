@@ -9,147 +9,136 @@ import type {
   ActionFinishedMessage,
   ResourceDepletedMessage,
   ResourceAvailableMessage,
+  PlayerPresence,
+  SessionId,
 } from 'mmo-shared';
-import type { PlayerPresence, SessionId } from 'mmo-shared';
 
 /*
- * GameEventMap — the canonical registry of every in-process event that can
- * flow through the GameEventBus.
+ * GameEventMap — every in-process event that can flow through the GameEventBus.
  *
- * ARCHITECTURE RULES (read before adding an event):
+ * This file is the contract between all game systems. A type lives here once.
+ * Nothing imports from another system directly — everything goes through the bus.
  *
- *   Store  = what the UI needs to render. React re-renders are acceptable here.
- *   Bus    = what game systems need to tell each other. No React, no Zustand writes.
- *   WS in  = parse a raw wire message, emit one bus event. Nothing else.
- *   WS out = format and send a wire message. Nothing else.
+ * ── How systems connect ────────────────────────────────────────────────────
  *
- * NAMING CONVENTION:  '<domain>:<verb>'  (kebab-case, colon separator)
+ * The flow for any server-driven event is always the same three steps:
  *
- * DOMAINS:
- *   session  — WS session lifecycle: opened, rejected, closed, player-data
- *   player   — local player state: movement ack, tick, arrived, stopped
- *   area     — world population: player join/leave, world state snapshot
- *   action   — server-driven action lifecycle: started, ongoing, finished
- *   world    — resource node availability
- *   input    — normalised intent from any input device
+ *   1. WS INBOUND — parses the raw wire message, emits one bus event:
  *
- * PAYLOAD RULES:
- *   - Always plain objects — never class instances.
- *   - Payloads must derive from mmo-shared types, not duplicate inline shapes.
- *   - Never import Babylon or React types here.
- *   - Use Pick<T, ...> rather than redefining subsets inline.
+ *        // ws/inbound/movement.ts
+ *        case MSG.PLAYER_MOVE_ACK:
+ *          gameEventBus.emit('player:move-acked', { path: msg.path, pace: msg.pace });
+ *          break;
  *
- * HOW TO ADD AN EVENT:
- *   1. Add one entry to GameEventMap below with a comment (emitter | listeners).
- *   2. Add the new event to ws/inbound/ (if WS-triggered) or the emitting system.
- *   3. Subscribe in the relevant system using bus.on().
- *   4. Return the unsubscribe fn from bus.on() and call it in dispose().
+ *   2. SYSTEM — subscribes during init, reacts to the event, writes to the store:
+ *
+ *        // systems/movement.ts
+ *        export function initMovementSystem(): () => void {
+ *          return gameEventBus.on('player:move-acked', ({ path, pace }) => {
+ *            PlayerManager.getInstance().startLocalMove(path, pace);
+ *            useGameStore.getState().setLocalPlayerMoving(true);
+ *          });
+ *        }
+ *
+ *   3. STORE → UI — Zustand notifies React; the HUD re-renders.
+ *
+ * Input events run the same pattern in reverse — the system emits, a game
+ * system subscribes:
+ *
+ *        // systems/input-keys.ts
+ *        gameEventBus.emit('input:intent', { intent: 'orbit-left' });
+ *
+ *        // systems/camera.ts
+ *        gameEventBus.on('input:intent', ({ intent }) => { ... });
+ *
+ * ── Rules ──────────────────────────────────────────────────────────────────
+ *
+ *   - Payloads are plain objects — no class instances, no Babylon types.
+ *   - Derive payloads from mmo-shared types via Pick<> — never redefine inline.
+ *   - One entry per event. Emitter and listener documented on the entry.
+ *   - To add an event: add it here, emit in the inbound/system, subscribe in the system.
  */
 export interface GameEventMap {
 
-  // ── Session ──────────────────────────────────────────────────────────────
-  //
-  // Emitter:  ws/inbound/session.ts
-  // Listener: systems/session.ts
-  //
-  // session:opened      — server confirmed handshake; carries presence + worldName.
-  // session:rejected    — server rejected the token; client must return to login.
-  // session:closed      — session ended (client or server initiated).
-  // session:player-data — private game state (skills/inventory/equipment) has
-  //                       arrived; completes the two-message hydration pair.
+  // ── Session ───────────────────────────────────────────────────────────────
+  // Emitter: ws/inbound/session.ts  |  Listener: systems/session.ts
 
+  // Server confirmed the WS handshake. Carries player presence + world name.
+  // This is the signal to seed localPlayer state and enable game input.
   'session:opened': SessionOpenedMessage;
+
+  // Server rejected the token (expired, already connected, malformed).
+  // Route back to the lobby screen.
   'session:rejected': Pick<SessionRejectedMessage, 'message'>;
+
+  // Session ended — either the player logged out or the server closed it.
+  // destroyGame() is called in response; bus.clear() follows.
   'session:closed': Record<string, never>;
+
+  // Private game state (skills, inventory, equipment) arrived.
+  // This is the second half of the two-message hydration pair after session:opened.
   'session:player-data': PlayerDataMessage;
 
   // ── Player ────────────────────────────────────────────────────────────────
-  //
-  // Emitter:  ws/inbound/movement.ts
-  // Listener: systems/movement.ts
-  //
-  // player:move-acked — server confirmed the move request; path and pace are
-  //                     authoritative. Begin optimistic prediction immediately.
-  // player:tick       — server position deltas for all moving players this tick.
-  //                     systems/movement.ts reconciles localPlayer prediction;
-  //                     systems/players.ts interpolates remote players.
-  //
-  // Emitter:  systems/players.ts (via PlayerManager)
-  // Listener: systems/movement.ts, systems/session.ts
-  //
-  // player:arrived    — local player mesh has physically reached the destination
-  //                     tile. systems/movement.ts uses this to clear prediction
-  //                     state; systems/session.ts updates store position.
-  //
-  // Emitter:  ws/inbound/movement.ts
-  // Listener: systems/movement.ts, systems/players.ts
-  //
-  // player:stopped    — server's authoritative stop position for any player.
-  //                     If id matches localPlayer, snap and clear prediction.
+  // Emitter: ws/inbound/movement.ts  |  Listener: systems/movement.ts
 
+  // Server ACKed the move. Path and pace are authoritative.
+  // systems/movement.ts begins optimistic prediction immediately on receipt.
   'player:move-acked': Pick<PlayerMoveAckMessage, 'path' | 'pace'>;
+
+  // Server tick — position deltas for every player who moved this tick.
+  // systems/movement.ts reconciles localPlayer prediction against this.
+  // systems/players.ts drives remote player interpolation from this.
   'player:tick': Pick<TickMessage, 'timestamp' | 'players'>;
+
+  // Emitter: PlayerManager (systems/players.ts)  |  Listener: systems/movement.ts
+  // Local player mesh physically reached a tile. Clears prediction state.
   'player:arrived': { x: number; z: number; y: number; floor: number };
+
+  // Emitter: ws/inbound/movement.ts  |  Listener: systems/movement.ts, systems/players.ts
+  // Authoritative final position for any player who stopped moving.
+  // If id matches localPlayer, snap position and clear any active prediction.
   'player:stopped': Pick<PlayerStoppedMessage, 'id' | 'x' | 'y' | 'z' | 'floor' | 'facing'>;
 
   // ── Area ──────────────────────────────────────────────────────────────────
-  //
-  // Emitter:  ws/inbound/area.ts
-  // Listener: systems/players.ts
-  //
-  // area:world-state   — initial snapshot of all visible players on region join.
-  //                      systems/players.ts seeds PlayerManager from this.
-  // area:player-joined — a player entered this client's visible range.
-  //                      systems/players.ts calls PlayerManager.addPlayer().
-  // area:player-left   — a player left this client's visible range or disconnected.
-  //                      systems/players.ts calls PlayerManager.removePlayer().
+  // Emitter: ws/inbound/area.ts  |  Listener: systems/players.ts
 
+  // Initial snapshot of all visible players when joining or changing region.
+  // systems/players.ts calls PlayerManager.addPlayer() for each entry.
   'area:world-state': { players: PlayerPresence[] };
+
+  // A player entered this client's visible range.
   'area:player-joined': { player: PlayerPresence };
+
+  // A player left this client's visible range or disconnected.
   'area:player-left': { id: SessionId };
 
   // ── Action ────────────────────────────────────────────────────────────────
-  //
-  // Emitter:  ws/inbound/actions.ts
-  // Listener: systems/actions.ts  (stubbed until actions system is built)
-  //
-  // action:started  — server confirmed the action has begun.
-  // action:ongoing  — a gather tick rolled and failed; keep the animation running.
-  // action:finished — action ended for any reason (success, interrupted, etc.).
-  //                   If reward is present the client should apply XP + loot.
+  // Emitter: ws/inbound/actions.ts  |  Listener: systems/actions.ts
 
+  // Server confirmed the action started (chop, mine, fish, etc.).
   'action:started': { targetId: number };
+
+  // Gather tick rolled and failed — action is still running, keep animating.
   'action:ongoing': Pick<ActionOngoingMessage, 'targetId'>;
+
+  // Action ended. If reason is 'success', reward carries XP and loot to apply.
   'action:finished': Pick<ActionFinishedMessage, 'reason' | 'reward'>;
 
   // ── World ─────────────────────────────────────────────────────────────────
-  //
-  // Emitter:  ws/inbound/world.ts
-  // Listener: systems/world.ts  (stubbed until world system is built)
-  //
-  // world:resource-depleted   — node was gathered; render depleted visual.
-  // world:resource-available  — node has respawned; restore normal visual.
+  // Emitter: ws/inbound/world.ts  |  Listener: systems/world.ts
 
+  // Resource node was successfully gathered — show depleted visual state.
   'world:resource-depleted': Pick<ResourceDepletedMessage, 'targetId'>;
+
+  // Depleted node has respawned — restore normal visual state.
   'world:resource-available': Pick<ResourceAvailableMessage, 'targetId'>;
 
   // ── Input ─────────────────────────────────────────────────────────────────
-  //
-  // Emitter:  systems/input-keys.ts (WASD), systems/input-gamepad.ts (future)
-  // Listener: systems/camera.ts
-  //
-  // input:intent — normalised directional intent from any input device.
-  //               camera.ts subscribes and calls orbit/zoom accordingly.
-  //               Input systems never call camera methods directly.
-  //
-  // Emitter:  systems/input-pointer.ts
-  // Listener: systems/movement.ts (registered at priority 0 as the default fallback)
-  //
-  // input:tile-clicked — a tile in the world was clicked with move intent.
-  //                      Higher-priority systems (combat, actions) may consume
-  //                      the click first via the PointerInput registry; only
-  //                      unhandled clicks reach the movement handler.
 
+  // Emitter: systems/input-keys.ts  |  Listener: systems/camera.ts
+  // Normalised camera intent from keyboard (WASD) or gamepad (future).
+  // Input systems never call camera methods directly — they emit here.
   'input:intent': {
     intent:
       | 'orbit-left'
@@ -160,9 +149,12 @@ export interface GameEventMap {
       | 'zoom-out';
   };
 
+  // Emitter: systems/input-pointer.ts  |  Listener: systems/movement.ts
+  // A left-click resolved to a walkable tile. Movement is the default handler
+  // (priority 0). Future systems (combat, actions) register at higher priority
+  // and can consume the click before it reaches movement.
   'input:tile-clicked': { tileX: number; tileZ: number };
 }
 
-// Utility types — derived from the map, used by bus.ts and all emitters/subscribers.
 export type GameEventKey = keyof GameEventMap;
 export type GameEventPayload<K extends GameEventKey> = GameEventMap[K];

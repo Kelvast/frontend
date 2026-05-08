@@ -5,52 +5,29 @@ type Listener<K extends GameEventKey> = (payload: GameEventPayload<K>) => void;
 type AnyListener = (payload: unknown) => void;
 
 /*
- * GameEventBus — typed in-process pub/sub for all game system communication.
+ * GameEventBus — typed in-process pub/sub.
  *
- * WHY THIS EXISTS:
- *   Systems must not call each other directly. Input must not know about camera.
- *   WS handlers must not know about the store. This bus is the contract between them.
+ * Systems communicate through this bus rather than calling each other directly.
+ * See types.ts for the full event registry and the end-to-end flow example.
  *
- * HOW TO SUBSCRIBE (in a system's init function):
+ * Usage:
  *
- *   export function initMySystem(): () => void {
- *     const off = gameEventBus.on('some:event', ({ field }) => {
- *       // react to the event
- *     });
- *     return off; // teardown: called by bootstrapGameClient cleanup
- *   }
+ *   // Subscribe (always store the returned teardown fn):
+ *   const off = gameEventBus.on('player:tick', ({ players }) => { ... });
  *
- * HOW TO EMIT (in a ws/inbound handler or a system):
+ *   // Emit:
+ *   gameEventBus.emit('player:move-acked', { path, pace });
  *
- *   gameEventBus.emit('some:event', { field: value });
+ *   // Teardown (call in your system's dispose/cleanup):
+ *   off();
  *
- * LIFECYCLE:
- *   - bus.on()    — subscribe. Returns an unsubscribe fn. Store it and call it on dispose.
- *   - bus.off()   — explicit unsubscribe (alternative to the returned fn).
- *   - bus.emit()  — synchronous fan-out. All listeners run before emit() returns.
- *   - bus.clear() — removes ALL listeners. Called only by destroyGame() to hard-reset
- *                   state between sessions. Never call from a system.
- *
- * ERROR ISOLATION:
- *   Each listener is wrapped in try/catch. One broken handler never silences others.
- *   Errors are logged via logger.error with the event name for easy tracing.
- *
- * THREADING:
- *   Synchronous. No queuing. No async. The emit caller blocks until all listeners return.
- *   This is intentional — game loop consistency depends on deterministic ordering.
+ *   // Full reset between sessions (destroyGame() only):
+ *   gameEventBus.clear();
  */
 class GameEventBus {
   private listeners = new Map<GameEventKey, Set<AnyListener>>();
 
-  /*
-   * Subscribe to an event. Returns an unsubscribe function.
-   *
-   * Always store the return value and call it in your system's dispose/teardown:
-   *
-   *   const off = gameEventBus.on('player:tick', handler);
-   *   // later:
-   *   off();
-   */
+  // Subscribe to an event. Returns an unsubscribe function — always call it on teardown.
   on<K extends GameEventKey>(event: K, listener: Listener<K>): () => void {
     let set = this.listeners.get(event);
     if (!set) {
@@ -61,20 +38,12 @@ class GameEventBus {
     return () => this.off(event, listener);
   }
 
-  /*
-   * Unsubscribe a specific listener from an event.
-   * Prefer using the fn returned by on() over calling this directly.
-   */
+  // Unsubscribe a specific listener. Prefer the fn returned by on() over calling this directly.
   off<K extends GameEventKey>(event: K, listener: Listener<K>): void {
     this.listeners.get(event)?.delete(listener as AnyListener);
   }
 
-  /*
-   * Emit an event. Runs all subscribed listeners synchronously in insertion order.
-   *
-   * Listeners that throw are caught, logged, and skipped — execution continues
-   * for the remaining listeners on that event.
-   */
+  // Synchronous fan-out to all listeners. One listener throwing never silences the rest.
   emit<K extends GameEventKey>(event: K, payload: GameEventPayload<K>): void {
     const set = this.listeners.get(event);
     if (!set || set.size === 0) {
@@ -85,26 +54,17 @@ class GameEventBus {
       try {
         listener(payload);
       } catch (err) {
-        logger.error(`[bus] listener threw on event "${event}":`, err);
+        logger.error(`[bus] listener threw on "${event}":`, err);
       }
     }
   }
 
-  /*
-   * Remove all listeners from all events.
-   *
-   * Called exclusively by destroyGame() to fully reset the bus between game
-   * sessions (e.g. disconnect → reconnect in the same browser tab).
-   * Never call this from a system — systems use their unsubscribe fns.
-   */
+  // Remove all listeners. Called only by destroyGame() — never from a system.
   clear(): void {
     this.listeners.clear();
   }
 
-  /*
-   * Returns the number of active listeners for a given event.
-   * Useful for assertions in tests and dev tooling — not for runtime branching.
-   */
+  // Number of active listeners for an event. For tests and dev tooling only.
   listenerCount(event: GameEventKey): number {
     return this.listeners.get(event)?.size ?? 0;
   }
