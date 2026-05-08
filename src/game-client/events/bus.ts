@@ -47,7 +47,7 @@ class GameEventBus {
   emit<K extends GameEventKey>(event: K, payload: GameEventPayload<K>): void {
     const set = this.listeners.get(event);
     if (!set || set.size === 0) {
-      logger.debug(`[bus] no listeners for: ${event}`);
+      logger.game(`[bus] no listeners for: ${event}`);
       return;
     }
     for (const listener of set) {
