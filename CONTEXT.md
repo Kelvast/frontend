@@ -1,16 +1,22 @@
 # CONTEXT - client
 
-> AI assistant context only. Human docs → README.md. Task tracking → GitHub Issues.
+> AI assistant context only. Human docs -> README.md. Task tracking -> GitHub Issues.
 >
 > Cross-repo architecture, protocol, type ownership, and shared conventions live in github.com/Kelvast/docs. This file contains only repo-specific rules, constraints, and gotchas.
 
 ---
 
+## Formatting rule
+
+Never use em dashes (--) in any file in this repo. Use a regular hyphen (-) or rewrite the sentence. This applies to all code, comments, documentation, and commit messages.
+
+---
+
 ## Branch & PR Workflow
 
-Never commit directly to main. All work goes on a feature branch created from main — prefix: `feature/`, `fix/`, `docs/`, `refactor/`. If no active branch is known, stop and ask — do not fall back to main.
+Never commit directly to main. All work goes on a feature branch created from main - prefix: `feature/`, `fix/`, `docs/`, `refactor/`. If no active branch is known, stop and ask - do not fall back to main.
 
-Open a PR targeting main. Do not merge it — leave it for review. Always fill in the "What does this PR do?" section.
+Open a PR targeting main. Do not merge it - leave it for review. Always fill in the "What does this PR do?" section.
 
 ---
 
@@ -20,40 +26,40 @@ Babylon.js owns the canvas and runs independently of React's render cycle.
 
 - A React `useEffect` mounts the Babylon `Engine` onto a `<canvas>` ref via `initGame(canvas, signal)`
 - Babylon's `runRenderLoop` runs at ~60fps
-- Each frame, the render loop reads `nearbyPlayers` and `myId` from Zustand via `useGameStore.getState()` — not the hook, because this runs outside React
+- Each frame, the render loop reads `nearbyPlayers` and `myId` from Zustand via `useGameStore.getState()` - not the hook, because this runs outside React
 - React re-renders only for UI state changes (HUD, inventory, login form)
 
 Never manipulate Babylon meshes from a React component. Never dispatch Zustand actions from inside the Babylon render loop (except debug tooling).
 
 ---
 
-## GameEventBus — inter-system communication rule
+## GameEventBus - inter-system communication rule
 
 The client uses a typed in-process event bus as the sole communication layer between all game systems. The pattern is strictly:
 
 ```
-ws/inbound/   → parse wire message → gameEventBus.emit('domain:verb', payload)
-GameEventBus  → synchronous fan-out to all subscribers
-systems/      → subscribe via gameEventBus.on() → update store or call Babylon APIs
-store         → UI rendering only — never written from WS handlers directly
-ws/outbound/  → sendX() helpers only — no logic, no bus emits
+ws/inbound/   -> parse wire message -> gameEventBus.emit('domain:verb', payload)
+GameEventBus  -> synchronous fan-out to all subscribers
+systems/      -> subscribe via gameEventBus.on() -> update store or call Babylon APIs
+store         -> UI rendering only - never written from WS handlers directly
+ws/outbound/  -> sendX() helpers only - no logic, no bus emits
 ```
 
 **Never** write to the Zustand store directly from a WS message handler.
 **Never** call a system method directly from an inbound handler.
 **Never** emit to the bus from `ws/outbound/`.
 
-The bus is a plain synchronous class — no `EventEmitter` dependency. All payload types in `GameEventMap` derive from `mmo-shared` via `Pick<>` — no inline shape duplication.
+The bus is a plain synchronous class - no `EventEmitter` dependency. All payload types in `GameEventMap` derive from `mmo-shared` via `Pick<>` - no inline shape duplication.
 
 All event keys follow the `'domain:verb'` pattern:
-- `session:*` — WS session lifecycle
-- `player:*` — local player movement state
-- `area:*` — world population (joins, leaves, world-state snapshot)
-- `action:*` — server-driven action lifecycle
-- `world:*` — resource node state
-- `input:*` — normalised intent from all input devices
+- `session:*` - WS session lifecycle
+- `player:*` - local player movement state
+- `area:*` - world population (joins, leaves, world-state snapshot)
+- `action:*` - server-driven action lifecycle
+- `world:*` - resource node state
+- `input:*` - normalised intent from all input devices
 
-Note: area events are `area:player-joined` and `area:player-left` — **not** `player:joined` / `player:left`.
+Note: area events are `area:player-joined` and `area:player-left` - **not** `player:joined` / `player:left`.
 
 ---
 
@@ -69,11 +75,11 @@ export function initMovementSystem(): () => void {
 }
 ```
 
-`bootstrapGameClient(ws)` in `src/game-client/bootstrap.ts` calls all init functions in order and returns the combined teardown. This is called from the game component's `useEffect` — the returned teardown is the cleanup function.
+`bootstrapGameClient(ws)` in `src/game-client/bootstrap.ts` calls all init functions in order and returns the combined teardown. This is called from the game component's `useEffect` - the returned teardown is the cleanup function.
 
 ---
 
-## Zustand store — UI only
+## Zustand store - UI only
 
 The store is the bridge between game systems and the React UI. Systems write to it; React reads from it. WS message handlers never write to it directly.
 
@@ -83,37 +89,37 @@ Single store, no slices. All WS message types imported from `mmo-shared`.
 |---|---|
 | `setMyId` | `systems/session.ts` on `session:opened` |
 | `setLocalPlayer` | `systems/session.ts` on `session:opened` |
-| `onPlayerData` | `systems/session.ts` on `session:player-data` — hydrates skills, inventory, equipment |
+| `onPlayerData` | `systems/session.ts` on `session:player-data` - hydrates skills, inventory, equipment |
 | `addNearbyPlayer` | `systems/players.ts` on `area:player-joined` |
 | `removeNearbyPlayer` | `systems/players.ts` on `area:player-left` |
-| `onPlayerStopped` | `systems/movement.ts` on `player:stopped` — snaps position, clears `isMoving` for local and nearby |
-| `onPlayerMoveAck` | `systems/movement.ts` on `player:move-acked` — sets `isMoving: true`, does NOT update x/z |
+| `onPlayerStopped` | `systems/movement.ts` on `player:stopped` - snaps position, clears `isMoving` for local and nearby |
+| `onPlayerMoveAck` | `systems/movement.ts` on `player:move-acked` - sets `isMoving: true`, does NOT update x/z |
 | `onPlayerArrived` | called by `PlayerManager` when mesh reaches destination tile |
-| `onTick` | `systems/movement.ts` on `player:tick` — patches `nearbyPlayers` and `localPlayer` from tick deltas |
-| `updateSettings` | UI — updates a single top-level key, calls `patchSettings` |
-| `onLogout` | `systems/session.ts` on `session:closed` — clears all session state |
+| `onTick` | `systems/movement.ts` on `player:tick` - patches `nearbyPlayers` and `localPlayer` from tick deltas |
+| `updateSettings` | UI - updates a single top-level key, calls `patchSettings` |
+| `onLogout` | `systems/session.ts` on `session:closed` - clears all session state |
 
-`localPlayer.x/z` is updated by `onTick` deltas and `onPlayerArrived` — **never** set to the destination immediately on ACK.
+`localPlayer.x/z` is updated by `onTick` deltas and `onPlayerArrived` - **never** set to the destination immediately on ACK.
 
 ---
 
 ## Game Client Singleton (game-client/index.ts)
 
-`initGame(canvas, signal)` is the entry point. Guarded — calling it twice is a safe no-op. Steps in order:
+`initGame(canvas, signal)` is the entry point. Guarded - calling it twice is a safe no-op. Steps in order:
 
 1. `Engine` created from canvas ref
 2. `GameWorld` created (lighting)
-3. `loadAllRegions` called — fetches all chunk data, `AbortSignal` threaded through every fetch
+3. `loadAllRegions` called - fetches all chunk data, `AbortSignal` threaded through every fetch
 4. `GameCamera` created
 5. `PlayerManager` created, local player mesh spawned
-6. `bootstrapGameClient(ws)` called — inits all systems in correct order, returns teardown
+6. `bootstrapGameClient(ws)` called - inits all systems in correct order, returns teardown
 7. Input handlers attached (`KeysInput`, `PointerInput`)
 8. `engine.runRenderLoop` started
 9. In dev: SSE watcher opened for chunk hot-reload
 
 `destroyGame()` stops the watcher, calls `gameEventBus.clear()`, disposes the engine, and nulls all refs. Always call it in the `useEffect` cleanup.
 
-`connectGame()` is async and separate from `initGame` — the engine can exist without a live WS connection. In dev mode it bypasses the session fetch and opens WS directly using `getDevCredentials()`.
+`connectGame()` is async and separate from `initGame` - the engine can exist without a live WS connection. In dev mode it bypasses the session fetch and opens WS directly using `getDevCredentials()`.
 
 ---
 
@@ -134,7 +140,7 @@ Files parse a single wire message type and emit one or more bus events. No store
 
 ## WS outbound layer (ws/outbound/)
 
-Typed `sendX()` helpers. No logic, no store reads, no bus emits. The `ws` instance is always passed in as a parameter — never imported as a global.
+Typed `sendX()` helpers. No logic, no store reads, no bus emits. The `ws` instance is always passed in as a parameter - never imported as a global.
 
 | Function | Packet |
 |---|---|
@@ -144,9 +150,9 @@ Typed `sendX()` helpers. No logic, no store reads, no bus emits. The `ws` instan
 
 ---
 
-## PointerInput — click handler registry
+## PointerInput - click handler registry
 
-`PointerInput` holds a priority-ordered handler registry. Systems register handlers at bootstrap — `PointerInput` never imports from game systems directly.
+`PointerInput` holds a priority-ordered handler registry. Systems register handlers at bootstrap - `PointerInput` never imports from game systems directly.
 
 | Priority | System | Condition |
 |---|---|---|
@@ -163,20 +169,20 @@ The first handler to return `true` consumes the click. Movement (priority 0) is 
 
 Two guards in `movement/movement.ts` prevent duplicate move packets:
 
-1. `isMoving` check — if `localPlayer.isMoving` is `true`, return early (player already walking)
-2. Tick-rate gate — one `sendPlayerMove` per `TICK_INTERVAL_MS` maximum
+1. `isMoving` check - if `localPlayer.isMoving` is `true`, return early (player already walking)
+2. Tick-rate gate - one `sendPlayerMove` per `TICK_INTERVAL_MS` maximum
 
 The `isMoving` check runs first (cheaper store read). The tick gate is a secondary guard.
 
 ---
 
-## PlayerManager — position only, no animation
+## PlayerManager - position only, no animation
 
-`PlayerManager` owns mesh lifecycle (create, pool, position) only. It subscribes to `localPlayer.x/z` in the store and calls `teleportToTile(x, z)` when position changes. It does not call any Babylon animation APIs — those belong to `PlayerAnimationManager` (client/85).
+`PlayerManager` owns mesh lifecycle (create, pool, position) only. It subscribes to `localPlayer.x/z` in the store and calls `teleportToTile(x, z)` when position changes. It does not call any Babylon animation APIs - those belong to `PlayerAnimationManager` (client/85).
 
 On position change, `PlayerManager` emits `player:arrived` on the bus once the mesh is placed.
 
-Remote players are driven by tick data via `systems/players.ts` → `PlayerManager.applyMovementDelta(delta)`.
+Remote players are driven by tick data via `systems/players.ts` -> `PlayerManager.applyMovementDelta(delta)`.
 
 ---
 
@@ -191,7 +197,7 @@ All routes are dev-only (return 403 in production).
 | `/api/builder/chunk` | GET | Reads a single chunk file by regionId, chunkX, chunkZ |
 | `/api/builder/chunk` | POST | Writes a chunk file, notifies SSE watchers |
 | `/api/builder/region` | POST | Creates a new region folder |
-| `/api/builder/watch` | GET | SSE stream — pushes `chunk_changed` events on save |
+| `/api/builder/watch` | GET | SSE stream - pushes `chunk_changed` events on save |
 
 ---
 
@@ -200,16 +206,16 @@ All routes are dev-only (return 403 in production).
 - `POST /api/builder/chunk` calls `notifyChunkChanged(regionId, chunkX, chunkZ)`
 - Pushes `chunk_changed` SSE event to all open connections on `/api/builder/watch`
 - Client receives it, calls `reloadChunkFromApi`, fetches the updated chunk, calls `GameWorld.reloadChunk(chunk)`
-- No page reload required — tile meshes for that chunk are disposed and rebuilt in-place
+- No page reload required - tile meshes for that chunk are disposed and rebuilt in-place
 - SSE auto-reconnects after 3s on disconnect
 
 ---
 
 ## HTTP clients (utils/http.ts)
 
-**Server-side** (`httpClient` / `request`) — Next.js route handlers only. `baseURL` is `API_URL` (server-only env var, never `NEXT_PUBLIC_`). Never import in browser code.
+**Server-side** (`httpClient` / `request`) - Next.js route handlers only. `baseURL` is `API_URL` (server-only env var, never `NEXT_PUBLIC_`). Never import in browser code.
 
-**Browser-side** (`browserClient` / `browserRequest`) — client-side code calling Next.js API routes. No `baseURL` — paths resolve relative to page origin. Never use in route handlers.
+**Browser-side** (`browserClient` / `browserRequest`) - client-side code calling Next.js API routes. No `baseURL` - paths resolve relative to page origin. Never use in route handlers.
 
 Both normalise Axios errors into `HttpError` objects via `handleAxiosError`.
 
@@ -217,13 +223,13 @@ Both normalise Axios errors into `HttpError` objects via `handleAxiosError`.
 
 ## Types (src/types/)
 
-All WS and skill types come from `mmo-shared` — `src/types/ws-protocol.ts` and `src/types/mmo/skills.ts` have been removed.
+All WS and skill types come from `mmo-shared` - `src/types/ws-protocol.ts` and `src/types/mmo/skills.ts` have been removed.
 
 `src/types/index.ts` is the barrel. Always import from `../../types`, not directly from sub-files.
 
-- `PlayerState` — client-only render shape, extends `PlayerPresence` with `animationState` and display fields
-- `StoredPlayer` — never used on the client
-- Derived values (HP, skill levels) always computed at render time — never stored on `PlayerState`
+- `PlayerState` - client-only render shape, extends `PlayerPresence` with `animationState` and display fields
+- `StoredPlayer` - never used on the client
+- Derived values (HP, skill levels) always computed at render time - never stored on `PlayerState`
 
 ---
 
@@ -231,7 +237,7 @@ All WS and skill types come from `mmo-shared` — `src/types/ws-protocol.ts` and
 
 `GameWorld` owns a `Map<string, GameRegion>` keyed by region id. Public methods: `loadRegion`, `reloadRegion`, `reloadChunk`, `getNavNode`, `dispose`.
 
-`getNavNode(x, z)` is the single public accessor — used by `PlayerManager` and `movement/pathfinding.ts`. Every tile gets a node regardless of walkability; `walkable` and `blockedEdges` are fields on `NavNode`. `NavNode` carries `worldY` (blended visual height), `y` (tile height index), `floor`, `walkable`, and `blockedEdges`.
+`getNavNode(x, z)` is the single public accessor - used by `PlayerManager` and `movement/pathfinding.ts`. Every tile gets a node regardless of walkability; `walkable` and `blockedEdges` are fields on `NavNode`. `NavNode` carries `worldY` (blended visual height), `y` (tile height index), `floor`, `walkable`, and `blockedEdges`.
 
 ---
 
@@ -239,9 +245,9 @@ All WS and skill types come from `mmo-shared` — `src/types/ws-protocol.ts` and
 
 Persists `UserSettings` to `localStorage` under the key `mmo-settings`.
 
-- `loadSettings()` — reads and merges with `DEFAULT_SETTINGS`
-- `saveSettings(settings)` — writes full object as JSON
-- `patchSettings(key, value)` — loads, merges single key, saves, returns updated value
+- `loadSettings()` - reads and merges with `DEFAULT_SETTINGS`
+- `saveSettings(settings)` - writes full object as JSON
+- `patchSettings(key, value)` - loads, merges single key, saves, returns updated value
 
 `UserSettings` and `DEFAULT_SETTINGS` defined in `src/types/mmo/settings.ts`.
 
@@ -256,18 +262,18 @@ In dev mode (`NEXT_PUBLIC_DEV_MODE === "true"`), `connectGame()` skips `POST /ap
 ## Logger levels
 
 ```ts
-logger.log(...)    // general — dev only
-logger.warn(...)   // warnings — dev only
-logger.error(...)  // errors — always on
-logger.ws(...)     // WebSocket events — dev only
-logger.game(...)   // Babylon/game events — dev only
+logger.log(...)    // general - dev only
+logger.warn(...)   // warnings - dev only
+logger.error(...)  // errors - always on
+logger.ws(...)     // WebSocket events - dev only
+logger.game(...)   // Babylon/game events - dev only
 ```
 
 ---
 
 ## Babylon.js Inspector (dev)
 
-`@babylonjs/inspector` is installed as a direct dependency and transpiled via `transpilePackages` in `next.config.mjs`. Dynamically imported in scene setup — never included in production bundles.
+`@babylonjs/inspector` is installed as a direct dependency and transpiled via `transpilePackages` in `next.config.mjs`. Dynamically imported in scene setup - never included in production bundles.
 
 ---
 
@@ -281,22 +287,22 @@ Always rebuild `mmo-shared` after source changes (`npm run build`). If consuming
 
 ---
 
-## TypeScript — Node globals in scripts
+## TypeScript - Node globals in scripts
 
 `tsconfig.json` includes `"types": ["node"]`. Required for Node globals in scripts run via `tsx`. Do not remove this field.
 
 ---
 
-## Dev tooling — chunk-seam scripts
+## Dev tooling - chunk-seam scripts
 
-`scripts/chunk-seams/` — dev-only, never run in production.
+`scripts/chunk-seams/` - dev-only, never run in production.
 
 | Script | Effect |
 |---|---|
-| `npm run seams` | Report border mismatches only — no writes |
+| `npm run seams` | Report border mismatches only - no writes |
 | `npm run seams:fix` | Snap mismatched border tiles |
 | `npm run seams:ease` | Smooth interior slope gradients |
 | `npm run seams:fix:ease` | Fix seams then ease slopes in one pass |
 | `npm run seams:format` | Fix + ease then run Prettier |
 
-No confirmation prompts — all modes write immediately. Re-run `npm run seams` after any fix/ease pass to verify.
+No confirmation prompts - all modes write immediately. Re-run `npm run seams` after any fix/ease pass to verify.
