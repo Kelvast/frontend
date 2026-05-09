@@ -11,29 +11,29 @@ jobs:
 
     defaults:
       run:
-        working-directory: mmo-client
+        working-directory: kelvast-client
 
     steps:
-      - name: Checkout mmo-client
+      - name: Checkout kelvast-client
         uses: actions/checkout@v4
         with:
-          path: mmo-client
+          path: kelvast-client
 
-      - name: Checkout mmo-shared
+      - name: Checkout kelvast-shared
         uses: actions/checkout@v4
         with:
-          repository: SamNewhouse/mmo-shared
-          path: mmo-shared
+          repository: SamNewhouse/kelvast-shared
+          path: kelvast-shared
           token: ${{ secrets.MMO_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: mmo-client/package-lock.json
+          cache-dependency-path: kelvast-client/package-lock.json
 
-      - name: Install and build mmo-shared
-        working-directory: mmo-shared
+      - name: Install and build kelvast-shared
+        working-directory: kelvast-shared
         run: npm ci && npm run build
 
       - name: Install client deps
