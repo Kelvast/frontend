@@ -1,5 +1,5 @@
 {
-  "name": "mmo-client",
+  "name": "kelvast-client",
   "version": "0.0.2",
   "license": "ISC",
   "readme": "README.md",
@@ -25,7 +25,7 @@
     "@babylonjs/inspector": "9.0.0",
     "@babylonjs/materials": "9.0.0",
     "axios": "1.13.2",
-    "mmo-shared": "file:../mmo-shared",
+    "kelvast-shared": "file:../shared",
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
