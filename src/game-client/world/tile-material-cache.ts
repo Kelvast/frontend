@@ -1,5 +1,5 @@
 import { Scene, StandardMaterial, Color3 } from "@babylonjs/core";
-import { TileData } from "mmo-shared";
+import { TileData } from "kelvast-shared";
 import { getTileRenderConfig } from "./tile-render";
 
 const cache = new Map<string, StandardMaterial>();

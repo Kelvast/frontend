@@ -8,7 +8,7 @@ import {
   Scene,
 } from "@babylonjs/core";
 import { PLAYER } from "../constants";
-import { WORLD, ResolvedPace, Coords } from "mmo-shared";
+import { WORLD, ResolvedPace, Coords } from "kelvast-shared";
 import { GameWorld } from "../world";
 import { logger } from "../../utils/logger";
 import { buildMoveAnimation, ANIM_FPS } from "../movement/animation";

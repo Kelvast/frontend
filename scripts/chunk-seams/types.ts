@@ -1,4 +1,4 @@
-import { TileData, TileHeight } from "mmo-shared";
+import { TileData, TileHeight } from "kelvast-shared";
 
 /*
  * Script-local type aliases. All tile types and world constants come from

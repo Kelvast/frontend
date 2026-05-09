@@ -8,7 +8,7 @@ import {
   generateRegionsRootIndexTs,
 } from "../../../../utils/region-index-gen";
 import { parseChunkTs } from "../../../../utils/chunk-parse";
-import type { ObjectInstance, NpcSpawn } from "mmo-shared";
+import type { ObjectInstance, NpcSpawn } from "kelvast-shared";
 import { BuilderSaveRequest } from "../../../../types";
 
 const REGIONS_ROOT = path.resolve("src/game-client/world/regions");

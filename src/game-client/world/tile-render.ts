@@ -1,5 +1,5 @@
 import { Color3 } from "@babylonjs/core";
-import { TileHeight, TileData, TileType, Floor } from "mmo-shared";
+import { TileHeight, TileData, TileType, Floor } from "kelvast-shared";
 
 export interface TileRenderConfig {
   color: Color3;

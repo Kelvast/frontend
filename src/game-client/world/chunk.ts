@@ -9,7 +9,7 @@ import {
   Vector3,
   HighlightLayer,
 } from "@babylonjs/core";
-import { ChunkData, TileData, WORLD } from "mmo-shared";
+import { ChunkData, TileData, WORLD } from "kelvast-shared";
 import { logger } from "../../utils/logger";
 import { DEV_MODE } from "../../utils/dev";
 import { buildTileMesh } from "./tile-mesh";

@@ -1,4 +1,4 @@
-import type { AuthResponse } from "mmo-shared";
+import type { AuthResponse } from "kelvast-shared";
 import { browserRequest } from "./http";
 import { generateClientToken } from "./client-token";
 import { logger } from "./logger";

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import type { LoginRequest, AuthSuccessResponse } from "mmo-shared";
+import type { LoginRequest, AuthSuccessResponse } from "kelvast-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { validateClientToken } from "../../../../utils/client-token";

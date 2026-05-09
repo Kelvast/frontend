@@ -10,7 +10,7 @@ import type {
   PlayerDataMessage,
   Coords,
   ResolvedPace,
-} from "mmo-shared";
+} from "kelvast-shared";
 import type { PlayerState, NearbyPlayer } from "./player";
 import type { UserSettings } from "./settings";
 

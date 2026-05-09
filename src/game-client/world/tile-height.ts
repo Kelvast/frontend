@@ -1,4 +1,4 @@
-import { TileHeight, Floor } from "mmo-shared";
+import { TileHeight, Floor } from "kelvast-shared";
 import { FLOOR } from "../constants";
 
 /*

@@ -1,5 +1,5 @@
 import { MeshBuilder, StandardMaterial, Color3, Vector3, Scene, Mesh } from "@babylonjs/core";
-import { TileData, WORLD } from "mmo-shared";
+import { TileData, WORLD } from "kelvast-shared";
 import { TILE_RENDER } from "./tile-render";
 import { tileWorldY } from "./tile-height";
 

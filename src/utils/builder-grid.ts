@@ -1,4 +1,4 @@
-import { ChunkData, Region } from "mmo-shared";
+import { ChunkData, Region } from "kelvast-shared";
 
 export interface GridCell {
   chunkX: number;

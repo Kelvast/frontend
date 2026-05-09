@@ -1,4 +1,4 @@
-import { Region } from "mmo-shared";
+import { Region } from "kelvast-shared";
 
 import spawnRegion from "./spawn";
 

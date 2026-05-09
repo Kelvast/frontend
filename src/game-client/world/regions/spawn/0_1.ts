@@ -1,4 +1,4 @@
-import { ChunkData, TILES } from "mmo-shared";
+import { ChunkData, TILES } from "kelvast-shared";
 
 const { D, DD1, DD2, DI1, DI2, DI3, G, GI1, GI2, GI3, GI4, GI5, S, SD1, SD2, SD3, SD4, SD5, SD6, SI1, SI2, SI3, SI4, SI5 } = TILES; // prettier-ignore
 

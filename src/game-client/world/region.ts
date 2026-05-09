@@ -1,5 +1,5 @@
 import { Scene, HighlightLayer } from "@babylonjs/core";
-import { Region, ChunkData } from "mmo-shared";
+import { Region, ChunkData } from "kelvast-shared";
 import { Chunk } from "./chunk";
 import { Navmesh, mergeNavmesh } from "./navmesh";
 import { logger } from "../../utils/logger";

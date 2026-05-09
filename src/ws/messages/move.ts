@@ -1,5 +1,5 @@
-import type { Coords, MoveMessage, ResolvedPace } from "mmo-shared";
-import { MSG } from "mmo-shared";
+import type { Coords, MoveMessage, ResolvedPace } from "kelvast-shared";
+import { MSG } from "kelvast-shared";
 import { send } from "../client";
 
 /*

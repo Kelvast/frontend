@@ -1,4 +1,4 @@
-import { TileHeight, WORLD } from "mmo-shared";
+import { TileHeight, WORLD } from "kelvast-shared";
 import { withHeight } from "./palette";
 import { MAX_SLOPE_STEP, TileGrid } from "./types";
 

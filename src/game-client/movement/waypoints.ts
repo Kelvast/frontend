@@ -1,6 +1,6 @@
 import { Vector3 } from "@babylonjs/core";
-import type { Coords } from "mmo-shared";
-import { WORLD } from "mmo-shared";
+import type { Coords } from "kelvast-shared";
+import { WORLD } from "kelvast-shared";
 import { PLAYER } from "../constants";
 
 const s = WORLD.TILE_SIZE;

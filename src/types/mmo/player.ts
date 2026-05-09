@@ -1,4 +1,4 @@
-import type { Direction, MovementType, Player } from "mmo-shared";
+import type { Direction, MovementType, Player } from "kelvast-shared";
 
 export type AnimationState = MovementType | "idle" | "attacking";
 

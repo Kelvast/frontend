@@ -1,4 +1,4 @@
-import { MSG, type ActionFinishedMessage } from "mmo-shared";
+import { MSG, type ActionFinishedMessage } from "kelvast-shared";
 import { registerMessageHandler } from "../registry";
 
 // future: Phase 3 - apply reward to inventory + XP, clear action state

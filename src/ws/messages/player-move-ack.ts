@@ -1,5 +1,5 @@
-import type { PlayerMoveAckMessage } from "mmo-shared";
-import { MSG } from "mmo-shared";
+import type { PlayerMoveAckMessage } from "kelvast-shared";
+import { MSG } from "kelvast-shared";
 import { registerMessageHandler } from "../registry";
 import { useGameStore } from "../../utils/game-store";
 

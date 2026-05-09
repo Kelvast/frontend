@@ -1,4 +1,4 @@
-import { TileData, TileHeight, TILES } from "mmo-shared";
+import { TileData, TileHeight, TILES } from "kelvast-shared";
 
 function buildReverseMap(): Map<string, string> {
   const m = new Map<string, string>();

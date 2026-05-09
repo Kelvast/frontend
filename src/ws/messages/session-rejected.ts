@@ -1,4 +1,4 @@
-import { MSG, type SessionRejectedMessage } from "mmo-shared";
+import { MSG, type SessionRejectedMessage } from "kelvast-shared";
 import { logger } from "../../utils/logger";
 import { registerMessageHandler } from "../registry";
 
