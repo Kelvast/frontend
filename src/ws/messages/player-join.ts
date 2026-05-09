@@ -1,4 +1,4 @@
-import { MSG, type PlayerJoinMessage } from "mmo-shared";
+import { MSG, type PlayerJoinMessage } from "kelvast-shared";
 import { logger } from "../../utils/logger";
 import { useGameStore } from "../../utils/game-store";
 import { registerMessageHandler } from "../registry";

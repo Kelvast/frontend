@@ -1,4 +1,4 @@
-import { MSG, type ErrorMessage } from "mmo-shared";
+import { MSG, type ErrorMessage } from "kelvast-shared";
 import { logger } from "../../utils/logger";
 import { registerMessageHandler } from "../registry";
 

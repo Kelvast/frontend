@@ -2,7 +2,7 @@ import { Scene, HighlightLayer } from "@babylonjs/core";
 import { GameRegion } from "./region";
 import { Navmesh, NavNode, navKey } from "./navmesh";
 import { logger } from "../../utils/logger";
-import { Region, ChunkData } from "mmo-shared";
+import { Region, ChunkData } from "kelvast-shared";
 import { DEV_MODE } from "../../utils/dev";
 import { setupScene } from "../engine/scene-setup";
 

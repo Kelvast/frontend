@@ -1,5 +1,5 @@
 import { Mesh, VertexData, Scene } from "@babylonjs/core";
-import { TileData, WORLD } from "mmo-shared";
+import { TileData, WORLD } from "kelvast-shared";
 import { tileWorldY } from "./tile-height";
 
 type TileGrid = ReadonlyArray<ReadonlyArray<TileData>>;

@@ -6,7 +6,7 @@ import TileGrid from "./TileGrid";
 import TilePalette from "./TilePalette";
 import ChunkExporter from "./ChunkExporter";
 import RegionSelector from "../1-atoms/RegionSelector";
-import { ChunkData, TileData, TileHeight, TileType, WORLD, tileData } from "mmo-shared";
+import { ChunkData, TileData, TileHeight, TileType, WORLD, tileData } from "kelvast-shared";
 
 function makeEmptyChunk(): TileData[][] {
   return Array.from({ length: WORLD.CHUNK_SIZE }, () =>

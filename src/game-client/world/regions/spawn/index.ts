@@ -1,4 +1,4 @@
-import { Region } from "mmo-shared";
+import { Region } from "kelvast-shared";
 
 import chunk_n1_0 from "./-1_0";
 import chunk_n1_1 from "./-1_1";

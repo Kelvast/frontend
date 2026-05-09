@@ -3,8 +3,8 @@ import type { GameStoreState } from "../types";
 import type { UserSettings } from "../types/mmo/settings";
 import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
-import { defaultSkills, defaultInventory, defaultEquipment } from "mmo-shared";
-import type { Coords, ResolvedPace } from "mmo-shared";
+import { defaultSkills, defaultInventory, defaultEquipment } from "kelvast-shared";
+import type { Coords, ResolvedPace } from "kelvast-shared";
 
 export const useGameStore = create<GameStoreState>((set) => ({
   identity: null,

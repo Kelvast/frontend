@@ -3,7 +3,7 @@ import { browserRequest } from "../../utils/http";
 import { generateClientToken } from "../../utils/client-token";
 import { useGameStore } from "../../utils/game-store";
 import { getDevCredentials } from "../../utils/dev";
-import type { AuthSuccessResponse, LoginRequest, AuthResponse } from "mmo-shared";
+import type { AuthSuccessResponse, LoginRequest, AuthResponse } from "kelvast-shared";
 import type { OnLoadEvent } from "../../types/mmo/loading";
 
 /*

@@ -1,4 +1,4 @@
-import { TileData, ChunkData, TILES } from "mmo-shared";
+import { TileData, ChunkData, TILES } from "kelvast-shared";
 
 /*
  * Reverse map: "type:y" → TILES key (e.g. "grass:1" → "GI1").
@@ -43,7 +43,7 @@ export function generateChunkTs(data: ChunkData): string {
     })
     .join("\n");
 
-  return `import { ChunkData, TILES } from "mmo-shared";
+  return `import { ChunkData, TILES } from "kelvast-shared";
 
 ${destructure}
 

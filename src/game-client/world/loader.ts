@@ -1,4 +1,4 @@
-import { Region, ChunkData, TileData } from "mmo-shared";
+import { Region, ChunkData, TileData } from "kelvast-shared";
 import { logger } from "../../utils/logger";
 import { GameWorld } from "./index";
 import type { OnLoadEvent } from "../../types/mmo/loading";

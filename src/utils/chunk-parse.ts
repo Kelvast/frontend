@@ -1,6 +1,5 @@
-// src/utils/chunk-parse.ts
-import { TileType, TileData, TileHeight, TILE_WALKABLE, tileData, TILES } from "mmo-shared";
-import type { ObjectInstance, NpcSpawn } from "mmo-shared";
+import { TileType, TileData, TileHeight, TILE_WALKABLE, tileData, TILES } from "kelvast-shared";
+import type { ObjectInstance, NpcSpawn } from "kelvast-shared";
 
 const HEIGHT_FROM_KEY = Object.fromEntries(
   Object.entries(TileHeight)

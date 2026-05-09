@@ -1,4 +1,4 @@
-import { MSG, type ResourceDepletedMessage } from "mmo-shared";
+import { MSG, type ResourceDepletedMessage } from "kelvast-shared";
 import { registerMessageHandler } from "../registry";
 
 // future: Phase 3 - mark resource node unclickable in scene

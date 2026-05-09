@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { TileData, TileHeight, TILES, WORLD } from "mmo-shared";
+import { TileData, TileHeight, TILES, WORLD } from "kelvast-shared";
 import { REVERSE_TILES } from "./palette";
 import { chunkFileFor } from "./discovery";
 import { TileGrid } from "./types";

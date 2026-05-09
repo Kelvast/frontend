@@ -1,4 +1,4 @@
-import type { MessageType } from "mmo-shared";
+import type { MessageType } from "kelvast-shared";
 import { logger } from "../utils/logger";
 
 type MessageHandler<T> = (msg: T) => void;

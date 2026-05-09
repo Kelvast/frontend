@@ -8,7 +8,7 @@ import { CHUNK_PX } from "../1-atoms/ChunkSlot";
 import WorldGrid from "../2-molecules/WorldGrid";
 import ChunkEditorPanel from "../2-molecules/ChunkEditorPanel";
 import ZoomControls from "../1-atoms/ZoomControls";
-import { Region, ChunkData, TileData } from "mmo-shared";
+import { Region, ChunkData, TileData } from "kelvast-shared";
 
 type TileCache = Map<string, TileData[][]>;
 

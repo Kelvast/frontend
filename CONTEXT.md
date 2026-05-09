@@ -8,7 +8,7 @@
 
 ## Formatting rule
 
-Never use em dashes in any file in this repo. Use a regular hyphen (-) or rewrite the sentence. This applies to all code, comments, documentation, and commit messages.
+Never use em dashes (—) in any file in this repo. Use a regular hyphen (-) or rewrite the sentence. This applies to all code, comments, documentation, and commit messages.
 
 ---
 
@@ -17,6 +17,12 @@ Never use em dashes in any file in this repo. Use a regular hyphen (-) or rewrit
 Never commit directly to main. All work goes on a feature branch created from main - prefix: `feature/`, `fix/`, `docs/`, `refactor/`. If no active branch is known, stop and ask - do not fall back to main.
 
 Open a PR targeting main. Do not merge it - leave it for review. Always fill in the "What does this PR do?" section.
+
+---
+
+## React / Babylon boundary
+
+Never manipulate Babylon meshes from a React component. Never dispatch Zustand actions from inside the Babylon render loop - use `useGameStore.getState()` for reads and only write via systems.
 
 ---
 
@@ -29,6 +35,7 @@ Open a PR targeting main. Do not merge it - leave it for review. Always fill in 
 The bus is a plain synchronous class - no `EventEmitter` dependency. All payload types in `GameEventMap` derive from `mmo-shared` via `Pick<>` - no inline shape duplication.
 
 All event keys follow the `'domain:verb'` pattern:
+
 - `session:*` - WS session lifecycle
 - `player:*` - local player movement state
 - `area:*` - world population (joins, leaves, world-state snapshot)
@@ -78,7 +85,7 @@ Systems write to the store. WS message handlers never write to it directly. Reac
 
 ---
 
-## WS inbound layer (ws/inbound/)
+## WS inbound layer (`ws/inbound/`)
 
 Files parse a single wire message type and emit one or more bus events. No store writes. No Babylon calls. No `ws.send()`.
 
@@ -93,7 +100,7 @@ Files parse a single wire message type and emit one or more bus events. No store
 
 ---
 
-## WS outbound layer (ws/outbound/)
+## WS outbound layer (`ws/outbound/`)
 
 Typed `sendX()` helpers only. No logic, no store reads, no bus emits. The `ws` instance is always passed in as a parameter - never imported as a global.
 
@@ -118,7 +125,7 @@ Systems register handlers at bootstrap. `PointerInput` never imports from game s
 
 ---
 
-## requestMove guards
+## `requestMove` guards
 
 Two guards in `movement/movement.ts` prevent duplicate move packets:
 
@@ -137,7 +144,7 @@ Remote players are driven by tick data via `systems/players.ts` -> `PlayerManage
 
 ---
 
-## HTTP clients (utils/http.ts)
+## HTTP clients (`utils/http.ts`)
 
 `httpClient` / `request` - Next.js route handlers only. `baseURL` is `API_URL` (server-only env var, never `NEXT_PUBLIC_`). Never import in browser code.
 
@@ -145,7 +152,7 @@ Remote players are driven by tick data via `systems/players.ts` -> `PlayerManage
 
 ---
 
-## Types (src/types/)
+## Types (`src/types/`)
 
 `src/types/ws-protocol.ts` and `src/types/mmo/skills.ts` have been removed - all WS and skill types come from `mmo-shared`.
 

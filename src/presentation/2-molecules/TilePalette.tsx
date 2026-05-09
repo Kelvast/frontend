@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, memo } from "react";
-import { TileHeight, TileType, TILE_WALKABLE } from "mmo-shared";
+import { TileHeight, TileType, TILE_WALKABLE } from "kelvast-shared";
 import PaletteButton from "../1-atoms/PaletteButton";
 import SectionLabel from "../1-atoms/SectionLabel";
 import { TILE_COLORS } from "../../game-client/world/tile-render";

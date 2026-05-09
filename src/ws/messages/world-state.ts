@@ -1,4 +1,4 @@
-import { MSG, type WorldStateMessage } from "mmo-shared";
+import { MSG, type WorldStateMessage } from "kelvast-shared";
 import { useGameStore } from "../../utils/game-store";
 import { registerMessageHandler } from "../registry";
 

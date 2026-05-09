@@ -11,7 +11,7 @@ import type {
   ResourceAvailableMessage,
   PlayerPresence,
   SessionId,
-} from 'mmo-shared';
+} from 'kelvast-shared';
 
 /*
  * GameEventMap — every in-process event that can flow through the GameEventBus.

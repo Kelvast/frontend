@@ -1,5 +1,5 @@
-import type { Coords, ResolvedPace } from "mmo-shared";
-import { calcMoveSpeed, DEFAULT_SPEED_MODIFIERS } from "mmo-shared";
+import type { Coords, ResolvedPace } from "kelvast-shared";
+import { calcMoveSpeed, DEFAULT_SPEED_MODIFIERS } from "kelvast-shared";
 import { getContext } from "../context";
 import { useGameStore } from "../../utils/game-store";
 import { sendPlayerMove } from "../../ws/messages/move";

@@ -1,7 +1,7 @@
 "use client";
 
-import type { ClientMessage, MessageBase, MessageType } from "mmo-shared";
-import { MSG } from "mmo-shared";
+import type { ClientMessage, MessageBase, MessageType } from "kelvast-shared";
+import { MSG } from "kelvast-shared";
 import { useGameStore } from "../utils/game-store";
 import { logger } from "../utils/logger";
 import { dispatch } from "./registry";

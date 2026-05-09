@@ -1,4 +1,4 @@
-import type { Coords } from "mmo-shared";
+import type { Coords } from "kelvast-shared";
 import type { GameWorld } from "../world";
 
 const MAX_PATH_LENGTH = 64;

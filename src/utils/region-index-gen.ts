@@ -16,7 +16,7 @@ export function generateRegionIndexTs(regionId: string, chunkKeys: string[]): st
     })
     .join("\n");
 
-  return `import { Region } from "mmo-shared";
+  return `import { Region } from "kelvast-shared";
 
 ${imports}
 
@@ -37,7 +37,7 @@ export function generateRegionsRootIndexTs(regionIds: string[]): string {
 
   const exports = regionIds.map((id) => `  ${id}Region,`).join("\n");
 
-  return `import { Region } from "mmo-shared";
+  return `import { Region } from "kelvast-shared";
 
 ${imports}
 

@@ -1,4 +1,4 @@
-import { MSG, type SessionClosedMessage } from "mmo-shared";
+import { MSG, type SessionClosedMessage } from "kelvast-shared";
 import { logger } from "../../utils/logger";
 import { useGameStore } from "../../utils/game-store";
 import { registerMessageHandler } from "../registry";

@@ -1,4 +1,4 @@
-import { ChunkData, TileData, TileHeight, Floor, TILE_WALKABLE, WORLD } from "mmo-shared";
+import { ChunkData, TileData, TileHeight, Floor, TILE_WALKABLE, WORLD } from "kelvast-shared";
 import { tileWorldY, floorWorldY } from "./tile-height";
 
 export interface NavNode {

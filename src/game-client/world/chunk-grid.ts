@@ -1,5 +1,5 @@
 import { MeshBuilder, Mesh, Vector3, Scene } from "@babylonjs/core";
-import { WORLD } from "mmo-shared";
+import { WORLD } from "kelvast-shared";
 
 export function buildChunkGrid(chunkX: number, chunkZ: number, scene: Scene): Mesh {
   const size = WORLD.CHUNK_SIZE * WORLD.TILE_SIZE;

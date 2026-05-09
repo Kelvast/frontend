@@ -1,5 +1,5 @@
-import type { ActionStartMessage, ActionType } from "mmo-shared";
-import { MSG } from "mmo-shared";
+import type { ActionStartMessage, ActionType } from "kelvast-shared";
+import { MSG } from "kelvast-shared";
 import { send } from "../client";
 
 export function sendActionStart(action: ActionType, targetId: number): void {

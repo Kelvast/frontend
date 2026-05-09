@@ -1,4 +1,4 @@
-import { MSG, type PlayerStoppedMessage } from "mmo-shared";
+import { MSG, type PlayerStoppedMessage } from "kelvast-shared";
 import { useGameStore } from "../../utils/game-store";
 import { registerMessageHandler } from "../registry";
 

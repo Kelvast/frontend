@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import type { GameSession } from "mmo-shared";
+import type { GameSession } from "kelvast-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { COOKIE } from "../../../../config";

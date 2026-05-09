@@ -1,4 +1,4 @@
-import { WORLD } from "mmo-shared";
+import { WORLD } from "kelvast-shared";
 import { withHeight } from "./palette";
 import { type ChunkCoord, type Mismatch, type TileGrid } from "./types";
 

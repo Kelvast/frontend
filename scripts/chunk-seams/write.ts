@@ -19,7 +19,7 @@ export function writeChunk(cx: number, cz: number, grid: TileGrid): void {
     })
     .join("\n");
 
-  const out = `import { ChunkData, TILES } from "mmo-shared";
+  const out = `import { ChunkData, TILES } from "kelvast-shared";
 
 ${destructure}
 

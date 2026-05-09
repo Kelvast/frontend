@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, memo, useState } from "react";
-import type { TileData } from "mmo-shared";
+import type { TileData } from "kelvast-shared";
 import TileCell from "../1-atoms/TileCell";
 import { getTileColor } from "../../game-client/world/tile-render";
 

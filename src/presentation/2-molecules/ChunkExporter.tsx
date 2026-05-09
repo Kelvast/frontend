@@ -6,7 +6,7 @@ import { generateChunkTs } from "../../utils/chunk-export";
 import SectionLabel from "../1-atoms/SectionLabel";
 import AddUpdateButton from "../1-atoms/AddUpdateButton";
 import SaveStatus, { SaveState } from "../1-atoms/SaveStatus";
-import { ChunkData } from "mmo-shared";
+import { ChunkData } from "kelvast-shared";
 
 interface Props {
   chunkData: ChunkData;

@@ -1,4 +1,4 @@
-import { MSG, type ActionOngoingMessage } from "mmo-shared";
+import { MSG, type ActionOngoingMessage } from "kelvast-shared";
 import { registerMessageHandler } from "../registry";
 
 // future: Phase 3 - continue gather animation without state change

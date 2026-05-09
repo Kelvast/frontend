@@ -1,4 +1,4 @@
-import type { TileData } from "mmo-shared";
+import type { TileData } from "kelvast-shared";
 
 export interface BuilderChunk {
   regionId: string;
