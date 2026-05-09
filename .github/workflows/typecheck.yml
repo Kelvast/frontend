@@ -19,10 +19,10 @@ jobs:
         with:
           path: kelvast-client
 
-      - name: Checkout kelvast-shared
+      - name: Checkout Kelvast/shared
         uses: actions/checkout@v4
         with:
-          repository: SamNewhouse/kelvast-shared
+          repository: Kelvast/shared
           path: kelvast-shared
           token: ${{ secrets.MMO_TOKEN }}
 
