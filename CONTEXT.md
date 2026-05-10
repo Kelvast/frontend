@@ -8,7 +8,43 @@
 
 ## Formatting rule
 
-Never use em dashes (—) in any file in this repo. Use a regular hyphen (-) or rewrite the sentence. This applies to all code, comments, documentation, and commit messages.
+Never use em dashes (-) in any file in this repo. Use a regular hyphen (-) or rewrite the sentence. This applies to all code, comments, documentation, and commit messages.
+
+---
+
+## Folder structure
+
+```ts
+src/
+  app/
+    api/
+      auth/            // POST /api/auth/login, POST /api/auth/register
+      builder/         // chunk CRUD, region CRUD, SSE chunk-change stream
+    game/              // game page
+    login/             // login page
+    map-builder/       // map builder page (dev only)
+  config/              // environment and config variable bindings
+  game-client/         // all Babylon.js logic - no React inside here
+    systems/           // one file per system - each exports initXSystem()
+    ws/
+      inbound/         // one file per message domain - emits bus events
+      outbound/        // sendX() helpers
+    events/            // GameEventBus, GAME_EVENT, emitX/onX helpers, types
+    entities/          // PlayerManager
+    input/             // keys, pointer
+    movement/          // pathfinding, animation, speed, waypoints
+    world/             // GameWorld, regions, chunks, tile config
+  presentation/
+    1-atoms/
+    2-molecules/
+    3-organisms/       // GameCanvas, LoginForm, MapBuilder
+    4-layouts/
+    5-pages/
+  types/               // client-only types barrel - always import from here
+  utils/               // store, ws-client, http, logger, settings, helpers
+  scripts/
+    chunk-seams/       // dev tooling for border mismatch detection and fixing
+```
 
 ---
 
@@ -34,6 +70,8 @@ Never manipulate Babylon meshes from a React component. Never dispatch Zustand a
 
 The bus is a plain synchronous class - no `EventEmitter` dependency. All payload types in `GameEventMap` derive from `mmo-shared` via `Pick<>` - no inline shape duplication.
 
+Use the named `emitX()` and `onX()` helpers from `game-client/events` - never call `gameEventBus.emit()` or `gameEventBus.on()` directly outside of `emitters.ts` and `listeners.ts`.
+
 All event keys follow the `'domain:verb'` pattern:
 
 - `session:*` - WS session lifecycle
@@ -42,8 +80,11 @@ All event keys follow the `'domain:verb'` pattern:
 - `action:*` - server-driven action lifecycle
 - `world:*` - resource node state
 - `input:*` - normalised intent from all input devices
+- `bus:error` - fired internally when any listener throws
 
 Area population events are `area:player-joined` and `area:player-left` - **not** `player:joined` / `player:left`.
+
+When adding a new event: add it to `GameEventMap` in `types.ts`, add a matching entry to `GAME_EVENT` in `game-event.ts`, then add `emitX` to `emitters.ts` and `onX` to `listeners.ts` in the same PR.
 
 ---
 
@@ -53,8 +94,8 @@ Each system exports an `initXSystem()` function that subscribes to bus events an
 
 ```ts
 export function initMovementSystem(): () => void {
-  const unsub1 = gameEventBus.on('player:move-acked', ({ path, pace }) => { ... });
-  const unsub2 = gameEventBus.on('player:stopped', ({ id, x, z }) => { ... });
+  const unsub1 = onPlayerMoveAcked(({ path, pace }) => { ... });
+  const unsub2 = onPlayerStopped(({ id, x, z }) => { ... });
   return () => { unsub1(); unsub2(); };
 }
 ```
