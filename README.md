@@ -1,4 +1,4 @@
-# mmo-client
+# kelvast-client
 
 Browser-based 3D MMO client. Built with Next.js, Babylon.js, and Zustand.
 
@@ -15,7 +15,7 @@ For cross-repo architecture, protocol, and system documentation see [github.com/
 | State              | Zustand                                                 |
 | Real-time          | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
 | HTTP               | Axios wrapper (`http.ts`)                               |
-| Shared types/logic | mmo-shared                                              |
+| Shared types/logic | kelvast-shared                                          |
 | Language           | TypeScript - strict throughout                          |
 
 ---
@@ -75,9 +75,9 @@ Babylon.js owns the canvas and runs independently of React's render cycle.
 All inter-system communication on the client goes through `GameEventBus`. The flow is:
 
 ```
-ws/inbound/  ->  parse wire message  ->  gameEventBus.emit('domain:verb', payload)
+ws/inbound/  ->  parse wire message  ->  emitX(payload)
 GameEventBus ->  synchronous fan-out to all subscribers
-systems/     ->  subscribe via gameEventBus.on()  ->  update store or call Babylon APIs
+systems/     ->  subscribe via onX()  ->  update store or call Babylon APIs
 store        ->  UI rendering only
 ws/outbound/ ->  sendX() helpers only
 ```
@@ -108,7 +108,7 @@ ws/outbound/ ->  sendX() helpers only
 
 ### Settings (`utils/settings.ts`)
 
-Persists `UserSettings` to `localStorage` under the key `mmo-settings`.
+Persists `UserSettings` to `localStorage` under the key `kelvast-settings`.
 
 - `loadSettings()` - reads and merges with `DEFAULT_SETTINGS`
 - `saveSettings(settings)` - writes full object as JSON
@@ -163,89 +163,32 @@ All logging goes through `src/utils/logger.ts`. Raw `console.log` is banned.
 
 ```
 src/
-  app/
-    api/
-      auth/
-        login/             POST /api/auth/login
-        register/          POST /api/auth/register
-      builder/
-        chunk/             GET + POST single chunk
-        chunks/            GET all chunks (batch)
-        region/            POST create region
-        regions/           GET all regions + coords
-        watch/             GET SSE chunk-change stream
-    game/                  Game page
-    login/                 Login page
-    map-builder/           Map builder page (dev only)
-    layout.tsx
-  config/                  Environment and config variable bindings
-  game-client/             All Babylon.js logic - no React inside here
-    index.ts               initGame / connectGame / destroyGame
-    bootstrap.ts           bootstrapGameClient - inits all systems
-    engine.ts              GameEngine
-    camera.ts              GameCamera
-    constants.ts           WORLD, CAMERA, PLAYER, CHUNK_LOADING
-    entities/
-      players.ts           PlayerManager
-    input/
-      keys.ts
-      pointer.ts
-    movement/
-      index.ts
-      animation.ts
-      speed.ts
-      waypoints.ts
-    systems/
-      session.ts
-      players.ts
-      movement.ts
-      actions.ts
-    ws/
-      inbound/             One file per message domain - emits bus events
-      outbound/            sendX() helpers
-    world/
-      index.ts             GameWorld
-      loader.ts            loadAllRegions, reloadChunkFromApi
-      region.ts            GameRegion
-      chunk.ts             Chunk - 16x16 tile mesh grid
-      tile-config.ts
-      tile-height.ts
-      regions/             Chunk data files: regionId/chunkX_chunkZ.ts
-  presentation/
-    1-atoms/
-    2-molecules/
-    3-organisms/           GameCanvas, LoginForm, MapBuilder
-    4-layouts/
-    5-pages/
-  types/
-    index.ts               Barrel - re-exports all client-only types
-    mmo/
-      builder.ts
-      world.ts
-      player.ts            PlayerState, AnimationState
-      game-state.ts        GameStoreState
-      entities.ts
-      network.ts
-      position.ts
-      settings.ts          UserSettings, DEFAULT_SETTINGS
-      structure.ts
-  utils/
-    game-store.ts          Zustand store
-    ws-client.ts           WebSocket singleton
-    xp.ts                  Re-exports from mmo-shared; maxHpFromSkills
-    settings.ts            loadSettings / saveSettings / patchSettings
-    http.ts                Axios wrapper (server-side and browser-side)
-    logger.ts
-    use-focus-zoom.ts
-    use-zoom.ts
-    chunk-spiral.ts
-    builder-grid.ts
-    chunk-export.ts
-    chunk-parse.ts
-    tile-colors.ts
-    response.ts
-    site.ts
-    dev.ts
-  scripts/
-    chunk-seams/           Dev tooling for border mismatch detection and fixing
+├── app/
+│   ├── api/
+│   │   ├── auth/            POST /api/auth/login, POST /api/auth/register
+│   │   └── builder/         chunk CRUD, region CRUD, SSE chunk-change stream
+│   ├── game/                game page
+│   ├── login/               login page
+│   └── map-builder/         map builder page (dev only)
+├── config/                  environment and config variable bindings
+├── game-client/             all Babylon.js logic - no React inside here
+│   ├── systems/             one file per system - each exports initXSystem()
+│   ├── ws/
+│   │   ├── inbound/         one file per message domain - emits bus events
+│   │   └── outbound/        sendX() helpers
+│   ├── events/              GameEventBus, GAME_EVENT, emitX/onX helpers, types
+│   ├── entities/            PlayerManager
+│   ├── input/               keys, pointer
+│   ├── movement/            pathfinding, animation, speed, waypoints
+│   └── world/               GameWorld, regions, chunks, tile config
+├── presentation/
+│   ├── 1-atoms/
+│   ├── 2-molecules/
+│   ├── 3-organisms/         GameCanvas, LoginForm, MapBuilder
+│   ├── 4-layouts/
+│   └── 5-pages/
+├── types/                   client-only types barrel - always import from here
+├── utils/                   store, ws-client, http, logger, settings, helpers
+└── scripts/
+    └── chunk-seams/         dev tooling for border mismatch detection and fixing
 ```
