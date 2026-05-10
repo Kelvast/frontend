@@ -14,21 +14,3 @@ export interface PlayerState extends Player {
   lastUpdated: number;
   animationState: AnimationState;
 }
-
-/**
- * Minimal state for other players visible in the scene.
- * We only know what the server broadcasts - position, facing, name.
- * Skills and inventory are not available for other players.
- */
-export interface NearbyPlayer {
-  id: number;
-  playerName: string;
-  x: number;
-  y: number;
-  floor: number;
-  z: number;
-  facing: Direction;
-  isMoving: boolean;
-  lastUpdated: number;
-  animationState: AnimationState;
-}
