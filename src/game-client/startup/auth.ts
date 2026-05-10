@@ -4,7 +4,7 @@ import { generateClientToken } from "../../utils/client-token";
 import { useGameStore } from "../../utils/game-store";
 import { getDevCredentials } from "../../utils/dev";
 import type { AuthSuccessResponse, LoginRequest, AuthResponse } from "kelvast-shared";
-import type { OnLoadEvent } from "../../types/mmo/loading";
+import type { OnLoadEvent } from "../../types/loading";
 
 /*
  * Dev auth: POST /api/auth/login using NEXT_PUBLIC_DEV_EMAIL + NEXT_PUBLIC_DEV_PASSWORD.

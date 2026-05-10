@@ -1,6 +1,6 @@
 import { FC, memo, useEffect, useRef, useState } from "react";
 import { LOADER } from "../../game-client/constants";
-import type { LoadStage } from "../../types/mmo/loading";
+import type { LoadStage } from "../../types/loading";
 
 interface Props {
   stage: LoadStage;

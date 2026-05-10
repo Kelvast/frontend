@@ -2,7 +2,7 @@ import { logger } from "../../utils/logger";
 import { browserRequest, HttpError } from "../../utils/http";
 import { useGameStore } from "../../utils/game-store";
 import type { GameSessionResponse } from "kelvast-shared";
-import type { OnLoadEvent } from "../../types/mmo/loading";
+import type { OnLoadEvent } from "../../types/loading";
 
 /*
  * POST /api/game/session — the hard gate between auth and everything else.

@@ -215,9 +215,9 @@ In dev mode (`NEXT_PUBLIC_DEV_MODE === "true"`), `connectGame()` skips `POST /ap
 
 ---
 
-## `mmo-shared` as a local package
+## `kelvast-shared` as a local package
 
-Always rebuild `mmo-shared` after source changes (`npm run build`). If consuming repos behave unexpectedly after a type change, check whether `dist/` is stale.
+Always rebuild `kelvast-shared` after source changes (`npm run build`). If consuming repos behave unexpectedly after a type change, check whether `dist/` is stale.
 
 ---
 

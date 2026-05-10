@@ -8,7 +8,7 @@ import { loadAllRegions } from "../world/loader";
 import { createDevWatcher } from "../dev-watcher";
 import { setContext } from "../context";
 import { logger } from "../../utils/logger";
-import type { OnLoadEvent, LoadStage } from "../../types/mmo/loading";
+import type { OnLoadEvent, LoadStage } from "../../types/loading";
 import { DEV_MODE } from "../../utils/dev";
 import { useGameStore } from "../../utils/game-store";
 

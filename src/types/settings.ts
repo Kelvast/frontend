@@ -1,4 +1,4 @@
-import { CAMERA } from "../../game-client/constants";
+import { CAMERA } from "../game-client/constants";
 
 export interface CameraSettings {
   alpha: number;

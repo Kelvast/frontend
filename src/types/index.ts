@@ -1,10 +1,10 @@
-export type { Position } from "./mmo/position";
-export { ZERO_POSITION } from "./mmo/position";
-export type { PlayerState } from "./mmo/player";
-export type { GameStoreState } from "./mmo/game-state";
-export type { NPC, Interactable } from "./mmo/entities";
-export type { UserSettings, CameraSettings, GraphicsSettings, AudioSettings } from "./mmo/settings";
-export { DEFAULT_SETTINGS } from "./mmo/settings";
+export type { Position } from "./position";
+export { ZERO_POSITION } from "./position";
+export type { PlayerState } from "./player";
+export type { GameStoreState } from "./game-state";
+export type { NPC, Interactable } from "./entities";
+export type { UserSettings, CameraSettings, GraphicsSettings, AudioSettings } from "./settings";
+export { DEFAULT_SETTINGS } from "./settings";
 export {
   WallType,
   DoorState,
@@ -12,11 +12,12 @@ export {
   emptyWallConfig,
   emptyFloor,
   emptyStructure,
-} from "./mmo/structure";
-export type { WallFace, WallConfig, Floor, Structure } from "./mmo/structure";
+} from "./structure";
+export type { WallFace, WallConfig, Floor, Structure } from "./structure";
 export type {
   BuilderChunk,
   BuilderRegion,
   BuilderRegionsResponse,
   BuilderSaveRequest,
-} from "./mmo/builder";
+} from "./builder";
+export type { LoadStage, LoadEvent, OnLoadEvent } from "./loading"
