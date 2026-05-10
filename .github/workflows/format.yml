@@ -35,5 +35,5 @@ jobs:
         with:
           commit_message: 'chore: auto-format'
           commit_user_name: SamNewhouse
-          commit_user_email: sam@samnewhouse.co.uk
+          commit_user_email: hello@samnewhouse.co.uk
           commit_author: SamNewhouse <sam@samnewhouse.co.uk>
