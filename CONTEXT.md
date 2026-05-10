@@ -12,42 +12,6 @@ Never use em dashes (-) in any file in this repo. Use a regular hyphen (-) or re
 
 ---
 
-## Folder structure
-
-```ts
-src/
-  app/
-    api/
-      auth/            // POST /api/auth/login, POST /api/auth/register
-      builder/         // chunk CRUD, region CRUD, SSE chunk-change stream
-    game/              // game page
-    login/             // login page
-    map-builder/       // map builder page (dev only)
-  config/              // environment and config variable bindings
-  game-client/         // all Babylon.js logic - no React inside here
-    systems/           // one file per system - each exports initXSystem()
-    ws/
-      inbound/         // one file per message domain - emits bus events
-      outbound/        // sendX() helpers
-    events/            // GameEventBus, GAME_EVENT, emitX/onX helpers, types
-    entities/          // PlayerManager
-    input/             // keys, pointer
-    movement/          // pathfinding, animation, speed, waypoints
-    world/             // GameWorld, regions, chunks, tile config
-  presentation/
-    1-atoms/
-    2-molecules/
-    3-organisms/       // GameCanvas, LoginForm, MapBuilder
-    4-layouts/
-    5-pages/
-  types/               // client-only types barrel - always import from here
-  utils/               // store, ws-client, http, logger, settings, helpers
-  scripts/
-    chunk-seams/       // dev tooling for border mismatch detection and fixing
-```
-
----
-
 ## Branch & PR Workflow
 
 Never commit directly to main. All work goes on a feature branch created from main - prefix: `feature/`, `fix/`, `docs/`, `refactor/`. If no active branch is known, stop and ask - do not fall back to main.
