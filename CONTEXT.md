@@ -108,19 +108,19 @@ export function initMovementSystem(): () => void {
 
 Systems write to the store. WS message handlers never write to it directly. React reads from it - never writes from inside Babylon.
 
-| Action | Triggered by |
-|---|---|
-| `setMyId` | `systems/session.ts` on `session:opened` |
-| `setLocalPlayer` | `systems/session.ts` on `session:opened` |
-| `onPlayerData` | `systems/session.ts` on `session:player-data` - hydrates skills, inventory, equipment |
-| `addNearbyPlayer` | `systems/players.ts` on `area:player-joined` |
-| `removeNearbyPlayer` | `systems/players.ts` on `area:player-left` |
-| `onPlayerStopped` | `systems/movement.ts` on `player:stopped` - snaps position, clears `isMoving` for local and nearby |
-| `onPlayerMoveAck` | `systems/movement.ts` on `player:move-acked` - sets `isMoving: true`, does NOT update x/z |
-| `onPlayerArrived` | called by `PlayerManager` when mesh reaches destination tile |
-| `onTick` | `systems/movement.ts` on `player:tick` - patches `nearbyPlayers` and `localPlayer` from tick deltas |
-| `updateSettings` | UI - updates a single top-level key, calls `patchSettings` |
-| `onLogout` | `systems/session.ts` on `session:closed` - clears all session state |
+| Action               | Triggered by                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| `setMyId`            | `systems/session.ts` on `session:opened`                                                            |
+| `setLocalPlayer`     | `systems/session.ts` on `session:opened`                                                            |
+| `onPlayerData`       | `systems/session.ts` on `session:player-data` - hydrates skills, inventory, equipment               |
+| `addNearbyPlayer`    | `systems/players.ts` on `area:player-joined`                                                        |
+| `removeNearbyPlayer` | `systems/players.ts` on `area:player-left`                                                          |
+| `onPlayerStopped`    | `systems/movement.ts` on `player:stopped` - snaps position, clears `isMoving` for local and nearby  |
+| `onPlayerMoveAck`    | `systems/movement.ts` on `player:move-acked` - sets `isMoving: true`, does NOT update x/z           |
+| `onPlayerArrived`    | called by `PlayerManager` when mesh reaches destination tile                                        |
+| `onTick`             | `systems/movement.ts` on `player:tick` - patches `nearbyPlayers` and `localPlayer` from tick deltas |
+| `updateSettings`     | UI - updates a single top-level key, calls `patchSettings`                                          |
+| `onLogout`           | `systems/session.ts` on `session:closed` - clears all session state                                 |
 
 `localPlayer.x/z` is updated by `onTick` deltas and `onPlayerArrived` - **never** set to the destination immediately on ACK.
 
@@ -130,14 +130,14 @@ Systems write to the store. WS message handlers never write to it directly. Reac
 
 Files parse a single wire message type and emit one or more bus events. No store writes. No Babylon calls. No `ws.send()`.
 
-| File | Messages handled | Bus events emitted |
-|---|---|---|
-| `movement.ts` | `player_move_ack`, `player_stopped`, `tick` | `player:move-acked`, `player:stopped`, `player:tick` |
-| `area.ts` | `player_join`, `player_leave`, `world_state` | `area:player-joined`, `area:player-left`, `area:world-state` |
-| `resume.ts` | `session_opened` | `session:opened` |
-| `session.ts` | `session_closed`, `session_rejected`, `player_data` | `session:closed`, `session:rejected`, `session:player-data` |
-| `actions.ts` | `action_ongoing`, `action_finished` | `action:ongoing`, `action:finished` |
-| `world.ts` | `resource_depleted`, `resource_available` | `world:resource-depleted`, `world:resource-available` |
+| File          | Messages handled                                    | Bus events emitted                                           |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| `movement.ts` | `player_move_ack`, `player_stopped`, `tick`         | `player:move-acked`, `player:stopped`, `player:tick`         |
+| `area.ts`     | `player_join`, `player_leave`, `world_state`        | `area:player-joined`, `area:player-left`, `area:world-state` |
+| `resume.ts`   | `session_opened`                                    | `session:opened`                                             |
+| `session.ts`  | `session_closed`, `session_rejected`, `player_data` | `session:closed`, `session:rejected`, `session:player-data`  |
+| `actions.ts`  | `action_ongoing`, `action_finished`                 | `action:ongoing`, `action:finished`                          |
+| `world.ts`    | `resource_depleted`, `resource_available`           | `world:resource-depleted`, `world:resource-available`        |
 
 ---
 
@@ -145,11 +145,11 @@ Files parse a single wire message type and emit one or more bus events. No store
 
 Typed `sendX()` helpers only. No logic, no store reads, no bus emits. The `ws` instance is always passed in as a parameter - never imported as a global.
 
-| Function | Packet |
-|---|---|
+| Function                         | Packet                      |
+| -------------------------------- | --------------------------- |
 | `sendPlayerMove(ws, path, pace)` | `{ type: 204, path, pace }` |
-| `sendSessionResume(ws, token)` | `{ type: 100, token }` |
-| `sendSessionClose(ws)` | `{ type: 103 }` |
+| `sendSessionResume(ws, token)`   | `{ type: 100, token }`      |
+| `sendSessionClose(ws)`           | `{ type: 103 }`             |
 
 ---
 
@@ -157,12 +157,12 @@ Typed `sendX()` helpers only. No logic, no store reads, no bus emits. The `ws` i
 
 Systems register handlers at bootstrap. `PointerInput` never imports from game systems directly. The first handler to return `true` consumes the click.
 
-| Priority | System | Condition |
-|---|---|---|
-| 100 | Combat | Clicked mesh is an NPC |
-| 50 | Actions | Clicked mesh is a resource node |
-| 10 | Ground items | Clicked mesh is a ground item |
-| 0 | Movement | Default fallback |
+| Priority | System       | Condition                       |
+| -------- | ------------ | ------------------------------- |
+| 100      | Combat       | Clicked mesh is an NPC          |
+| 50       | Actions      | Clicked mesh is a resource node |
+| 10       | Ground items | Clicked mesh is a ground item   |
+| 0        | Movement     | Default fallback                |
 
 ---
 

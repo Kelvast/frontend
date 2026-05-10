@@ -20,4 +20,4 @@ export type {
   BuilderRegionsResponse,
   BuilderSaveRequest,
 } from "./builder";
-export type { LoadStage, LoadEvent, OnLoadEvent } from "./loading"
+export type { LoadStage, LoadEvent, OnLoadEvent } from "./loading";
