@@ -10,8 +10,9 @@ import type {
   PlayerDataMessage,
   Coords,
   ResolvedPace,
+  NearbyPlayer,
 } from "kelvast-shared";
-import type { PlayerState, NearbyPlayer } from "./player";
+import type { PlayerState } from "./player";
 import type { UserSettings } from "./settings";
 
 export interface GameStoreState {

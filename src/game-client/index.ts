@@ -5,7 +5,7 @@ import { devAuth, prodCredentialCheck } from "./startup/auth";
 import { fetchSession } from "./startup/session";
 import { bootGame } from "./startup/init";
 import { getContext, hasContext, clearContext } from "./context";
-import type { OnLoadEvent } from "../types/mmo/loading";
+import type { OnLoadEvent } from "../types/loading";
 
 export { GameEngine } from "./engine/engine";
 export { GameWorld } from "./world";

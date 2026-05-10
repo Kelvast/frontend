@@ -1,4 +1,4 @@
-import { UserSettings, DEFAULT_SETTINGS } from "../types/mmo/settings";
+import { UserSettings, DEFAULT_SETTINGS } from "../types/settings";
 
 const STORAGE_KEY = "mmo-settings";
 

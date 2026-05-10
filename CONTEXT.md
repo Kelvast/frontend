@@ -8,7 +8,43 @@
 
 ## Formatting rule
 
-Never use em dashes (—) in any file in this repo. Use a regular hyphen (-) or rewrite the sentence. This applies to all code, comments, documentation, and commit messages.
+Never use em dashes (-) in any file in this repo. Use a regular hyphen (-) or rewrite the sentence. This applies to all code, comments, documentation, and commit messages.
+
+---
+
+## Folder structure
+
+```ts
+src/
+  app/
+    api/
+      auth/            // POST /api/auth/login, POST /api/auth/register
+      builder/         // chunk CRUD, region CRUD, SSE chunk-change stream
+    game/              // game page
+    login/             // login page
+    map-builder/       // map builder page (dev only)
+  config/              // environment and config variable bindings
+  game-client/         // all Babylon.js logic - no React inside here
+    systems/           // one file per system - each exports initXSystem()
+    ws/
+      inbound/         // one file per message domain - emits bus events
+      outbound/        // sendX() helpers
+    events/            // GameEventBus, GAME_EVENT, emitX/onX helpers, types
+    entities/          // PlayerManager
+    input/             // keys, pointer
+    movement/          // pathfinding, animation, speed, waypoints
+    world/             // GameWorld, regions, chunks, tile config
+  presentation/
+    1-atoms/
+    2-molecules/
+    3-organisms/       // GameCanvas, LoginForm, MapBuilder
+    4-layouts/
+    5-pages/
+  types/               // client-only types barrel - always import from here
+  utils/               // store, ws-client, http, logger, settings, helpers
+  scripts/
+    chunk-seams/       // dev tooling for border mismatch detection and fixing
+```
 
 ---
 
@@ -34,6 +70,8 @@ Never manipulate Babylon meshes from a React component. Never dispatch Zustand a
 
 The bus is a plain synchronous class - no `EventEmitter` dependency. All payload types in `GameEventMap` derive from `mmo-shared` via `Pick<>` - no inline shape duplication.
 
+Use the named `emitX()` and `onX()` helpers from `game-client/events` - never call `gameEventBus.emit()` or `gameEventBus.on()` directly outside of `emitters.ts` and `listeners.ts`.
+
 All event keys follow the `'domain:verb'` pattern:
 
 - `session:*` - WS session lifecycle
@@ -42,8 +80,11 @@ All event keys follow the `'domain:verb'` pattern:
 - `action:*` - server-driven action lifecycle
 - `world:*` - resource node state
 - `input:*` - normalised intent from all input devices
+- `bus:error` - fired internally when any listener throws
 
 Area population events are `area:player-joined` and `area:player-left` - **not** `player:joined` / `player:left`.
+
+When adding a new event: add it to `GameEventMap` in `types.ts`, add a matching entry to `GAME_EVENT` in `game-event.ts`, then add `emitX` to `emitters.ts` and `onX` to `listeners.ts` in the same PR.
 
 ---
 
@@ -53,8 +94,8 @@ Each system exports an `initXSystem()` function that subscribes to bus events an
 
 ```ts
 export function initMovementSystem(): () => void {
-  const unsub1 = gameEventBus.on('player:move-acked', ({ path, pace }) => { ... });
-  const unsub2 = gameEventBus.on('player:stopped', ({ id, x, z }) => { ... });
+  const unsub1 = onPlayerMoveAcked(({ path, pace }) => { ... });
+  const unsub2 = onPlayerStopped(({ id, x, z }) => { ... });
   return () => { unsub1(); unsub2(); };
 }
 ```
@@ -67,19 +108,19 @@ export function initMovementSystem(): () => void {
 
 Systems write to the store. WS message handlers never write to it directly. React reads from it - never writes from inside Babylon.
 
-| Action | Triggered by |
-|---|---|
-| `setMyId` | `systems/session.ts` on `session:opened` |
-| `setLocalPlayer` | `systems/session.ts` on `session:opened` |
-| `onPlayerData` | `systems/session.ts` on `session:player-data` - hydrates skills, inventory, equipment |
-| `addNearbyPlayer` | `systems/players.ts` on `area:player-joined` |
-| `removeNearbyPlayer` | `systems/players.ts` on `area:player-left` |
-| `onPlayerStopped` | `systems/movement.ts` on `player:stopped` - snaps position, clears `isMoving` for local and nearby |
-| `onPlayerMoveAck` | `systems/movement.ts` on `player:move-acked` - sets `isMoving: true`, does NOT update x/z |
-| `onPlayerArrived` | called by `PlayerManager` when mesh reaches destination tile |
-| `onTick` | `systems/movement.ts` on `player:tick` - patches `nearbyPlayers` and `localPlayer` from tick deltas |
-| `updateSettings` | UI - updates a single top-level key, calls `patchSettings` |
-| `onLogout` | `systems/session.ts` on `session:closed` - clears all session state |
+| Action               | Triggered by                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| `setMyId`            | `systems/session.ts` on `session:opened`                                                            |
+| `setLocalPlayer`     | `systems/session.ts` on `session:opened`                                                            |
+| `onPlayerData`       | `systems/session.ts` on `session:player-data` - hydrates skills, inventory, equipment               |
+| `addNearbyPlayer`    | `systems/players.ts` on `area:player-joined`                                                        |
+| `removeNearbyPlayer` | `systems/players.ts` on `area:player-left`                                                          |
+| `onPlayerStopped`    | `systems/movement.ts` on `player:stopped` - snaps position, clears `isMoving` for local and nearby  |
+| `onPlayerMoveAck`    | `systems/movement.ts` on `player:move-acked` - sets `isMoving: true`, does NOT update x/z           |
+| `onPlayerArrived`    | called by `PlayerManager` when mesh reaches destination tile                                        |
+| `onTick`             | `systems/movement.ts` on `player:tick` - patches `nearbyPlayers` and `localPlayer` from tick deltas |
+| `updateSettings`     | UI - updates a single top-level key, calls `patchSettings`                                          |
+| `onLogout`           | `systems/session.ts` on `session:closed` - clears all session state                                 |
 
 `localPlayer.x/z` is updated by `onTick` deltas and `onPlayerArrived` - **never** set to the destination immediately on ACK.
 
@@ -89,14 +130,14 @@ Systems write to the store. WS message handlers never write to it directly. Reac
 
 Files parse a single wire message type and emit one or more bus events. No store writes. No Babylon calls. No `ws.send()`.
 
-| File | Messages handled | Bus events emitted |
-|---|---|---|
-| `movement.ts` | `player_move_ack`, `player_stopped`, `tick` | `player:move-acked`, `player:stopped`, `player:tick` |
-| `area.ts` | `player_join`, `player_leave`, `world_state` | `area:player-joined`, `area:player-left`, `area:world-state` |
-| `resume.ts` | `session_opened` | `session:opened` |
-| `session.ts` | `session_closed`, `session_rejected`, `player_data` | `session:closed`, `session:rejected`, `session:player-data` |
-| `actions.ts` | `action_ongoing`, `action_finished` | `action:ongoing`, `action:finished` |
-| `world.ts` | `resource_depleted`, `resource_available` | `world:resource-depleted`, `world:resource-available` |
+| File          | Messages handled                                    | Bus events emitted                                           |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| `movement.ts` | `player_move_ack`, `player_stopped`, `tick`         | `player:move-acked`, `player:stopped`, `player:tick`         |
+| `area.ts`     | `player_join`, `player_leave`, `world_state`        | `area:player-joined`, `area:player-left`, `area:world-state` |
+| `resume.ts`   | `session_opened`                                    | `session:opened`                                             |
+| `session.ts`  | `session_closed`, `session_rejected`, `player_data` | `session:closed`, `session:rejected`, `session:player-data`  |
+| `actions.ts`  | `action_ongoing`, `action_finished`                 | `action:ongoing`, `action:finished`                          |
+| `world.ts`    | `resource_depleted`, `resource_available`           | `world:resource-depleted`, `world:resource-available`        |
 
 ---
 
@@ -104,11 +145,11 @@ Files parse a single wire message type and emit one or more bus events. No store
 
 Typed `sendX()` helpers only. No logic, no store reads, no bus emits. The `ws` instance is always passed in as a parameter - never imported as a global.
 
-| Function | Packet |
-|---|---|
+| Function                         | Packet                      |
+| -------------------------------- | --------------------------- |
 | `sendPlayerMove(ws, path, pace)` | `{ type: 204, path, pace }` |
-| `sendSessionResume(ws, token)` | `{ type: 100, token }` |
-| `sendSessionClose(ws)` | `{ type: 103 }` |
+| `sendSessionResume(ws, token)`   | `{ type: 100, token }`      |
+| `sendSessionClose(ws)`           | `{ type: 103 }`             |
 
 ---
 
@@ -116,12 +157,12 @@ Typed `sendX()` helpers only. No logic, no store reads, no bus emits. The `ws` i
 
 Systems register handlers at bootstrap. `PointerInput` never imports from game systems directly. The first handler to return `true` consumes the click.
 
-| Priority | System | Condition |
-|---|---|---|
-| 100 | Combat | Clicked mesh is an NPC |
-| 50 | Actions | Clicked mesh is a resource node |
-| 10 | Ground items | Clicked mesh is a ground item |
-| 0 | Movement | Default fallback |
+| Priority | System       | Condition                       |
+| -------- | ------------ | ------------------------------- |
+| 100      | Combat       | Clicked mesh is an NPC          |
+| 50       | Actions      | Clicked mesh is a resource node |
+| 10       | Ground items | Clicked mesh is a ground item   |
+| 0        | Movement     | Default fallback                |
 
 ---
 
@@ -174,9 +215,9 @@ In dev mode (`NEXT_PUBLIC_DEV_MODE === "true"`), `connectGame()` skips `POST /ap
 
 ---
 
-## `mmo-shared` as a local package
+## `kelvast-shared` as a local package
 
-Always rebuild `mmo-shared` after source changes (`npm run build`). If consuming repos behave unexpectedly after a type change, check whether `dist/` is stale.
+Always rebuild `kelvast-shared` after source changes (`npm run build`). If consuming repos behave unexpectedly after a type change, check whether `dist/` is stale.
 
 ---
 

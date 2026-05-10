@@ -1,5 +1,5 @@
-import { logger } from '../../utils/logger';
-import type { GameEventKey, GameEventMap, GameEventPayload } from './types';
+import { logger } from "../../utils/logger";
+import type { GameEventKey, GameEventMap, GameEventPayload } from "./types";
 
 type Listener<K extends GameEventKey> = (payload: GameEventPayload<K>) => void;
 type AnyListener = (payload: unknown) => void;
@@ -13,16 +13,19 @@ type AnyListener = (payload: unknown) => void;
  * Usage:
  *
  *   // Subscribe (always store the returned teardown fn):
- *   const off = gameEventBus.on('player:tick', ({ players }) => { ... });
+ *   const off = onPlayerTick(({ players }) => { ... });
  *
  *   // Emit:
- *   gameEventBus.emit('player:move-acked', { path, pace });
+ *   emitPlayerMoveAcked({ path, pace });
  *
  *   // Teardown (call in your system's dispose/cleanup):
  *   off();
  *
  *   // Full reset between sessions (destroyGame() only):
  *   gameEventBus.clear();
+ *
+ * Direct calls to gameEventBus.emit() and gameEventBus.on() are banned outside
+ * of emitters.ts and listeners.ts respectively. Use the named emitX / onX helpers.
  */
 class GameEventBus {
   private listeners = new Map<GameEventKey, Set<AnyListener>>();
@@ -44,6 +47,8 @@ class GameEventBus {
   }
 
   // Synchronous fan-out to all listeners. One listener throwing never silences the rest.
+  // On throw: logs the error and emits bus:error so systems can react to failures.
+  // bus:error itself never re-emits to prevent infinite recursion.
   emit<K extends GameEventKey>(event: K, payload: GameEventPayload<K>): void {
     const set = this.listeners.get(event);
     if (!set || set.size === 0) {
@@ -55,6 +60,9 @@ class GameEventBus {
         listener(payload);
       } catch (err) {
         logger.error(`[bus] listener threw on "${event}":`, err);
+        if (event !== "bus:error") {
+          this.emit("bus:error", { event, err });
+        }
       }
     }
   }

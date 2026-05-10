@@ -8,15 +8,15 @@ For cross-repo architecture, protocol, and system documentation see [github.com/
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js (App Router) |
-| 3D Engine | Babylon.js 9 |
-| State | Zustand |
-| Real-time | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
-| HTTP | Axios wrapper (`http.ts`) |
-| Shared types/logic | mmo-shared |
-| Language | TypeScript - strict throughout |
+| Layer              | Technology                                              |
+| ------------------ | ------------------------------------------------------- |
+| Framework          | Next.js (App Router)                                    |
+| 3D Engine          | Babylon.js 9                                            |
+| State              | Zustand                                                 |
+| Real-time          | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
+| HTTP               | Axios wrapper (`http.ts`)                               |
+| Shared types/logic | mmo-shared                                              |
+| Language           | TypeScript - strict throughout                          |
 
 ---
 
@@ -29,33 +29,33 @@ npm run dev
 
 Copy `.env.example` to `.env.local`:
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_MMO_SERVER_URL` | WebSocket server - e.g. `ws://localhost:8080` |
-| `NEXT_PUBLIC_DEV_MODE` | Set `true` to enable verbose logging and dev auto-login |
-| `NEXT_PUBLIC_DEV_EMAIL` | Dev auto-login email |
-| `NEXT_PUBLIC_DEV_PASSWORD` | Dev auto-login password |
+| Variable                     | Description                                             |
+| ---------------------------- | ------------------------------------------------------- |
+| `NEXT_PUBLIC_MMO_SERVER_URL` | WebSocket server - e.g. `ws://localhost:8080`           |
+| `NEXT_PUBLIC_DEV_MODE`       | Set `true` to enable verbose logging and dev auto-login |
+| `NEXT_PUBLIC_DEV_EMAIL`      | Dev auto-login email                                    |
+| `NEXT_PUBLIC_DEV_PASSWORD`   | Dev auto-login password                                 |
 
 ---
 
 ## Scripts
 
-| Command | Effect |
-|---|---|
-| `npm run dev` | Development server |
-| `npm run build` | Production build |
-| `npm run start` | Production server |
-| `npm run format` | Prettier format |
+| Command          | Effect             |
+| ---------------- | ------------------ |
+| `npm run dev`    | Development server |
+| `npm run build`  | Production build   |
+| `npm run start`  | Production server  |
+| `npm run format` | Prettier format    |
 
 ### Chunk Seam Scripts
 
-| Command | Effect |
-|---|---|
-| `npm run seams` | Report border mismatches only - no writes |
-| `npm run seams:fix` | Snap mismatched border tiles |
-| `npm run seams:ease` | Smooth interior slope gradients |
-| `npm run seams:fix:ease` | Fix seams then ease slopes in one pass |
-| `npm run seams:format` | Fix + ease then run Prettier |
+| Command                  | Effect                                    |
+| ------------------------ | ----------------------------------------- |
+| `npm run seams`          | Report border mismatches only - no writes |
+| `npm run seams:fix`      | Snap mismatched border tiles              |
+| `npm run seams:ease`     | Smooth interior slope gradients           |
+| `npm run seams:fix:ease` | Fix seams then ease slopes in one pass    |
+| `npm run seams:format`   | Fix + ease then run Prettier              |
 
 ---
 
@@ -120,14 +120,14 @@ Persists `UserSettings` to `localStorage` under the key `mmo-settings`.
 
 All routes return 403 in production.
 
-| Route | Method | Description |
-|---|---|---|
-| `/api/builder/regions` | GET | Lists all region folders and their chunk coords |
-| `/api/builder/chunks` | GET | Reads and parses every chunk file |
-| `/api/builder/chunk` | GET | Reads a single chunk file by `regionId`, `chunkX`, `chunkZ` |
-| `/api/builder/chunk` | POST | Writes a chunk file, notifies SSE watchers |
-| `/api/builder/region` | POST | Creates a new region folder |
-| `/api/builder/watch` | GET | SSE stream - pushes `chunk_changed` events on save |
+| Route                  | Method | Description                                                 |
+| ---------------------- | ------ | ----------------------------------------------------------- |
+| `/api/builder/regions` | GET    | Lists all region folders and their chunk coords             |
+| `/api/builder/chunks`  | GET    | Reads and parses every chunk file                           |
+| `/api/builder/chunk`   | GET    | Reads a single chunk file by `regionId`, `chunkX`, `chunkZ` |
+| `/api/builder/chunk`   | POST   | Writes a chunk file, notifies SSE watchers                  |
+| `/api/builder/region`  | POST   | Creates a new region folder                                 |
+| `/api/builder/watch`   | GET    | SSE stream - pushes `chunk_changed` events on save          |
 
 ### Chunk hot-reload
 
@@ -143,13 +143,13 @@ All routes return 403 in production.
 
 All logging goes through `src/utils/logger.ts`. Raw `console.log` is banned.
 
-| Level | When |
-|---|---|
-| `logger.log` | General - dev only |
-| `logger.warn` | Warnings - dev only |
-| `logger.error` | Errors - always on |
-| `logger.ws` | WebSocket events - dev only |
-| `logger.game` | Babylon/game events - dev only |
+| Level          | When                           |
+| -------------- | ------------------------------ |
+| `logger.log`   | General - dev only             |
+| `logger.warn`  | Warnings - dev only            |
+| `logger.error` | Errors - always on             |
+| `logger.ws`    | WebSocket events - dev only    |
+| `logger.game`  | Babylon/game events - dev only |
 
 ---
 

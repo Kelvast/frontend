@@ -3,7 +3,7 @@ import { FC, memo, useCallback, useState } from "react";
 import GameCanvas from "../3-organisms/GameCanvas";
 import GameLoader from "../2-molecules/GameLoader";
 import { LOADER } from "../../game-client/constants";
-import type { LoadEvent, LoadStage } from "../../types/mmo/loading";
+import type { LoadEvent, LoadStage } from "../../types/loading";
 
 /*
  * GamePage owns load state and wires it between GameCanvas and GameLoader.

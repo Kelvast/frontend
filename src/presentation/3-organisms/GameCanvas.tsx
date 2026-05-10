@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { startGame, destroyGame } from "../../game-client";
-import type { OnLoadEvent } from "../../types/mmo/loading";
+import type { OnLoadEvent } from "../../types/loading";
 
 interface Props {
   onLoadEvent: OnLoadEvent;

@@ -1,7 +1,7 @@
 import { Region, ChunkData, TileData } from "kelvast-shared";
 import { logger } from "../../utils/logger";
 import { GameWorld } from "./index";
-import type { OnLoadEvent } from "../../types/mmo/loading";
+import type { OnLoadEvent } from "../../types/loading";
 
 async function fetchChunkTiles(
   regionId: string,

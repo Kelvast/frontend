@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import type { GameStoreState } from "../types";
-import type { UserSettings } from "../types/mmo/settings";
+import type { GameStoreState, UserSettings } from "../types";
 import { loadSettings, patchSettings } from "./settings";
 import { logger } from "./logger";
 import { defaultSkills, defaultInventory, defaultEquipment } from "kelvast-shared";
