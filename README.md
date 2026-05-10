@@ -15,7 +15,7 @@ For cross-repo architecture, protocol, and system documentation see [github.com/
 | State              | Zustand                                                 |
 | Real-time          | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
 | HTTP               | Axios wrapper (`http.ts`)                               |
-| Shared types/logic | kelvast-shared                                              |
+| Shared types/logic | kelvast-shared                                          |
 | Language           | TypeScript - strict throughout                          |
 
 ---
