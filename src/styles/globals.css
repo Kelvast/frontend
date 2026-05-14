@@ -1,54 +1,88 @@
 @import "tailwindcss";
 
-:root {
-  --font-heading: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+@theme {
+  /* ── Fonts ────────────────────────────────── */
+   --font-heading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --color-bg: #0e0f11;
-  --color-surface: #161820;
-  --color-surface-2: #1e2028;
-  --color-border: rgba(255, 255, 255, 0.08);
+  /* ── Surfaces ─────────────────────────────── */
+  --color-bg: #0a0b0d; /* deepest — page background */
+  --color-surface: #111318; /* cards, panels */
+  --color-surface-2: #181b22; /* elevated panels, modals */
+  --color-surface-3: #1f2230; /* tooltips, popovers — topmost */
+  --color-surface-inset: #08090b; /* inset wells, input backgrounds */
 
-  --color-text: #e8e9ec;
-  --color-text-muted: #8b8d97;
-  --color-text-faint: #4a4c57;
+  /* ── Borders ──────────────────────────────── */
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-subtle: rgba(255, 255, 255, 0.04);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
 
-  --color-accent: #f0a500;
-  --color-accent-hover: #ffb822;
+  /* ── Foreground (text) ────────────────────── */
+  --color-fg: #e4e6ed;
+  --color-fg-muted: #888b98;
+  --color-fg-faint: #42444f;
+  --color-fg-inverse: #0a0b0d;
 
-  --color-danger: #e5484d;
-  --color-danger-hover: #f2666b;
+  /* ── Gold — primary accent ────────────────── */
+  /* Rich warm gold. CTAs, active states, highlights, the logo on dark. */
+  --color-accent: #d4920a;
+  --color-accent-bright: #f0a820; /* hover, glow source */
+  --color-accent-muted: #7a5010; /* disabled, subtle tint */
+  --color-accent-surface: rgba(212, 146, 10, 0.08); /* tinted panel bg */
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-}
+  /* ── Steel Blue — world accent ────────────── */
+  /* Magical/world elements. Quest markers, skill icons, world map tints.
+     Complements gold without competing — cold to gold's warm. */
+  --color-world: #4a7fa5;
+  --color-world-bright: #6b9fc4;
+  --color-world-surface: rgba(74, 127, 165, 0.08);
 
-body,
-input,
-textarea,
-button,
-select {
-  font-family: var(--font-body);
-  color: var(--color-text);
-  background-color: var(--color-bg);
-}
+  /* ── Semantic ─────────────────────────────── */
+  --color-danger: #c94040;
+  --color-danger-hover: #e05555;
+  --color-danger-surface: rgba(201, 64, 64, 0.08);
 
-h1,
-h2,
-h3,
-h4,
-.font-heading {
-  font-family: var(--font-heading);
+  --color-success: #3a8c4e;
+  --color-success-hover: #4fa864;
+  --color-success-surface: rgba(58, 140, 78, 0.08);
+
+  /* ── Radius ───────────────────────────────── */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 }
 
 @layer base {
+  body,
+  input,
+  textarea,
+  button,
+  select {
+    font-family: var(--font-body);
+    color: var(--color-fg);
+    background-color: var(--color-bg);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-heading {
+    font-family: var(--font-heading);
+  }
+
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
     border-color: var(--color-border);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-bounce {
+      animation: none;
+    }
   }
 }

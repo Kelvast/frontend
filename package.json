@@ -12,25 +12,14 @@
     "build": "next build --webpack",
     "start": "next start",
     "format": "prettier --write .",
-    "test": "tsc --noEmit",
-    "seams": "npx tsx scripts/chunk-seams/index.ts",
-    "seams:fix": "npx tsx scripts/chunk-seams/index.ts --fix",
-    "seams:ease": "npx tsx scripts/chunk-seams/index.ts --ease",
-    "seams:fix:ease": "npx tsx scripts/chunk-seams/index.ts --fix --ease",
-    "seams:format": "npm run seams:fix:ease && npm run format"
+    "test": "tsc --noEmit"
   },
   "dependencies": {
-    "@babylonjs/core": "9.0.0",
-    "@babylonjs/gui": "9.0.0",
-    "@babylonjs/inspector": "9.0.0",
-    "@babylonjs/materials": "9.0.0",
     "axios": "1.13.2",
     "kelvast-shared": "file:../kelvast-shared",
     "next": "16.1.4",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "ws": "^8.19.0",
-    "zustand": "^5.0.12"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.2.1",

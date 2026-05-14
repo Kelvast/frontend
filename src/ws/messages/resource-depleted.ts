@@ -1,7 +1,0 @@
-import { MSG, type ResourceDepletedMessage } from "kelvast-shared";
-import { registerMessageHandler } from "../registry";
-
-// future: Phase 3 - mark resource node unclickable in scene
-function handleResourceDepleted(_msg: ResourceDepletedMessage): void {}
-
-registerMessageHandler<ResourceDepletedMessage>(MSG.RESOURCE_DEPLETED, handleResourceDepleted);

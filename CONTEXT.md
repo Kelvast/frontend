@@ -1,4 +1,4 @@
-# CONTEXT - client
+# CONTEXT - frontend
 
 > AI assistant context only. Human docs -> README.md. Task tracking -> GitHub Issues.
 >
