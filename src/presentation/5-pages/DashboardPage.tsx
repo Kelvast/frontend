@@ -3,15 +3,12 @@ import { FC, memo } from "react";
 import { useRouter } from "next/navigation";
 import BaseLayout from "../4-layouts/BaseLayout";
 import Button from "../1-atoms/Button";
-import { useGameStore } from "../../utils/game-store";
+import { useAuth } from "../../context/auth-context";
 import { ROUTE } from "../../config";
 
-interface Props {}
-
-const DashboardPage: FC<Props> = () => {
+const DashboardPage: FC = () => {
   const router = useRouter();
-  const identity = useGameStore((s) => s.identity);
-  const logout = useGameStore((s) => s.onLogout);
+  const { identity, logout } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -22,7 +19,9 @@ const DashboardPage: FC<Props> = () => {
     <BaseLayout centered>
       <div className="text-center">
         {identity && (
-          <p className="text-[var(--color-text-muted)] mb-6">Welcome back, {identity.playerName}</p>
+          <p className="text-[var(--color-text-muted)] mb-6">
+            Welcome back, {identity.playerName}
+          </p>
         )}
         <div className="flex flex-col items-center gap-3">
           <Button size="lg" onClick={() => router.push(ROUTE.GAME)}>
