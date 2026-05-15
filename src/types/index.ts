@@ -54,4 +54,6 @@ export interface HttpErrorResponse {
  * Usage:
  *   export type AuthResponse = HttpResponse<AuthSuccessResponse, AuthErrorResponse>;
  */
-export type HttpResponse<TSuccess, TError extends HttpErrorResponse = HttpErrorResponse> = ({ ok: true } & TSuccess) | ({ ok: false } & TError);
+export type HttpResponse<TSuccess, TError extends HttpErrorResponse = HttpErrorResponse> =
+  | ({ ok: true } & TSuccess)
+  | ({ ok: false } & TError);

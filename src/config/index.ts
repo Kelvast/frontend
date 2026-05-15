@@ -12,7 +12,6 @@ export const NEXT_PUBLIC_MMO_SERVER_URL: string = process.env.NEXT_PUBLIC_MMO_SE
 /** Base URL for the upstream Lambda API. Server-only - never referenced in client code. */
 export const NEXT_PUBLIC_API_URL: string = process.env.NEXT_PUBLIC_API_URL!;
 
-
 export const ROUTE = {
   HOME: "/",
   LOGIN: "/login",
