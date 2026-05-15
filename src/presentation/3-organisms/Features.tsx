@@ -42,15 +42,11 @@ const LandingFeatures: FC = () => {
               <h3 className="font-heading font-bold text-xl sm:text-2xl md:text-3xl text-[var(--color-fg)] mb-4 leading-tight">
                 {title}
               </h3>
-              <p className="text-[var(--color-fg-muted)] text-base leading-relaxed">
-                {body}
-              </p>
+              <p className="text-[var(--color-fg-muted)] text-base leading-relaxed">{body}</p>
             </div>
 
             <div className="rounded-[var(--radius-xl)] bg-[var(--color-surface)] border border-[var(--color-border)] aspect-video flex items-center justify-center">
-              <span className="text-[var(--color-fg-faint)] text-sm">
-                Screenshot coming soon
-              </span>
+              <span className="text-[var(--color-fg-faint)] text-sm">Screenshot coming soon</span>
             </div>
           </div>
         ))}

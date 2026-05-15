@@ -32,9 +32,7 @@ const BaseLayout: FC<Props> = ({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className={`w-full ${WIDTH_CLASSES[width]} mx-auto px-4`}>
-        {children}
-      </div>
+      <div className={`w-full ${WIDTH_CLASSES[width]} mx-auto px-4`}>{children}</div>
     </div>
   );
 };

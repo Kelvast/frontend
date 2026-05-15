@@ -1,9 +1,7 @@
 "use client";
 import { FC, memo } from "react";
 import KelvastWordmark from "../1-atoms/KelvastWordmark";
-import useScrolledPast, {
-  HERO_SCROLL_THRESHOLD,
-} from "../../utils/useScrolledPast";
+import useScrolledPast, { HERO_SCROLL_THRESHOLD } from "../../utils/useScrolledPast";
 
 /*
  * Hidden by default. Becomes visible once the user scrolls past the hero.

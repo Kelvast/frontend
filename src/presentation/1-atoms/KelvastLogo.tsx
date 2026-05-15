@@ -37,9 +37,7 @@ const KelvastLogo = ({
   return (
     <div
       className={`flex items-center ${
-        variant === "stacked"
-          ? "flex-col gap-4 sm:gap-6"
-          : "flex-row gap-4 sm:gap-6"
+        variant === "stacked" ? "flex-col gap-4 sm:gap-6" : "flex-row gap-4 sm:gap-6"
       } ${className}`}
     >
       <div className="sm:hidden">

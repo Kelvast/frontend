@@ -43,9 +43,7 @@ const ErrorPage: NextPage<Props> = ({ statusCode = 404 }) => {
 
         <div className="space-y-2">
           <h2 className="font-heading text-2xl text-fg">{heading}</h2>
-          <p className="text-fg-muted text-base leading-relaxed max-w-sm">
-            {body}
-          </p>
+          <p className="text-fg-muted text-base leading-relaxed max-w-sm">{body}</p>
         </div>
 
         <a

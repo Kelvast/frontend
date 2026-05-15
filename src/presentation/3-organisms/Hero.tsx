@@ -1,9 +1,7 @@
 "use client";
 import { FC, memo, useEffect, useState } from "react";
 import KelvastLogo from "../1-atoms/KelvastLogo";
-import useScrolledPast, {
-  HERO_SCROLL_THRESHOLD,
-} from "../../utils/useScrolledPast";
+import useScrolledPast, { HERO_SCROLL_THRESHOLD } from "../../utils/useScrolledPast";
 
 const LandingHero: FC = () => {
   const [bright, setBright] = useState(false);
@@ -26,12 +24,7 @@ const LandingHero: FC = () => {
       />
 
       <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl mx-auto">
-        <KelvastLogo
-          variant="stacked"
-          mobileSize="xl"
-          size="xxl"
-          fill="var(--color-fg)"
-        />
+        <KelvastLogo variant="stacked" mobileSize="xl" size="xxl" fill="var(--color-fg)" />
 
         <p className="text-[var(--color-fg-muted)] text-sm sm:text-base md:text-xl leading-relaxed max-w-md">
           A browser-based 3D MMORPG. No installs.
@@ -48,13 +41,7 @@ const LandingHero: FC = () => {
           .filter(Boolean)
           .join(" ")}
       >
-        <svg
-          className="animate-bounce"
-          width="20"
-          height="28"
-          viewBox="0 0 14 20"
-          fill="none"
-        >
+        <svg className="animate-bounce" width="20" height="28" viewBox="0 0 14 20" fill="none">
           <circle cx="7" cy="3" r="1" fill="currentColor" opacity="0.7" />
           <circle cx="7" cy="7" r="1" fill="currentColor" opacity="0.7" />
           <path d="M7 16l-3-4h6l-3 4z" fill="currentColor" opacity="0.7" />
