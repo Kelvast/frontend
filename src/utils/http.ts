@@ -1,83 +1,57 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import { API_URL } from "../config";
-import { logger } from "./logger";
+import { NEXT_PUBLIC_API_URL } from "../config";
 
-export interface HttpError extends Error {
-  status?: number;
-}
 
-/*
- * Extracts a normalised error from any Axios failure and re-throws it as
- * an HttpError with a `status` property. Typed as `never` so TypeScript
- * knows the call site always throws - no return value is possible.
+/**
+ * Represents an HTTP error returned from a failed request.
  */
-function handleAxiosError(error: unknown): never {
-  let message = "HTTP error occurred";
-  let status: number | undefined;
+export class HttpError extends Error {
+  public readonly status: number | undefined;
 
-  if (axios.isAxiosError(error)) {
-    status = error.response?.status;
-    message = (error.response?.data as { message?: string })?.message ?? error.message;
-    logger.error(`HTTP ${status ?? "?"} -`, message);
-  } else if (error instanceof Error) {
-    message = error.message;
-    logger.error("HTTP error -", message);
+  constructor(status: number | undefined, message: string) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
   }
-
-  throw Object.assign(new Error(message), { status }) as HttpError;
 }
 
-/*
- * Server-side Axios client.
+/**
+ * Makes an HTTP request using the native fetch API.
  *
- * baseURL is API_URL (process.env.API_URL) - a server-only env var that is
- * never prefixed with NEXT_PUBLIC_ and is therefore never bundled into the
- * browser. Only import `request` from route handlers and other server-only
- * modules. Importing this in browser code will result in API_URL being
- * undefined and all requests failing.
- */
-export const httpClient: AxiosInstance = axios.create({
-  baseURL: API_URL,
-  timeout: 12000,
-});
-
-export async function request<T>(config: AxiosRequestConfig): Promise<T> {
-  const headers = {
-    ...(config.data !== undefined ? { "Content-Type": "application/json" } : {}),
-    ...config.headers,
-  };
-
-  logger.http("→", config.method?.toUpperCase(), config.url);
-  try {
-    const response = await httpClient.request<T>({ ...config, headers });
-    logger.http("✓", config.method?.toUpperCase(), config.url, response.status);
-    return response.data;
-  } catch (error) {
-    handleAxiosError(error);
-  }
-}
-
-/*
- * Browser-side Axios client.
+ * Automatically prepends the base API URL from environment config,
+ * sets JSON content headers, and throws an {@link HttpError} for
+ * non-2xx responses with the status code and error message from the body.
  *
- * No baseURL - paths resolve relative to the current page origin, so
- * `/api/auth/login` always hits the Next.js route handler regardless of
- * environment. Use `browserRequest` from client-side utils that need to
- * call Next.js API routes. Never use this in route handlers or any
- * server-only module.
+ * Requests time out after 5 seconds via {@link AbortSignal.timeout}.
+ *
+ * @param path - The API path to append to the base URL (e.g. `/users/1`).
+ * @param options - Standard {@link RequestInit} fetch options (method, body, headers, etc).
+ * @returns The parsed JSON response body typed as `T`.
+ * @throws {@link HttpError} if the response status is not ok, or if the network fails.
+ * @throws {@link DOMException} with name `"TimeoutError"` if the request exceeds 5 seconds.
+ *
+ * @example
+ * const user = await request<User>("/users/1");
+ * const created = await request<User>("/users", { method: "POST", body: JSON.stringify(data) });
  */
-export const browserClient: AxiosInstance = axios.create({
-  timeout: 12000,
-  headers: { "Content-Type": "application/json" },
-});
+export async function request<T = unknown>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
+  const url = `${NEXT_PUBLIC_API_URL}${path}`;
 
-export async function browserRequest<T>(config: AxiosRequestConfig): Promise<T> {
-  logger.http("→", config.method?.toUpperCase(), config.url);
-  try {
-    const response = await browserClient.request<T>(config);
-    logger.http("✓", config.method?.toUpperCase(), config.url, response.status);
-    return response.data;
-  } catch (error) {
-    handleAxiosError(error);
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(5000),
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new HttpError(response.status, body?.message ?? response.statusText);
   }
+
+  return response.json() as Promise<T>;
 }

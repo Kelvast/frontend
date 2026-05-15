@@ -2,10 +2,6 @@ import { browserRequest } from "./http";
 import { generateClientToken } from "./client-token";
 import { logger } from "./logger";
 
-type AuthResponse =
-  | { ok: true; uuid: string; playerName: string }
-  | { ok: false; message: string; field?: string };
-
 /*
  * Sends an auth request to a Next.js route handler.
  * Injects a fresh clientToken into every request - the route handler

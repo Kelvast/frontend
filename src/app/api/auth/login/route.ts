@@ -4,19 +4,7 @@ import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { validateClientToken } from "../../../../utils/client-token";
 import { COOKIE } from "../../../../config";
-
-type LoginRequest = {
-  email: string;
-  password: string;
-  clientToken: string;
-};
-
-type AuthSuccessResponse = {
-  authToken: string;
-  authExpiresAt: number;
-  uuid: string;
-  playerName: string;
-};
+import type { LoginRequest, AuthSuccessResponse } from "../../../../types";
 
 export async function POST(req: NextRequest) {
   let body: LoginRequest;

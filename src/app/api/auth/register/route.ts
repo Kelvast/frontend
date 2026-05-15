@@ -1,23 +1,9 @@
 import { NextRequest } from "next/server";
-import { cookies } from "next/headers";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { validateClientToken } from "../../../../utils/client-token";
-import { COOKIE } from "../../../../config";
-
-type RegisterRequest = {
-  playerName: string;
-  email: string;
-  password: string;
-  clientToken: string;
-};
-
-type AuthSuccessResponse = {
-  authToken: string;
-  authExpiresAt: number;
-  uuid: string;
-  playerName: string;
-};
+import type { RegisterRequest, AuthSuccessResponse } from "../../../../types";
+import { setCookie } from "../../../../utils/cookies";
 
 export async function POST(req: NextRequest) {
   let body: RegisterRequest;
@@ -38,14 +24,7 @@ export async function POST(req: NextRequest) {
       data: { playerName: body.playerName, email: body.email, password: body.password },
     });
 
-    const cookieStore = await cookies();
-    cookieStore.set(COOKIE.AUTH_TOKEN, data.authToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: Math.floor((data.authExpiresAt - Date.now()) / 1000),
-    });
+    setCookie(data);
 
     return sendOk({ ok: true, uuid: data.uuid, playerName: data.playerName });
   } catch (err) {
