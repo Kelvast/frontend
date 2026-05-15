@@ -1,4 +1,4 @@
-# kelvast-client
+# kelvast-frontend
 
 Browser-based 3D MMO client. Built with Next.js, Babylon.js, and Zustand.
 
