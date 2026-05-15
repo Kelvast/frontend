@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FC } from "react";
 import { Inter } from "next/font/google";
 import "../styles/globals.css";
+import { AuthProvider } from "../context/auth-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -41,7 +42,9 @@ interface Props {
 const RootLayout: FC<Props> = ({ children }) => {
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 };
