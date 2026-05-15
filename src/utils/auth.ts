@@ -1,6 +1,9 @@
-import { browserRequest } from "./http";
+import { request } from "./http";
 import { generateClientToken } from "./client-token";
 import { logger } from "./logger";
+import type { HttpResponse, AuthSuccessResponse } from "../types";
+
+type AuthResponse = HttpResponse<Pick<AuthSuccessResponse, "uuid" | "playerName">>;
 
 /*
  * Sends an auth request to a Next.js route handler.
@@ -14,16 +17,15 @@ export async function authRequest(
   const clientToken = await generateClientToken();
   logger.auth("→", path, { ...body, password: body.password ? "[redacted]" : undefined });
 
-  const res = await browserRequest<AuthResponse>({
+  const res = await request<AuthResponse>(path, {
     method: "POST",
-    url: path,
-    data: { ...body, clientToken },
+    body: JSON.stringify({ ...body, clientToken }),
   });
 
   if (res.ok) {
     logger.auth("✓", path, { uuid: res.uuid, name: res.playerName });
   } else {
-    logger.auth("✗", path, { message: res.message, field: res.field });
+    logger.auth("✗", path, { message: res.message });
   }
 
   return res;
