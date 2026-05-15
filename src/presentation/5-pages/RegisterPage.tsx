@@ -29,7 +29,10 @@ const RegisterPage: FC = () => {
           <RegisterForm onSubmit={handleRegister} />
           <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
             Already have an account?{" "}
-            <Link href={ROUTE.LOGIN} className="text-[var(--color-accent)] hover:underline font-medium">
+            <Link
+              href={ROUTE.LOGIN}
+              className="text-[var(--color-accent)] hover:underline font-medium"
+            >
               Sign in
             </Link>
           </p>

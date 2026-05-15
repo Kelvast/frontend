@@ -27,7 +27,10 @@ const LoginPage: FC = () => {
           <LoginForm onSubmit={handleAuth} />
           <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
             No account?{" "}
-            <Link href={ROUTE.REGISTER} className="text-[var(--color-accent)] hover:underline font-medium">
+            <Link
+              href={ROUTE.REGISTER}
+              className="text-[var(--color-accent)] hover:underline font-medium"
+            >
               Register
             </Link>
           </p>

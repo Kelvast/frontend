@@ -19,9 +19,7 @@ const DashboardPage: FC = () => {
     <BaseLayout centered>
       <div className="text-center">
         {identity && (
-          <p className="text-[var(--color-text-muted)] mb-6">
-            Welcome back, {identity.playerName}
-          </p>
+          <p className="text-[var(--color-text-muted)] mb-6">Welcome back, {identity.playerName}</p>
         )}
         <div className="flex flex-col items-center gap-3">
           <Button size="lg" onClick={() => router.push(ROUTE.GAME)}>
