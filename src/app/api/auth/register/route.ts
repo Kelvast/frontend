@@ -1,10 +1,23 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import type { RegisterRequest, AuthSuccessResponse } from "kelvast-shared";
 import { request, HttpError } from "../../../../utils/http";
 import { sendOk, sendError } from "../../../../utils/response";
 import { validateClientToken } from "../../../../utils/client-token";
 import { COOKIE } from "../../../../config";
+
+type RegisterRequest = {
+  playerName: string;
+  email: string;
+  password: string;
+  clientToken: string;
+};
+
+type AuthSuccessResponse = {
+  authToken: string;
+  authExpiresAt: number;
+  uuid: string;
+  playerName: string;
+};
 
 export async function POST(req: NextRequest) {
   let body: RegisterRequest;
