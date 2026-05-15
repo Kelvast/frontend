@@ -10,16 +10,7 @@
 export const NEXT_PUBLIC_MMO_SERVER_URL: string = process.env.NEXT_PUBLIC_MMO_SERVER_URL!;
 
 /** Base URL for the upstream Lambda API. Server-only - never referenced in client code. */
-export const API_URL: string = process.env.API_URL!;
-
-/** Enables dev mode when "true" - auto-login and auto-register on auth fail. */
-export const NEXT_PUBLIC_DEV_MODE: boolean = process.env.NEXT_PUBLIC_DEV_MODE === "true";
-
-/** Dev account email. Only used when NEXT_PUBLIC_DEV_MODE is true. */
-export const NEXT_PUBLIC_DEV_EMAIL: string = process.env.NEXT_PUBLIC_DEV_EMAIL!;
-
-/** Dev account password. Only used when NEXT_PUBLIC_DEV_MODE is true. */
-export const NEXT_PUBLIC_DEV_PASSWORD: string = process.env.NEXT_PUBLIC_DEV_PASSWORD!;
+export const NEXT_PUBLIC_API_URL: string = process.env.NEXT_PUBLIC_API_URL!;
 
 export const ROUTE = {
   HOME: "/",
@@ -30,5 +21,5 @@ export const ROUTE = {
 } as const;
 
 export const COOKIE = {
-  AUTH_TOKEN: "mmo_auth_token",
+  AUTH_TOKEN: "kelvast_auth_token",
 } as const;

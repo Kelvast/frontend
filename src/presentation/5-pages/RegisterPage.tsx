@@ -4,20 +4,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import RegisterForm from "../3-organisms/RegisterForm";
 import BaseLayout from "../4-layouts/BaseLayout";
-import { useGameStore } from "../../utils/game-store";
+import { useAuth } from "../../context/auth-context";
 import { ROUTE } from "../../config";
 import { authRequest } from "../../utils/auth";
 
-interface Props {}
-
-const RegisterPage: FC<Props> = () => {
+const RegisterPage: FC = () => {
   const router = useRouter();
-  const storeIdentity = useGameStore((s) => s.storeIdentity);
+  const { setIdentity } = useAuth();
 
   const handleRegister = async (playerName: string, email: string, password: string) => {
     const res = await authRequest("/api/auth/register", { playerName, email, password });
     if (!res.ok) throw new Error(res.message);
-    storeIdentity({ uuid: res.uuid, playerName: res.playerName });
+    setIdentity({ uuid: res.uuid, playerName: res.playerName });
     router.push(ROUTE.DASHBOARD);
   };
 

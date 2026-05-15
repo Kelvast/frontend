@@ -25,7 +25,7 @@ const BaseLayout: FC<Props> = ({
   return (
     <div
       className={[
-        "min-h-screen w-full",
+        "min-h-screen w-full bg-bg text-fg overflow-x-hidden",
         centered ? "flex flex-col items-center justify-center" : "",
         className,
       ]

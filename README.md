@@ -14,7 +14,6 @@ For cross-repo architecture, protocol, and system documentation see [github.com/
 | 3D Engine          | Babylon.js 9                                            |
 | State              | Zustand                                                 |
 | Real-time          | WebSocket (`ws-client.ts`) + SSE (`/api/builder/watch`) |
-| HTTP               | Axios wrapper (`http.ts`)                               |
 | Shared types/logic | kelvast-shared                                          |
 | Language           | TypeScript - strict throughout                          |
 
