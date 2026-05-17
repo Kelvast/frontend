@@ -22,9 +22,9 @@ export type SessionId = number;
  * y is discrete - players snap between floors with no partial values.
  */
 export interface Coords {
-	x: number;
-	y: number;
-	z: number;
+  x: number;
+  y: number;
+  z: number;
 }
 
 /**
@@ -32,9 +32,9 @@ export interface Coords {
  * Fields: dest (target tile), path (ordered waypoints, max MAX_PATH_LENGTH), pace (ms/tile).
  */
 export interface MoveMessage {
-	dest: Coords;
-	path: Coords[];
-	pace: number;
+  dest: Coords;
+  path: Coords[];
+  pace: number;
 }
 
 /**
@@ -43,10 +43,10 @@ export interface MoveMessage {
  * Fields: uuid (Cognito sub / DynamoDB pk), player_name, coords, facing.
  */
 export interface Player {
-	uuid: string;
-	player_name: string;
-	coords: Coords;
-	facing: Direction;
+  uuid: string;
+  player_name: string;
+  coords: Coords;
+  facing: Direction;
 }
 
 /**
@@ -54,9 +54,9 @@ export interface Player {
  * Fields: msg_type, id (session ID of joining player), player (full record for immediate render).
  */
 export interface PlayerJoinMessage {
-	type: Opcode;
-	id: SessionId;
-	player: Player;
+  type: Opcode;
+  id: SessionId;
+  player: Player;
 }
 
 /**
@@ -64,8 +64,8 @@ export interface PlayerJoinMessage {
  * Fields: msg_type, id (session ID of the player who left).
  */
 export interface PlayerLeaveMessage {
-	type: Opcode;
-	id: SessionId;
+  type: Opcode;
+  id: SessionId;
 }
 
 /**
@@ -75,12 +75,12 @@ export interface PlayerLeaveMessage {
  * path (confirmed waypoints, empty on reject), facing.
  */
 export interface PlayerMoveResultMessage {
-	type: Opcode;
-	accepted: boolean;
-	coords: Coords;
-	pace: number;
-	path: Coords[];
-	facing: Direction;
+  type: Opcode;
+  accepted: boolean;
+  coords: Coords;
+  pace: number;
+  path: Coords[];
+  facing: Direction;
 }
 
 /**
@@ -89,10 +89,10 @@ export interface PlayerMoveResultMessage {
  * Fields: msg_type, id (ephemeral session ID), server_id, player (full initial state).
  */
 export interface SessionAcceptedMessage {
-	type: Opcode;
-	id: SessionId;
-	server_id: number;
-	player: Player;
+  type: Opcode;
+  id: SessionId;
+  server_id: number;
+  player: Player;
 }
 
 /**
@@ -101,8 +101,8 @@ export interface SessionAcceptedMessage {
  * Token format: `<uuid>.<expiry_ms>.<hex_hmac_sha256_of_"uuid.expiry_ms">`
  */
 export interface SessionConnectMessage {
-	token: string;
-	server_id: number;
+  token: string;
+  server_id: number;
 }
 
 /**
@@ -110,12 +110,11 @@ export interface SessionConnectMessage {
  * Fields: msg_type, message (human-readable reason).
  */
 export interface SessionRejectedMessage {
-	type: Opcode;
-	message: string;
+  type: Opcode;
+  message: string;
 }
 
-
-/** 
+/**
  * Opcode - appended by gen (typeshare cannot emit numeric enums)
  * Source of truth: server/src/msg/opcodes.rs
  */
@@ -129,4 +128,4 @@ export const Opcode = {
   PlayerMoveResult: 203,
 } as const;
 
-export type Opcode = typeof Opcode[keyof typeof Opcode];
+export type Opcode = (typeof Opcode)[keyof typeof Opcode];
